@@ -1,12 +1,12 @@
 # Feature Specification: Gestión de sueldo, gasto real, deudas y ahorro
 
-**Feature Branch**: `001-gestion-sueldo-ahorro`
+**Feature Branch**: `master` — por decisión del usuario esta feature se desarrolla sobre `master`; las mejoras posteriores irán en ramas por feature.
 
 **Created**: 2026-08-26
 
-**Last Updated**: 2026-08-26 (revisión 2: se añaden transacciones reales, seguimiento de ahorro y deudas en cuotas)
+**Last Updated**: 2026-08-26 (revisión 4: cierre de meses pasados con ventana de gracia; gestión de tarjetas con entidad emisora y tipo; meta de ahorro por mes; semántica de cuota pagada explícita)
 
-**Status**: Draft
+**Status**: Ready — plan y tareas derivados y analizados
 
 **Input**: User description: "Aplicación de finanzas personales de uso individual para administrar un sueldo mensual en soles peruanos (S/) y decidir cuánto ahorrar cada mes después de cubrir las obligaciones (tarjetas de crédito, alquiler, servicios, pasajes, comida). Incluye registro de transacciones reales, seguimiento del ahorro efectivamente realizado, y deudas de tarjeta de crédito a largo plazo con pagos mensuales en cuotas."
 
@@ -22,6 +22,9 @@ Tres conceptos que atraviesan toda la especificación y conviene fijar antes:
 - **Deuda en cuotas**: una compra financiada con tarjeta que genera un pago
   mensual durante varios meses. Su cuota entra automáticamente en el
   presupuesto de cada mes que le corresponde, sin que el usuario la reescriba.
+  **La cuota del mes en curso se considera pendiente hasta que el mes termina**:
+  una deuda de 12 cuotas que arranca este mes tiene doce cuotas por pagar, no
+  once. De ahí se derivan las cuotas pagadas, las restantes y el saldo.
 
 La app muestra **presupuestado y real en paralelo**: al inicio del mes proyecta
 cuánto podrá ahorrar; conforme avanza el mes contrasta esa proyección con la
@@ -160,6 +163,8 @@ disponible; y registrando aportes para verificar el acumulado y el progreso.
 9. **Given** aportes registrados en meses anteriores, **When** el usuario consulta su ahorro, **Then** ve el acumulado histórico total y el aporte de cada mes.
 10. **Given** un aporte registrado por error, **When** el usuario lo edita o elimina, **Then** el ahorro del mes y el acumulado histórico se recalculan.
 11. **Given** un mes cerrado sin ningún aporte registrado, **When** el usuario consulta el historial, **Then** ese mes figura con S/ 0.00 ahorrado, no como si la meta se hubiera cumplido.
+12. **Given** un mes pasado con meta de S/ 400.00 y una meta actual de S/ 700.00, **When** el usuario consulta el historial, **Then** ese mes se evalúa contra sus S/ 400.00, no contra los S/ 700.00 vigentes hoy.
+13. **Given** un mes nuevo sin meta y un mes anterior con meta de S/ 500.00, **When** el usuario abre la sección de ahorro, **Then** la app propone S/ 500.00 para confirmar o ajustar, y no queda fijada hasta que el usuario la confirme.
 
 ---
 
@@ -204,7 +209,7 @@ y que el orden refleja el criterio pedido.
 - **Deuda con inicio en mes futuro**: no aporta al presupuesto actual pero sí al saldo total adeudado.
 - **Última cuota**: al mes siguiente la deuda queda saldada y desaparece del presupuesto.
 - **Cancelación anticipada**: el usuario puede marcar una deuda como saldada; deja de generar cuotas y su saldo pasa a cero.
-- **Edición retroactiva de una deuda**: recalcula los meses afectados sin alterar los gastos reales ya registrados.
+- **Edición retroactiva de una deuda**: recalcula los meses afectados sin alterar los gastos reales ya registrados. Es la única modificación admitida sobre un mes cerrado (FR-057).
 - **Deuda de una sola cuota**: se admite; equivale a una obligación de un único mes.
 - **Sin deudas activas**: la vista de deudas comunica el estado libre de deuda en vez de mostrarse vacía.
 
@@ -219,7 +224,9 @@ y que el orden refleja el criterio pedido.
 - **Monto inválido**: montos negativos o no numéricos se rechazan al guardar.
 - **Montos grandes**: se formatean correctamente hasta siete cifras (S/ 9,999,999.99) sin desbordar la interfaz.
 - **Redondeo**: los porcentajes se redondean al centavo; la suma de subtotales por categoría nunca difiere del total.
-- **Edición de un mes pasado**: recalcula solo ese mes y, si afecta aportes de ahorro, el acumulado histórico.
+- **Mes cerrado**: un mes anterior al actual es de solo lectura (FR-052). La app lo comunica explícitamente en vez de dejar que el usuario intente editar y falle.
+- **Pago rezagado**: dentro de la ventana de gracia (FR-055) se puede registrar un gasto con fecha del mes anterior; queda inmutable al guardarse (FR-056). Pasada la ventana, ese gasto ya no puede registrarse en el mes que le correspondía.
+- **Error en un mes cerrado**: no hay vía de corrección salvo por deudas (FR-057). Se asume que la validación al ingresar y la confirmación del usuario evitan el error; si aparece uno, se trata como defecto del software y se corrige la causa.
 
 ## Requirements *(mandatory)*
 
@@ -248,6 +255,9 @@ y que el orden refleja el criterio pedido.
 **Deudas en cuotas**
 
 - **FR-015**: El sistema MUST permitir registrar una deuda en cuotas con descripción, tarjeta asociada, monto de la cuota mensual, número total de cuotas y mes de inicio.
+- **FR-059**: El sistema MUST permitir registrar, editar y eliminar tarjetas, cada una con un nombre, la entidad emisora y el tipo (débito o crédito). Eliminar una tarjeta con deudas asociadas MUST rechazarse.
+- **FR-060**: El sistema MUST ofrecer una lista local de entidades bancarias peruanas para elegir al registrar una tarjeta, y admitir escribir una que no esté en la lista. Esa lista MUST resolverse en el dispositivo, sin consultar ningún servicio externo.
+- **FR-061**: Solo las tarjetas de tipo crédito MUST admitir deudas en cuotas.
 - **FR-016**: El sistema MUST incorporar automáticamente al presupuesto de cada mes la suma de las cuotas vigentes en ese mes, en la categoría tarjeta de crédito.
 - **FR-017**: El sistema MUST permitir desglosar el compromiso mensual de una tarjeta en las deudas individuales que lo componen.
 - **FR-018**: El sistema MUST calcular, para cada deuda, las cuotas pagadas, las restantes, el saldo pendiente y el mes de la última cuota.
@@ -273,7 +283,7 @@ y que el orden refleja el criterio pedido.
 - **FR-032**: El sistema MUST permitir configurar el porcentaje cuando la regla sea por porcentaje.
 - **FR-033**: El sistema MUST calcular el ahorro sugerido según la regla vigente.
 - **FR-034**: Cuando el ahorro sugerido por porcentaje exceda el disponible proyectado, el sistema MUST advertirlo y ofrecer el disponible como monto alcanzable.
-- **FR-035**: El sistema MUST permitir fijar una meta de ahorro mensual y reportar si es alcanzable con el disponible proyectado.
+- **FR-035**: El sistema MUST permitir fijar una meta de ahorro **propia de cada mes** y reportar si es alcanzable con el disponible proyectado de ese mes.
 - **FR-036**: Cuando la meta no sea alcanzable, el sistema MUST indicar cuánto habría que recortar en compromisos para lograrla.
 - **FR-037**: En estado de déficit, el sistema MUST suprimir la sugerencia de ahorro e indicar que no corresponde ahorrar.
 - **FR-038**: El sistema MUST permitir registrar, editar y eliminar aportes de ahorro con monto y fecha.
@@ -282,6 +292,8 @@ y que el orden refleja el criterio pedido.
 - **FR-041**: El sistema MUST mantener y mostrar el ahorro acumulado histórico y el aporte de cada mes.
 - **FR-042**: El sistema MUST admitir aportes que excedan el disponible del mes, informándolo sin bloquear el registro.
 - **FR-043**: Los meses sin aportes MUST figurar con S/ 0.00 ahorrado en el historial.
+- **FR-053**: Al abrir un mes sin meta fijada, el sistema MUST proponer la meta del último mes que tuvo una, dejando al usuario confirmarla o ajustarla, sin guardarla en silencio.
+- **FR-054**: El historial MUST evaluar cada mes contra la meta que regía en ese mes, no contra la meta vigente al momento de la consulta. Un mes sin meta figura sin veredicto de progreso.
 
 **Desglose por categoría**
 
@@ -296,7 +308,13 @@ y que el orden refleja el criterio pedido.
 - **FR-049**: Los cálculos monetarios MUST ser exactos al centavo, sin errores acumulados de redondeo.
 - **FR-050**: El sistema MUST persistir todos los datos localmente en el dispositivo, disponibles tras cerrar y reabrir la app.
 - **FR-051**: El sistema MUST conservar los meses registrados y permitir consultarlos.
-- **FR-052**: Editar un mes pasado MUST recalcular únicamente ese mes y, cuando corresponda, el acumulado histórico de ahorro.
+**Cierre de meses**
+
+- **FR-052**: Los meses anteriores al mes en curso MUST ser de solo lectura: no se admite crear, editar ni eliminar ingresos, obligaciones, transacciones ni aportes de un mes cerrado.
+- **FR-055**: El sistema MUST ofrecer una ventana de gracia de duración configurable en días, contada desde el inicio del mes, durante la cual sí se admite **registrar** transacciones y aportes con fecha del mes anterior, para los pagos que llegan con retraso.
+- **FR-056**: Lo registrado durante la ventana de gracia MUST quedar inmutable desde el momento en que se guarda: no se puede editar ni eliminar después.
+- **FR-057**: Corregir una deuda (FR-023) MUST seguir siendo posible aunque afecte meses cerrados, porque la cuota de un mes es un valor derivado de la deuda y no un dato ingresado en ese mes. Es la única vía de corrección sobre un mes cerrado.
+- **FR-058**: El sistema MUST indicar de forma explícita cuándo un mes está cerrado y por qué no se puede modificar, sin depender únicamente del color.
 
 ### Key Entities
 
@@ -305,10 +323,10 @@ y que el orden refleja el criterio pedido.
 - **Obligación presupuestada**: partida planificada del mes, con nombre, categoría, monto y tipo (fija o variable). Pertenece a un mes.
 - **Transacción**: gasto real ocurrido, con monto, fecha, categoría y descripción. Se asigna al mes de su fecha. Es el registro de la realidad, frente a la obligación que es la previsión.
 - **Categoría**: clasificación de obligaciones y transacciones, tomada de un conjunto cerrado (tarjeta de crédito, departamento, servicios, pasajes, comida, otros).
-- **Tarjeta**: medio de pago que agrupa deudas en cuotas. Permite ver el compromiso mensual consolidado por tarjeta.
+- **Tarjeta**: medio de pago con nombre, entidad emisora y tipo (débito o crédito). Las de crédito agrupan deudas en cuotas y permiten ver el compromiso mensual consolidado. La entidad emisora se elige de una lista local de bancos peruanos, ampliable a mano.
 - **Deuda en cuotas**: compra financiada, con descripción, tarjeta, cuota mensual, número total de cuotas y mes de inicio. Genera automáticamente el compromiso de cada mes en que tiene cuotas vigentes. Deriva saldo pendiente, cuotas restantes y mes de término.
 - **Regla de ahorro**: configuración de cómo se calcula el ahorro sugerido: por porcentaje del ingreso (con su porcentaje) o por remanente.
-- **Meta de ahorro**: monto que el usuario se propone apartar en el mes, contra el cual se evalúa viabilidad y progreso.
+- **Meta de ahorro**: monto que el usuario se propone apartar en **un mes concreto**, contra el cual se evalúa viabilidad y progreso de ese mes. Cada mes tiene su propia meta, o ninguna. Al abrir un mes sin meta, se propone la del último mes que la tuvo.
 - **Aporte de ahorro**: monto efectivamente apartado, con fecha. Varios aportes componen el ahorro de un mes; su suma histórica es el acumulado.
 
 ## Success Criteria *(mandatory)*
@@ -332,7 +350,9 @@ y que el orden refleja el criterio pedido.
 
 **Sobre el alcance**
 
-- **Un solo usuario, un solo dispositivo**: no se contempla multiusuario, autenticación ni sincronización entre dispositivos.
+- **Un solo usuario, un solo dispositivo**: no se contempla multiusuario, autenticación ni sincronización entre dispositivos. Cada instalación es independiente: que la app se distribuya a varios probadores antes de publicarla no cambia esto, porque cada uno tiene sus propios datos locales.
+- **Sin conexión a servicios externos**: ni siquiera para catálogos. La lista de entidades bancarias vive en el código (FR-060); no se consulta ninguna API.
+- **Sin tasas de interés**: no se registran TEA, tasas ni comisiones de las tarjetas. La cuota que informa el banco es el dato exacto; una tasa almacenada daría un número que parece preciso y no coincide con el estado de cuenta.
 - **Moneda única**: todos los montos son en soles peruanos; no hay conversión ni soporte multimoneda.
 - **Periodicidad mensual**: la unidad de gestión es el mes calendario. No se modelan quincenas, semanas ni sueldos con periodicidad distinta.
 - **Un ingreso por mes**: se asume un sueldo mensual único. Ingresos adicionales, gratificaciones o extraordinarios no están contemplados en esta versión.
