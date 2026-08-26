@@ -1,7 +1,8 @@
-# Specification Quality Checklist: Gestión de sueldo mensual y ahorro
+# Specification Quality Checklist: Gestión de sueldo, gasto real, deudas y ahorro
 
 **Purpose**: Validar la completitud y calidad de la especificación antes de pasar a la planificación
 **Created**: 2026-08-26
+**Last Updated**: 2026-08-26 (revisión 2)
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -26,21 +27,45 @@
 
 - [x] Cada requisito funcional se apoya en al menos una historia de usuario
 - [x] Las historias están priorizadas y son independientemente verificables
-- [x] La historia P1 por sí sola constituye un MVP con valor
+- [x] Las historias P1 (1, 2 y 3) constituyen un MVP con valor
 - [x] La especificación no contradice la constitución del proyecto
 
-## Notas
+## Decisiones resueltas en la revisión 2
 
-Los supuestos de la sección *Assumptions* son las decisiones que se tomaron por
-defecto ante detalles no especificados. Son el punto natural de revisión: si
-alguno no refleja lo que el usuario espera, corregirlo aquí antes de planificar
-evita retrabajo en implementación.
+Tres preguntas de alcance que estaban abiertas y el usuario resolvió:
 
-Los tres supuestos con mayor impacto en el alcance son:
+1. **Presupuesto y gasto real conviven en paralelo** — la app proyecta el ahorro a
+   inicio de mes y lo contrasta con lo efectivamente gastado. No se eligió uno de
+   los dos modelos: se muestran ambos (FR-025 a FR-027).
+2. **Las cuotas se registran tal como las informa el banco** — la app no modela
+   TEA ni amortización, para no discrepar en centavos con el estado de cuenta
+   real (FR-024).
+3. **El ahorro se registra manualmente** — se lleva lo efectivamente apartado, no
+   una suposición de lo que sobró (FR-038 a FR-043).
 
-1. **Obligaciones estimadas, no transacciones** — la app no lleva un registro de
-   gastos reales conforme ocurren. Si se requiriera, cambia el modelo de datos.
-2. **El ahorro no se rastrea** — se sugiere cuánto ahorrar, pero no se registra
-   lo efectivamente ahorrado ni su acumulado histórico.
-3. **Tarjetas como obligación mensual simple** — sin saldo, interés ni ciclo de
-   facturación.
+## Riesgo abierto
+
+**Sostenibilidad del registro manual de gastos.** La historia 3 depende de que el
+usuario anote cada gasto conforme ocurre. Es el punto donde más apps de finanzas
+personales fracasan: el registro se abandona a las dos semanas y los datos dejan
+de reflejar la realidad.
+
+Mitigación en la especificación: SC-002 fija un objetivo de menos de quince
+segundos por registro, lo que condiciona el diseño de esa pantalla.
+
+Mitigación pendiente de decisión: la captura automática de consumos a partir de
+las notificaciones del banco, evaluada como posible especificación 002 y sujeta a
+restricciones de plataforma (viable en Android, no en iOS).
+
+## Alcance explícitamente excluido
+
+Conviene tenerlo a la vista para no reabrirlo durante la implementación:
+
+- Multiusuario, autenticación, sincronización entre dispositivos
+- Multimoneda y conversión
+- Integración bancaria y captura automática de movimientos (ver 002)
+- Ingresos extraordinarios, gratificaciones, devoluciones
+- Línea de crédito, pago mínimo, intereses por revolver
+- Cuotas de monto variable o escalonado
+- Retiros, rendimientos o múltiples cuentas de ahorro
+- Respaldo, exportación y restauración de datos
