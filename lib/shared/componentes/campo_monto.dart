@@ -1,9 +1,8 @@
+import 'package:finanzas/dominio/calculos/presupuesto.dart';
+import 'package:finanzas/shared/estilos/tema.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import '../../core/dinero.dart';
-import '../../dominio/calculos/presupuesto.dart';
-import '../tema.dart';
 
 /// Campo de monto en soles, con validación y cifras tabulares.
 ///

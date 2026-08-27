@@ -1,5 +1,5 @@
-import '../../core/mes.dart';
-import '../modelos/estado_cierre.dart';
+import 'package:finanzas/dominio/modelos/estado_cierre.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 
 /// Regla de cierre de meses (FR-052, FR-055 – FR-058).
 ///

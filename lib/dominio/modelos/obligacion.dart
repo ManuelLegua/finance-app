@@ -1,6 +1,6 @@
-import '../../core/dinero.dart';
-import '../../core/mes.dart';
-import 'enums.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 
 /// Una partida planificada del mes (FR-002).
 ///

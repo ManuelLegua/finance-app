@@ -1,15 +1,14 @@
+import 'package:finanzas/datos/base_datos.dart';
+import 'package:finanzas/datos/repositorios/repositorio_configuracion.dart';
+import 'package:finanzas/datos/repositorios/repositorio_ingreso.dart';
+import 'package:finanzas/datos/repositorios/repositorio_obligaciones.dart';
+import 'package:finanzas/shared/estilos/tema.dart';
+import 'package:finanzas/ui/cascaron.dart';
+import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
-
-import 'datos/base_datos.dart';
-import 'datos/repositorios/repositorio_configuracion.dart';
-import 'datos/repositorios/repositorio_ingreso.dart';
-import 'datos/repositorios/repositorio_obligaciones.dart';
-import 'ui/cascaron.dart';
-import 'ui/estado/estado_mes.dart';
-import 'ui/tema.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

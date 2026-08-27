@@ -4,7 +4,7 @@ import 'package:finanzas/datos/esquema.dart';
 import 'package:finanzas/datos/migraciones.dart';
 import 'package:finanzas/datos/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
-import 'package:finanzas/dominio/modelos/enums.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite/sqflite.dart';
 

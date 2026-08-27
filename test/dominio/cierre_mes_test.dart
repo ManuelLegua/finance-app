@@ -1,6 +1,6 @@
-import 'package:finanzas/core/mes.dart';
 import 'package:finanzas/dominio/calculos/cierre_mes.dart';
 import 'package:finanzas/dominio/modelos/estado_cierre.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// FR-052 y FR-055 – FR-058: los meses pasados son de solo lectura, con una

@@ -1,7 +1,7 @@
-import '../../core/dinero.dart';
-import '../../core/mes.dart';
-import '../modelos/enums.dart';
-import '../modelos/obligacion.dart';
+import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 
 /// Reglas del presupuesto mensual: validación de montos (FR-005) y precarga
 /// de obligaciones fijas (FR-006).

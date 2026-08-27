@@ -32,7 +32,7 @@ Antes de proponer un cambio de diseño, leer `research.md`: es probable que la a
 
 1. **El dinero es un `int` de centavos, de punta a punta.** Nunca `double`, nunca `float`. El tipo `Dinero` no tiene constructor desde `double`. El formato `S/ 1,234.56` se produce a mano desde el entero — **no** con `intl.NumberFormat`, que recibe `num` y reintroduciría el punto flotante justo antes de mostrar la cifra. Columnas `INTEGER`, jamás `REAL`. Porcentajes en puntos base (20% = 2000).
 
-2. **`lib/dominio/` es Dart puro.** Sin `package:flutter/`, sin `package:sqflite/`, sin `DateTime.now()` adentro (la fecha entra como parámetro). `test/pureza_test.dart` falla si alguien lo viola.
+2. **`lib/dominio/` y las carpetas puras de `lib/shared/` son Dart puro.** Sin `package:flutter/`, sin `package:sqflite/`, sin `DateTime.now()` adentro (la fecha entra como parámetro). `test/pureza_test.dart` falla si alguien lo viola.
 
 3. **Las pruebas de reglas financieras se escriben ANTES que la implementación**, cubriendo caso normal, límite (saldo exactamente cero) y adverso (déficit). Es requisito de entrada por constitución, no un paso opcional.
 
@@ -49,9 +49,41 @@ Antes de proponer un cambio de diseño, leer `research.md`: es probable que la a
 - **La meta de ahorro es por mes**, no global (D12). Un mes pasado se evalúa contra la meta que regía entonces.
 - **Sin API de bancos ni tasas de interés** (D14). La lista de entidades peruanas es una constante local. La cuota la informa el banco; replicar la amortización daría discrepancias de centavos.
 
+## Estructura de carpetas
+
+```
+lib/
+├── shared/          # TODO lo reutilizable vive acá. Nada se duplica fuera.
+│   ├── tipos/       # Dinero, Mes — Dart puro
+│   ├── constantes/  # enums y constantes de dominio — Dart puro
+│   ├── formato/     # FormatoSoles, FormatoFecha — Dart puro
+│   ├── estilos/     # Tema, Espaciado — Flutter
+│   └── componentes/ # widgets reutilizables — Flutter
+├── dominio/         # PURO: modelos y cálculos financieros
+├── datos/           # esquema, migraciones, repositorios
+└── ui/              # estado y pantallas
+```
+
+**Antes de crear un enum, una constante, un estilo o un widget, buscar en `shared/`.** Si algo se usa en dos lugares, va a `shared/`; si se duplica, es un error a corregir, no una variante.
+
+Las cuatro primeras subcarpetas de `shared/` son **Dart puro** y `test/pureza_test.dart` las verifica junto con `lib/dominio/`: sin Flutter, sin sqflite, sin `DateTime.now()`. `estilos/` y `componentes/` sí usan Flutter y quedan fuera de esa guarda.
+
+Los imports internos son **absolutos** (`package:finanzas/shared/tipos/dinero.dart`), nunca relativos: mover un archivo no obliga a reescribir rutas y se ve de dónde viene cada cosa.
+
+## Código legible por encima de código breve
+
+El objetivo es que alguien que llega al proyecto entienda una función sin reconstruir contexto. En concreto:
+
+- **Enums en vez de `bool` o cadenas sueltas** para cualquier cosa que represente una decisión o un estado. `tipo: TipoEscritura.modificar` se lee solo; `requiereEdicion: true` obliga a ir a la firma. Además el `switch` exhaustivo hace que agregar un caso sin manejarlo no compile.
+- **Constantes con nombre en vez de números mágicos**: `Espaciado.entreCampos`, no `16`. `_maxCifrasEnteras`, no `7`.
+- **Nombres que digan la intención**: `obligacionesMesAnterior`, no `lista`. Evitar abreviaturas salvo las del dominio ya establecidas.
+- **Una responsabilidad por archivo**, y el nombre del archivo la anuncia. Si `formulario_obligacion.dart` termina conteniendo también un diálogo de ingreso, se separa.
+- **Comentar el porqué, no el qué.** El código dice qué hace; el comentario explica la decisión que no es obvia (por qué el parseo no pasa por `double`, por qué el cierre se deriva de la fecha).
+- Funciones cortas, anidamiento bajo, salidas tempranas antes que `else` encadenados.
+
 ## Convenciones de código
 
-- Arquitectura en capas, dependencia siempre hacia adentro: `ui → datos → dominio → core`.
+- Arquitectura en capas, dependencia siempre hacia adentro: `ui → datos → dominio → shared`. `shared/` no importa de ninguna capa; la guarda de pureza lo verifica.
 - **Identificadores del dominio en español** (`Mes`, `Obligacion`, `Transaccion`, `Deuda`, `AporteAhorro`), igual que la spec, para que no haya salto de vocabulario entre el requisito y el código. Las palabras del framework quedan en inglés.
 - UI en español, formato peruano. Material 3 del SDK, sin kit de componentes. Cifras tabulares en todo monto. **Ningún estado se comunica solo por color** (déficit, sobregiro, mes cerrado).
 - La regla de cierre se aplica en `lib/ui/estado/`, nunca en los repositorios: duplicarla crearía dos verdades que se desincronizan.

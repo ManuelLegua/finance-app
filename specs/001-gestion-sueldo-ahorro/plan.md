@@ -78,18 +78,18 @@ specs/001-gestion-sueldo-ahorro/
 ```text
 lib/
 ├── main.dart                      # Arranque, tema, locale es_PE, providers raíz
-├── core/
-│   ├── dinero.dart                # int de centavos + aritmética entera
-│   ├── mes.dart                   # Mes(anio, mes) con ordinal
-│   ├── formato_soles.dart         # S/ 1,234.56 desde el entero
-│   └── formato_fecha.dart         # DateFormat es_PE
+├── shared/                        # Todo lo reutilizable, sin duplicación
+│   ├── tipos/                     # Dinero (int de centavos), Mes (ordinal)
+│   ├── constantes/                # enums: Categoria, TipoObligacion,
+│   │                              # ReglaAhorro, TipoTarjeta, EntidadesPeru
+│   ├── formato/                   # FormatoSoles (sin double), FormatoFecha
+│   ├── estilos/                   # Tema Material 3, Espaciado
+│   └── componentes/               # campo de monto, aviso de mes cerrado,
+│                                  # aviso de déficit, selector de mes, fichas
 ├── dominio/                       # PURO: sin flutter, sin sqflite
 │   ├── modelos/                   # Ingreso, Obligacion, Transaccion, Tarjeta,
 │   │                              # Deuda, MetaAhorro, AporteAhorro,
-│   │                              # Configuracion, Categoria, EntidadesPeru,
-│   │                              # y los derivados (ResumenMes, LineaCategoria,
-│   │                              # EstadoDeuda, PanoramaDeuda, SugerenciaAhorro,
-│   │                              # ProgresoAhorro, EstadoCierre)
+│   │                              # Configuracion, y los derivados
 │   └── calculos/
 │       ├── resumen_mes.dart       # totales, disponible, déficit
 │       ├── desglose_categorias.dart
@@ -100,31 +100,22 @@ lib/
 ├── datos/
 │   ├── base_datos.dart            # apertura, onCreate, onUpgrade, foreign_keys
 │   ├── esquema.dart               # DDL de la versión 1
+│   ├── error_persistencia.dart    # errores legibles, sin SQL crudo
 │   ├── migraciones.dart           # pasos incrementales v(n) → v(n+1)
-│   └── repositorios/              # ingreso, obligaciones, transacciones,
-│                                  # tarjetas, deudas, ahorro, meses
+│   └── repositorios/
 └── ui/
-    ├── tema.dart                  # Material 3 desde semilla, cifras tabulares (D11)
-    ├── cascaron.dart              # Scaffold raíz + NavigationBar entre las 6 pantallas
-    ├── estado/                    # ChangeNotifiers: mes en curso, deudas, ahorro
-    ├── pantallas/
-    │   ├── resumen_mes/           # HU2 — pantalla principal
-    │   ├── presupuesto/           # HU1 — ingreso y obligaciones
-    │   ├── transacciones/         # HU3 — registro y listado de gastos
-    │   ├── deudas/                # HU4 — deudas, tarjetas, panorama
-    │   ├── ahorro/                # HU5 — regla, meta, aportes, historial
-    │   └── categorias/            # HU6 — desglose
-    └── widgets/                   # campo de monto, ficha de categoría,
-                                   # aviso de déficit, selector de mes
+    ├── cascaron.dart              # Scaffold raíz + NavigationBar
+    ├── estado/                    # ChangeNotifiers; aplican la regla de cierre
+    └── pantallas/                 # una carpeta por historia de usuario
 
 test/
-├── dominio/                       # Dart puro; se escribe antes de la implementación
+├── dominio/                       # Dart puro; se escribe antes de implementar
 ├── datos/                         # repositorios + migraciones (sqflite_common_ffi)
-├── ui/                            # widget tests de las reglas de presentación
-└── pureza_test.dart               # guarda: lib/dominio no importa flutter ni sqflite
+├── ui/                            # widget tests
+└── pureza_test.dart               # guarda: dominio y shared puro sin Flutter
 ```
 
-**Structure Decision**: proyecto Flutter único con separación en cuatro capas dentro de `lib/`, con la dependencia siempre apuntando hacia adentro (`ui → datos → dominio → core`). Es la estructura mínima que hace cumplible el Principio III —el dominio se prueba sin levantar Flutter— sin introducir capas que ningún requisito respalda. Los identificadores del dominio van en español, igual que la spec, para que no haya salto de vocabulario entre el requisito y el código. El directorio `test/` refleja esa misma división. Se descarta la estructura por feature modules y la separación en paquetes del monorepo: para ~8 pantallas de un solo usuario, multiplicarían la ceremonia sin beneficio (Principio V).
+**Structure Decision**: proyecto Flutter único con separación en cuatro capas dentro de `lib/`, con la dependencia siempre apuntando hacia adentro (`ui → datos → dominio → shared`). Es la estructura mínima que hace cumplible el Principio III —el dominio se prueba sin levantar Flutter— sin introducir capas que ningún requisito respalda. Los identificadores del dominio van en español, igual que la spec, para que no haya salto de vocabulario entre el requisito y el código. El directorio `test/` refleja esa misma división. Se descarta la estructura por feature modules y la separación en paquetes del monorepo: para ~8 pantallas de un solo usuario, multiplicarían la ceremonia sin beneficio (Principio V).
 
 ## Complexity Tracking
 

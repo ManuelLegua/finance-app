@@ -1,5 +1,5 @@
-import '../../core/dinero.dart';
-import '../../core/mes.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 
 /// Lo que el usuario percibe en un mes (FR-001).
 ///

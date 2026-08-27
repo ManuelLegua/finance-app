@@ -1,8 +1,7 @@
+import 'package:finanzas/datos/error_persistencia.dart';
+import 'package:finanzas/dominio/modelos/configuracion.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:sqflite/sqflite.dart';
-
-import '../../dominio/modelos/configuracion.dart';
-import '../../dominio/modelos/enums.dart';
-import '../error_persistencia.dart';
 
 /// Ajustes de la app: regla de ahorro, porcentaje y días de gracia del cierre.
 ///

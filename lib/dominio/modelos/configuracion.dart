@@ -1,4 +1,4 @@
-import 'enums.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
 
 /// Ajustes de la app. Fila única en la base de datos.
 ///

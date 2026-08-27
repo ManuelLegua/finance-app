@@ -1,4 +1,4 @@
-import 'package:finanzas/core/mes.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// D5: el mes se identifica por un ordinal entero `anio * 12 + (mes - 1)`.

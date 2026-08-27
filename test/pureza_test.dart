@@ -9,15 +9,26 @@ import 'package:flutter_test/flutter_test.dart';
 /// hasta que las pruebas del dominio dejan de correr sin levantar Flutter.
 /// Esta prueba convierte la convención en algo que la suite verifica.
 void main() {
-  group('lib/dominio es Dart puro', () {
-    final dominio = Directory('lib/dominio');
+  // Todo lo que la capa de dominio puede importar tiene que ser tan puro
+  // como ella. Al mover los tipos y los enums a shared/ hubo que extender la
+  // guarda: si solo mirara lib/dominio/, bastaria con poner un import de
+  // Flutter en shared/constantes/ para saltearla sin que nadie se entere.
+  final directoriosPuros = <Directory>[
+    Directory('lib/dominio'),
+    Directory('lib/shared/tipos'),
+    Directory('lib/shared/constantes'),
+    Directory('lib/shared/formato'),
+  ];
 
-    test('el directorio del dominio existe', () {
-      expect(
-        dominio.existsSync(),
-        isTrue,
-        reason: 'Se esperaba lib/dominio/ según la estructura del plan.',
-      );
+  group('el dominio y lo compartido puro son Dart puro', () {
+    test('los directorios puros existen', () {
+      for (final directorio in directoriosPuros) {
+        expect(
+          directorio.existsSync(),
+          isTrue,
+          reason: 'Falta ${directorio.path} según la estructura del plan.',
+        );
+      }
     });
 
     test('ningún archivo importa Flutter, sqflite ni dart:io', () {
@@ -27,11 +38,13 @@ void main() {
         'package:provider': 'el dominio no conoce el estado de la UI',
         'dart:io': 'el dominio no toca el sistema de archivos',
         'dart:ui': 'el dominio no conoce la capa de render',
+        'package:finanzas/ui/': 'lo puro no puede depender de la interfaz',
+        'package:finanzas/datos/': 'lo puro no conoce la persistencia',
       };
 
       final violaciones = <String>[];
 
-      for (final archivo in _archivosDart(dominio)) {
+      for (final archivo in directoriosPuros.expand(_archivosDart)) {
         final lineas = archivo.readAsLinesSync();
         for (var i = 0; i < lineas.length; i++) {
           final linea = lineas[i].trim();
@@ -64,7 +77,7 @@ void main() {
       // se vuelve imposible de probar sin manipular la hora del sistema (D13).
       final violaciones = <String>[];
 
-      for (final archivo in _archivosDart(dominio)) {
+      for (final archivo in directoriosPuros.expand(_archivosDart)) {
         final lineas = archivo.readAsLinesSync();
         for (var i = 0; i < lineas.length; i++) {
           if (_sinComentario(lineas[i]).contains('DateTime.now()')) {

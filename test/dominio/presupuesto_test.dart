@@ -1,8 +1,8 @@
-import 'package:finanzas/core/dinero.dart';
-import 'package:finanzas/core/mes.dart';
 import 'package:finanzas/dominio/calculos/presupuesto.dart';
-import 'package:finanzas/dominio/modelos/enums.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// FR-005 (validación de montos) y FR-006 (precarga de obligaciones fijas).

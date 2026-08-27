@@ -1,6 +1,5 @@
+import 'package:finanzas/ui/pantallas/presupuesto/pantalla_presupuesto.dart';
 import 'package:flutter/material.dart';
-
-import 'pantallas/presupuesto/pantalla_presupuesto.dart';
 
 /// Cascarón de navegación: el `Scaffold` raíz con los cinco destinos.
 ///

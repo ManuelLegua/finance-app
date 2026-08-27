@@ -3,18 +3,33 @@
 // los campos privados no pueden recibirse como `this._repo`. El lint sugiere
 // algo que el lenguaje no permite en este caso.
 
+import 'package:finanzas/datos/error_persistencia.dart';
+import 'package:finanzas/datos/repositorios/repositorio_configuracion.dart';
+import 'package:finanzas/datos/repositorios/repositorio_ingreso.dart';
+import 'package:finanzas/datos/repositorios/repositorio_obligaciones.dart';
+import 'package:finanzas/dominio/calculos/cierre_mes.dart';
+import 'package:finanzas/dominio/calculos/presupuesto.dart';
+import 'package:finanzas/dominio/modelos/estado_cierre.dart';
+import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../core/dinero.dart';
-import '../../core/mes.dart';
-import '../../datos/error_persistencia.dart';
-import '../../datos/repositorios/repositorio_configuracion.dart';
-import '../../datos/repositorios/repositorio_ingreso.dart';
-import '../../datos/repositorios/repositorio_obligaciones.dart';
-import '../../dominio/calculos/cierre_mes.dart';
-import '../../dominio/calculos/presupuesto.dart';
-import '../../dominio/modelos/estado_cierre.dart';
-import '../../dominio/modelos/obligacion.dart';
+/// Que se intenta hacer sobre el mes.
+///
+/// Existe porque el cierre trata distinto crear y modificar: la ventana de
+/// gracia admite registrar un pago rezagado, pero nunca editarlo ni borrarlo
+/// (FR-055, FR-056). Como enum, cada llamada dice cual de las dos es; con un
+/// `bool` habria que ir a la firma para saber que significa `true`.
+enum TipoEscritura {
+  crear,
+  modificar;
+
+  bool permitidaPor(EstadoCierre cierre) => switch (this) {
+        TipoEscritura.crear => cierre.admiteRegistrar,
+        TipoEscritura.modificar => cierre.admiteEditar,
+      };
+}
 
 /// Estado del mes que el usuario tiene abierto.
 ///
@@ -106,27 +121,27 @@ class EstadoMes extends ChangeNotifier {
 
   Future<bool> guardarIngreso(Dinero monto) => _escribir(
         () => _repoIngreso.guardar(_mes, monto),
-        requiereEdicion: ingresoRegistrado,
+        tipo: ingresoRegistrado ? TipoEscritura.modificar : TipoEscritura.crear,
       );
 
   Future<bool> eliminarIngreso() => _escribir(
         () => _repoIngreso.eliminar(_mes),
-        requiereEdicion: true,
+        tipo: TipoEscritura.modificar,
       );
 
   Future<bool> agregarObligacion(Obligacion obligacion) => _escribir(
         () => _repoObligaciones.insertar(obligacion.copiarCon(mes: _mes)),
-        requiereEdicion: false,
+        tipo: TipoEscritura.crear,
       );
 
   Future<bool> actualizarObligacion(Obligacion obligacion) => _escribir(
         () => _repoObligaciones.actualizar(obligacion),
-        requiereEdicion: true,
+        tipo: TipoEscritura.modificar,
       );
 
   Future<bool> eliminarObligacion(int id) => _escribir(
         () => _repoObligaciones.eliminar(id),
-        requiereEdicion: true,
+        tipo: TipoEscritura.modificar,
       );
 
   /// Las obligaciones fijas del mes anterior, para que el usuario confirme o
@@ -149,21 +164,18 @@ class EstadoMes extends ChangeNotifier {
   /// Confirma la precarga completa, en una sola transacción.
   Future<bool> confirmarPrecarga(List<Obligacion> propuestas) => _escribir(
         () => _repoObligaciones.insertarLote(propuestas),
-        requiereEdicion: false,
+        tipo: TipoEscritura.crear,
       );
 
   /// Ejecuta una escritura si el cierre del mes lo permite, y recarga.
   ///
-  /// [requiereEdicion] distingue crear (admitido en la ventana de gracia) de
-  /// editar o eliminar (nunca admitido fuera del mes en curso, FR-056).
+  /// El [tipo] decide si el cierre del mes la permite.
   Future<bool> _escribir(
     Future<void> Function() accion, {
-    required bool requiereEdicion,
+    required TipoEscritura tipo,
   }) async {
     final cierre = estadoCierre;
-    final permitido =
-        requiereEdicion ? cierre.admiteEditar : cierre.admiteRegistrar;
-    if (!permitido) {
+    if (!tipo.permitidaPor(cierre)) {
       _error = cierre.motivo;
       notifyListeners();
       return false;

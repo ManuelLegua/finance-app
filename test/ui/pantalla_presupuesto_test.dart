@@ -6,14 +6,14 @@
 )
 library;
 
-import 'package:finanzas/core/dinero.dart';
-import 'package:finanzas/core/mes.dart';
 import 'package:finanzas/datos/base_datos.dart';
 import 'package:finanzas/datos/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/datos/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/datos/repositorios/repositorio_obligaciones.dart';
-import 'package:finanzas/dominio/modelos/enums.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/pantallas/presupuesto/pantalla_presupuesto.dart';
 import 'package:flutter/material.dart';

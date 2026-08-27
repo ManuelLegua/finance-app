@@ -1,10 +1,9 @@
+import 'package:finanzas/datos/error_persistencia.dart';
+import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:sqflite/sqflite.dart';
-
-import '../../core/dinero.dart';
-import '../../core/mes.dart';
-import '../../dominio/modelos/enums.dart';
-import '../../dominio/modelos/obligacion.dart';
-import '../error_persistencia.dart';
 
 /// Las obligaciones presupuestadas de cada mes (FR-002).
 ///

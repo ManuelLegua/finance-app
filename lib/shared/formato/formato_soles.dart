@@ -1,4 +1,4 @@
-import 'dinero.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
 
 /// Presenta montos como `S/ 1,234.56` (FR-048).
 ///

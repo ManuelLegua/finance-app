@@ -1,8 +1,7 @@
+import 'package:finanzas/datos/error_persistencia.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:sqflite/sqflite.dart';
-
-import '../../core/dinero.dart';
-import '../../core/mes.dart';
-import '../error_persistencia.dart';
 
 /// El ingreso mensual (FR-001). Un registro por mes.
 ///

@@ -1,4 +1,4 @@
-import 'package:finanzas/core/dinero.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Principio II (no negociable): el dinero es un entero de centavos.

@@ -1,15 +1,28 @@
+import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/shared/componentes/aviso_mes_cerrado.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
+import 'package:finanzas/shared/estilos/tema.dart';
+import 'package:finanzas/shared/formato/formato_fecha.dart';
+import 'package:finanzas/shared/formato/formato_soles.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/ui/estado/estado_mes.dart';
+import 'package:finanzas/ui/pantallas/presupuesto/dialogo_ingreso.dart';
+import 'package:finanzas/ui/pantallas/presupuesto/formulario_obligacion.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/dinero.dart';
-import '../../../core/formato_fecha.dart';
-import '../../../core/formato_soles.dart';
-import '../../../dominio/modelos/enums.dart';
-import '../../../dominio/modelos/obligacion.dart';
-import '../../estado/estado_mes.dart';
-import '../../tema.dart';
-import '../../widgets/aviso_mes_cerrado.dart';
-import 'formulario_obligacion.dart';
+/// Lo que el menu contextual de una obligacion puede hacer.
+///
+/// Como enum en vez de cadenas sueltas: el `switch` es exhaustivo, asi que
+/// agregar una accion sin manejarla no compila.
+enum AccionSobreObligacion {
+  editar('Editar'),
+  eliminar('Eliminar');
+
+  const AccionSobreObligacion(this.etiqueta);
+
+  final String etiqueta;
+}
 
 /// Ingreso del mes y presupuesto de obligaciones (HU1).
 class PantallaPresupuesto extends StatefulWidget {
@@ -85,7 +98,7 @@ class _PantallaPresupuestoState extends State<PantallaPresupuesto> {
       body: RefreshIndicator(
         onRefresh: estado.cargar,
         child: ListView(
-          padding: const EdgeInsets.only(bottom: 96),
+          padding: const EdgeInsets.only(bottom: Espaciado.bajoBotonFlotante),
           children: [
             if (estado.error != null) _BannerError(mensaje: estado.error!),
             AvisoMesCerrado(estado: estado.estadoCierre),
@@ -131,9 +144,9 @@ class _TarjetaIngreso extends StatelessWidget {
     final tipografia = Theme.of(context).textTheme;
 
     return Card(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      margin: const EdgeInsets.fromLTRB(Espaciado.normal, Espaciado.normal, Espaciado.normal, Espaciado.chico),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(Espaciado.normal),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -141,7 +154,7 @@ class _TarjetaIngreso extends StatelessWidget {
               'Ingreso de ${FormatoFecha.mesLargo(estado.mes)}',
               style: tipografia.labelLarge,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: Espaciado.chico),
             if (ingreso == null)
               Text(
                 'Todavía no registraste tu sueldo de este mes.',
@@ -152,7 +165,7 @@ class _TarjetaIngreso extends StatelessWidget {
                 FormatoSoles.formatear(ingreso),
                 style: tipografia.montoDestacado,
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: Espaciado.interno),
             Row(
               children: [
                 if (estado.admiteRegistrar)
@@ -188,7 +201,7 @@ class _EncabezadoObligaciones extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        padding: const EdgeInsets.fromLTRB(Espaciado.normal, Espaciado.normal, Espaciado.normal, Espaciado.chico),
         child: Text(
           total == 0 ? 'Obligaciones' : 'Obligaciones ($total)',
           style: Theme.of(context).textTheme.titleMedium,
@@ -231,12 +244,14 @@ class _FilaObligacion extends StatelessWidget {
             style: Theme.of(context).textTheme.monto,
           ),
           if (puedeEditar)
-            PopupMenuButton<String>(
-              onSelected: (opcion) =>
-                  opcion == 'editar' ? onEditar() : onEliminar(),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'editar', child: Text('Editar')),
-                PopupMenuItem(value: 'eliminar', child: Text('Eliminar')),
+            PopupMenuButton<AccionSobreObligacion>(
+              onSelected: (accion) => switch (accion) {
+                AccionSobreObligacion.editar => onEditar(),
+                AccionSobreObligacion.eliminar => onEliminar(),
+              },
+              itemBuilder: (_) => [
+                for (final accion in AccionSobreObligacion.values)
+                  PopupMenuItem(value: accion, child: Text(accion.etiqueta)),
               ],
             ),
         ],
@@ -251,7 +266,7 @@ class _SinObligaciones extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: Espaciado.amplio, vertical: Espaciado.amplio),
         child: Text(
           'Todavía no cargaste obligaciones. Agregá el alquiler, los '
           'servicios y lo que estimás gastar en el mes.',
@@ -273,13 +288,13 @@ class _BannerError extends StatelessWidget {
     final esquema = Theme.of(context).colorScheme;
     return Card(
       color: esquema.errorContainer,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: Espaciado.normal, vertical: Espaciado.chico),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(Espaciado.interno),
         child: Row(
           children: [
             Icon(Icons.error_outline, color: esquema.onErrorContainer),
-            const SizedBox(width: 12),
+            const SizedBox(width: Espaciado.interno),
             Expanded(
               child: Text(
                 mensaje,
@@ -328,7 +343,7 @@ class _DialogoPrecargaState extends State<_DialogoPrecarga> {
               'vigentes; podés ajustar los montos después.',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: Espaciado.chico),
             for (var i = 0; i < widget.propuestas.length; i++)
               CheckboxListTile(
                 value: _elegidas.contains(i),

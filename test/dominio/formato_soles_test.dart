@@ -1,5 +1,5 @@
-import 'package:finanzas/core/dinero.dart';
-import 'package:finanzas/core/formato_soles.dart';
+import 'package:finanzas/shared/formato/formato_soles.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// FR-048: todo monto se presenta como `S/ 1,234.56`.

@@ -1,6 +1,5 @@
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:intl/intl.dart';
-
-import 'mes.dart';
 
 /// Fechas en convención peruana.
 ///

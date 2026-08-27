@@ -1,6 +1,5 @@
+import 'package:finanzas/dominio/modelos/estado_cierre.dart';
 import 'package:flutter/material.dart';
-
-import '../../dominio/modelos/estado_cierre.dart';
 
 /// Comunica que un mes está cerrado o en ventana de gracia (FR-058).
 ///

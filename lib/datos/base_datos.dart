@@ -1,9 +1,8 @@
+import 'package:finanzas/datos/error_persistencia.dart';
+import 'package:finanzas/datos/esquema.dart';
+import 'package:finanzas/datos/migraciones.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
-
-import 'error_persistencia.dart';
-import 'esquema.dart';
-import 'migraciones.dart';
 
 /// Apertura y ciclo de vida de la base local.
 ///
