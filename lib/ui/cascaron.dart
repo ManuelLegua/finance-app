@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'pantallas/presupuesto/pantalla_presupuesto.dart';
+
 /// Cascarón de navegación: el `Scaffold` raíz con los cinco destinos.
 ///
 /// Se construye en la fase Foundational, antes que las pantallas, para que
@@ -21,10 +23,10 @@ class _CascaronState extends State<Cascaron> {
 
   static const List<_Destino> _destinos = <_Destino>[
     _Destino(
-      etiqueta: 'Resumen',
+      etiqueta: 'Presupuesto',
       icono: Icons.account_balance_wallet_outlined,
       iconoActivo: Icons.account_balance_wallet,
-      pendiente: 'US2 · el resumen del mes y el estado de déficit',
+      pantalla: PantallaPresupuesto(),
     ),
     _Destino(
       etiqueta: 'Gastos',
@@ -58,7 +60,8 @@ class _CascaronState extends State<Cascaron> {
 
     return Scaffold(
       appBar: AppBar(title: Text(actual.etiqueta)),
-      body: _EnConstruccion(pendiente: actual.pendiente),
+      body: actual.pantalla ??
+          _EnConstruccion(pendiente: actual.pendiente ?? ''),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _destino,
         onDestinationSelected: (indice) => setState(() => _destino = indice),
@@ -80,13 +83,19 @@ class _Destino {
     required this.etiqueta,
     required this.icono,
     required this.iconoActivo,
-    required this.pendiente,
+    this.pantalla,
+    this.pendiente,
   });
 
   final String etiqueta;
   final IconData icono;
   final IconData iconoActivo;
-  final String pendiente;
+
+  /// La pantalla del destino, o `null` si su historia todavía no se construyó.
+  final Widget? pantalla;
+
+  /// Qué historia la construirá, para el marcador temporal.
+  final String? pendiente;
 }
 
 /// Marcador temporal. Cada historia lo reemplaza por su pantalla.

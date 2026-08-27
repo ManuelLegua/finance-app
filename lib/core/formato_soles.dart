@@ -23,6 +23,19 @@ abstract final class FormatoSoles {
     return '$signo${_cifra(monto.centavos.abs())}';
   }
 
+  /// `1234.56`: sin símbolo y **sin separador de miles**, para prellenar un
+  /// campo de texto editable.
+  ///
+  /// Existe para no caer en `centavos / 100`, que es la forma más fácil de
+  /// colar un `double` en la app: convertir y volver a parsear puede perder
+  /// un centavo en montos de siete cifras, justo antes de guardarlos.
+  static String paraEditar(Dinero monto) {
+    final signo = monto.centavos.isNegative ? '-' : '';
+    final absoluto = monto.centavos.abs();
+    final centimos = (absoluto % 100).toString().padLeft(2, '0');
+    return '$signo${absoluto ~/ 100}.$centimos';
+  }
+
   /// Parte entera agrupada de a tres, más dos decimales siempre presentes.
   static String _cifra(int centavosAbsolutos) {
     final soles = centavosAbsolutos ~/ 100;

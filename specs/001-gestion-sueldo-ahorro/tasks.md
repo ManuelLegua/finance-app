@@ -81,23 +81,24 @@ Proyecto Flutter único (ver *Structure Decision* en plan.md): código en `lib/`
 
 ### Tests para US1 ⚠️ (escribir primero, deben fallar)
 
-- [ ] T027 [P] [US1] Escribir `test/dominio/presupuesto_test.dart`: `validarMonto` rechaza vacío, no numérico, negativo y más de dos decimales; acepta siete cifras; `proponerFijasDelMesAnterior` propone solo las fijas y nunca las guarda
-- [ ] T028 [P] [US1] Escribir `test/datos/repositorio_ingreso_test.dart`: `obtener` devuelve `null` para mes sin registrar (distinto de cero), `guardar` inserta y reemplaza
-- [ ] T029 [P] [US1] Escribir `test/datos/repositorio_obligaciones_test.dart`: `porMes`, `fijasDeMes`, atomicidad de `insertarLote`, actualizar y eliminar
+- [X] T027 [P] [US1] Escribir `test/dominio/presupuesto_test.dart`: `validarMonto` rechaza vacío, no numérico, negativo y más de dos decimales; acepta siete cifras; `proponerFijasDelMesAnterior` propone solo las fijas y nunca las guarda
+- [X] T028 [P] [US1] Escribir `test/datos/repositorio_ingreso_test.dart`: `obtener` devuelve `null` para mes sin registrar (distinto de cero), `guardar` inserta y reemplaza
+- [X] T029 [P] [US1] Escribir `test/datos/repositorio_obligaciones_test.dart`: `porMes`, `fijasDeMes`, atomicidad de `insertarLote`, actualizar y eliminar
 
 ### Implementación para US1
 
-- [ ] T030 [P] [US1] Crear el modelo `Ingreso` en `lib/dominio/modelos/ingreso.dart`
-- [ ] T031 [P] [US1] Crear el modelo `Obligacion` en `lib/dominio/modelos/obligacion.dart`
-- [ ] T032 [US1] Implementar `validarMonto` y `proponerFijasDelMesAnterior` en `lib/dominio/calculos/presupuesto.dart` según [contracts/calculos-dominio.md](./contracts/calculos-dominio.md)
-- [ ] T033 [P] [US1] Implementar `lib/datos/repositorios/repositorio_ingreso.dart`
-- [ ] T034 [P] [US1] Implementar `lib/datos/repositorios/repositorio_obligaciones.dart`, con `insertarLote` dentro de una transacción
-- [ ] T035 [US1] Crear el `ChangeNotifier` del mes en curso en `lib/ui/estado/estado_mes.dart`: carga ingreso y obligaciones, expone alta, edición y baja, y **consulta `cierre_mes.dart` antes de toda escritura** — la regla de cierre se aplica acá, no en los repositorios
-- [ ] T036 [P] [US1] Crear el campo de monto reutilizable en `lib/ui/widgets/campo_monto.dart`: teclado numérico, `validarMonto`, mensaje de error en español, y el estilo de cifras tabulares de T004
-- [ ] T037 [US1] Construir `lib/ui/pantallas/presupuesto/pantalla_presupuesto.dart`: ingreso del mes y lista de obligaciones con su tipo fija/variable visible (FR-004). En un mes cerrado muestra `aviso_mes_cerrado` y deshabilita las acciones de escritura (FR-052)
-- [ ] T038 [US1] Construir el alta y edición de obligaciones en `lib/ui/pantallas/presupuesto/formulario_obligacion.dart` (nombre, categoría, monto, tipo). **El selector de categorías excluye `tarjetaCredito`**: ese compromiso lo derivan las deudas y registrarlo a mano duplicaría el monto en el presupuesto (data-model.md §2)
-- [ ] T039 [US1] Añadir el diálogo de precarga de fijas del mes anterior en `lib/ui/pantallas/presupuesto/pantalla_presupuesto.dart`, que solo confirma o ajusta, nunca guarda solo (FR-006)
-- [ ] T040 [US1] Escribir `test/ui/pantalla_presupuesto_test.dart`: monto vacío y negativo se rechazan sin guardar nada; `tarjetaCredito` no aparece entre las categorías elegibles; en un mes cerrado no hay acciones de edición disponibles
+- [X] T030 [P] [US1] Crear el modelo `Ingreso` en `lib/dominio/modelos/ingreso.dart`
+- [X] T031 [P] [US1] Crear el modelo `Obligacion` en `lib/dominio/modelos/obligacion.dart`
+- [X] T032 [US1] Implementar `validarMonto` y `proponerFijasDelMesAnterior` en `lib/dominio/calculos/presupuesto.dart` según [contracts/calculos-dominio.md](./contracts/calculos-dominio.md)
+- [X] T033 [P] [US1] Implementar `lib/datos/repositorios/repositorio_ingreso.dart`
+- [X] T034 [P] [US1] Implementar `lib/datos/repositorios/repositorio_obligaciones.dart`, con `insertarLote` dentro de una transacción
+- [X] T035 [US1] Crear el `ChangeNotifier` del mes en curso en `lib/ui/estado/estado_mes.dart`: carga ingreso y obligaciones, expone alta, edición y baja, y **consulta `cierre_mes.dart` antes de toda escritura** — la regla de cierre se aplica acá, no en los repositorios
+- [X] T036 [P] [US1] Crear el campo de monto reutilizable en `lib/ui/widgets/campo_monto.dart`: teclado numérico, `validarMonto`, mensaje de error en español, y el estilo de cifras tabulares de T004
+- [X] T037 [US1] Construir `lib/ui/pantallas/presupuesto/pantalla_presupuesto.dart`: ingreso del mes y lista de obligaciones con su tipo fija/variable visible (FR-004). En un mes cerrado muestra `aviso_mes_cerrado` y deshabilita las acciones de escritura (FR-052)
+- [X] T038 [US1] Construir el alta y edición de obligaciones en `lib/ui/pantallas/presupuesto/formulario_obligacion.dart` (nombre, categoría, monto, tipo). **El selector de categorías excluye `tarjetaCredito`**: ese compromiso lo derivan las deudas y registrarlo a mano duplicaría el monto en el presupuesto (data-model.md §2)
+- [X] T039 [US1] Añadir el diálogo de precarga de fijas del mes anterior en `lib/ui/pantallas/presupuesto/pantalla_presupuesto.dart`, que solo confirma o ajusta, nunca guarda solo (FR-006)
+- [ ] T040 [US1] Escribir `test/ui/pantalla_presupuesto_test.dart`: monto vacío y negativo se rechazan sin guardar nada; `tarjetaCredito` no aparece entre las categorías elegibles; en un mes cerrado no hay acciones de edición disponibles.
+  **BLOQUEADA**: la prueba está escrita pero marcada `@Skip`. `sqflite_common_ffi` no completa dentro del reloj falso de `testWidgets` y la prueba se cuelga; `runAsync` no alcanza. La salida es dar a los repositorios una costura de dobles (interfaz o clase no-`final`) para que las pruebas de widget no toquen la base real. Los tres comportamientos ya están cubiertos indirectamente por `presupuesto_test.dart` y `cierre_mes_test.dart`
 
 **Checkpoint**: US1 funciona sola. El usuario ya tiene su presupuesto mensual en un solo lugar.
 

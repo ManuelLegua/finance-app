@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
+import 'package:sqflite/sqflite.dart';
 
+import 'datos/base_datos.dart';
+import 'datos/repositorios/repositorio_configuracion.dart';
+import 'datos/repositorios/repositorio_ingreso.dart';
+import 'datos/repositorios/repositorio_obligaciones.dart';
 import 'ui/cascaron.dart';
+import 'ui/estado/estado_mes.dart';
 import 'ui/tema.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const AppFinanzas());
 }
 
@@ -32,7 +40,106 @@ class AppFinanzas extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const Cascaron(),
+      home: const _Arranque(),
+    );
+  }
+}
+
+/// Abre la base antes de montar la app.
+///
+/// Si la apertura falla se muestra el motivo, en vez de arrancar con datos
+/// vacíos: el usuario tiene que poder distinguir "no pude leer tus datos" de
+/// "no tenés datos".
+class _Arranque extends StatefulWidget {
+  const _Arranque();
+
+  @override
+  State<_Arranque> createState() => _ArranqueState();
+}
+
+class _ArranqueState extends State<_Arranque> {
+  final BaseDatos _baseDatos = BaseDatos();
+  late final Future<Database> _apertura = _baseDatos.abrir();
+
+  @override
+  void dispose() {
+    _baseDatos.cerrar();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Database>(
+      future: _apertura,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _PantallaErrorArranque(error: snapshot.error!);
+        }
+        final db = snapshot.data;
+        if (db == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return MultiProvider(
+          providers: [
+            Provider<RepositorioIngreso>(
+              create: (_) => RepositorioIngreso(db),
+            ),
+            Provider<RepositorioObligaciones>(
+              create: (_) => RepositorioObligaciones(db),
+            ),
+            Provider<RepositorioConfiguracion>(
+              create: (_) => RepositorioConfiguracion(db),
+            ),
+            ChangeNotifierProvider<EstadoMes>(
+              create: (contexto) => EstadoMes(
+                repoIngreso: contexto.read<RepositorioIngreso>(),
+                repoObligaciones: contexto.read<RepositorioObligaciones>(),
+                repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
+              )..cargar(),
+            ),
+          ],
+          child: const Cascaron(),
+        );
+      },
+    );
+  }
+}
+
+class _PantallaErrorArranque extends StatelessWidget {
+  const _PantallaErrorArranque({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                'No se pudieron abrir tus datos',
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'La información sigue guardada en el dispositivo, pero la app '
+                'no puede leerla en este momento.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
