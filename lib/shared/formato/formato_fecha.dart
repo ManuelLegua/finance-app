@@ -37,7 +37,8 @@ abstract final class FormatoFecha {
   static String diaYMes(DateTime fecha) => _diaYMes.format(fecha);
 
   /// `agosto 2026`. Para encabezados y el selector de mes.
-  static String mesLargo(Mes mes) => '${_nombresDeMes[mes.mes - 1]} ${mes.anio}';
+  static String mesLargo(Mes mes) =>
+      '${_nombresDeMes[mes.mes - 1]} ${mes.anio}';
 
   /// `Agosto 2026`, con inicial mayúscula, para títulos.
   static String mesTitulo(Mes mes) {

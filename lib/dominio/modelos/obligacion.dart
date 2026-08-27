@@ -42,15 +42,14 @@ final class Obligacion {
     Dinero? monto,
     TipoObligacion? tipo,
     bool limpiarId = false,
-  }) =>
-      Obligacion(
-        id: limpiarId ? null : (id ?? this.id),
-        mes: mes ?? this.mes,
-        nombre: nombre ?? this.nombre,
-        categoria: categoria ?? this.categoria,
-        monto: monto ?? this.monto,
-        tipo: tipo ?? this.tipo,
-      );
+  }) => Obligacion(
+    id: limpiarId ? null : (id ?? this.id),
+    mes: mes ?? this.mes,
+    nombre: nombre ?? this.nombre,
+    categoria: categoria ?? this.categoria,
+    monto: monto ?? this.monto,
+    tipo: tipo ?? this.tipo,
+  );
 
   @override
   bool operator ==(Object other) =>

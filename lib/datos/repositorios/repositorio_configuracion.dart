@@ -10,13 +10,13 @@ import 'package:sqflite/sqflite.dart';
 final class RepositorioConfiguracion {
   static const String _tabla = 'configuracion';
 
-  final Database _db;
+  final Database _conexion;
 
-  const RepositorioConfiguracion(this._db);
+  const RepositorioConfiguracion(this._conexion);
 
   Future<Configuracion> obtener() async {
     try {
-      final filas = await _db.query(_tabla, where: 'id = 1', limit: 1);
+      final filas = await _conexion.query(_tabla, where: 'id = 1', limit: 1);
       if (filas.isEmpty) {
         await guardar(Configuracion.porDefecto);
         return Configuracion.porDefecto;
@@ -31,24 +31,20 @@ final class RepositorioConfiguracion {
 
   Future<void> guardar(Configuracion config) async {
     try {
-      await _db.insert(
-        _tabla,
-        <String, Object?>{
-          'id': 1,
-          'regla': config.regla.slug,
-          'porcentaje_bp': config.porcentajeBp,
-          'dias_gracia_cierre': config.diasGraciaCierre,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await _conexion.insert(_tabla, <String, Object?>{
+        'id': 1,
+        'regla': config.regla.slug,
+        'porcentaje_bp': config.porcentajeBp,
+        'dias_gracia_cierre': config.diasGraciaCierre,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     } on Object catch (causa) {
       throw ErrorPersistencia.alGuardar('los ajustes', causa);
     }
   }
 
   static Configuracion _desdeFila(Map<String, Object?> fila) => Configuracion(
-        regla: ReglaAhorro.desdeSlug(fila['regla']! as String),
-        porcentajeBp: fila['porcentaje_bp']! as int,
-        diasGraciaCierre: fila['dias_gracia_cierre']! as int,
-      );
+    regla: ReglaAhorro.desdeSlug(fila['regla']! as String),
+    porcentajeBp: fila['porcentaje_bp']! as int,
+    diasGraciaCierre: fila['dias_gracia_cierre']! as int,
+  );
 }

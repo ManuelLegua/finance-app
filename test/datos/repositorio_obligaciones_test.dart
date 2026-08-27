@@ -12,18 +12,18 @@ import 'helper_bd.dart';
 void main() {
   setUpAll(inicializarSqfliteFfi);
 
-  late BaseDatos bd;
+  late BaseDatos baseDatos;
   late RepositorioObligaciones repo;
 
   const agosto = Mes(2026, 8);
   const julio = Mes(2026, 7);
 
   setUp(() async {
-    bd = await abrirBaseEnMemoria();
-    repo = RepositorioObligaciones(await bd.abrir());
+    baseDatos = await abrirBaseEnMemoria();
+    repo = RepositorioObligaciones(await baseDatos.abrir());
   });
 
-  tearDown(() async => bd.cerrar());
+  tearDown(() async => baseDatos.cerrar());
 
   Obligacion crear({
     Mes mes = agosto,
@@ -32,15 +32,14 @@ void main() {
     int centavos = 90000,
     TipoObligacion tipo = TipoObligacion.fija,
     int? id,
-  }) =>
-      Obligacion(
-        id: id,
-        mes: mes,
-        nombre: nombre,
-        categoria: categoria,
-        monto: Dinero.deCentavos(centavos),
-        tipo: tipo,
-      );
+  }) => Obligacion(
+    id: id,
+    mes: mes,
+    nombre: nombre,
+    categoria: categoria,
+    monto: Dinero.deCentavos(centavos),
+    tipo: tipo,
+  );
 
   group('insertar y leer', () {
     test('devuelve el id asignado', () async {
@@ -53,13 +52,13 @@ void main() {
       final obligaciones = await repo.porMes(agosto);
 
       expect(obligaciones, hasLength(1));
-      final o = obligaciones.single;
-      expect(o.nombre, 'Alquiler');
-      expect(o.categoria, Categoria.departamento);
-      expect(o.monto, const Dinero.deCentavos(90000));
-      expect(o.tipo, TipoObligacion.fija);
-      expect(o.mes, agosto);
-      expect(o.id, isNotNull);
+      final obligacion = obligaciones.single;
+      expect(obligacion.nombre, 'Alquiler');
+      expect(obligacion.categoria, Categoria.departamento);
+      expect(obligacion.monto, const Dinero.deCentavos(90000));
+      expect(obligacion.tipo, TipoObligacion.fija);
+      expect(obligacion.mes, agosto);
+      expect(obligacion.id, isNotNull);
     });
 
     test('porMes no mezcla meses', () async {
@@ -76,8 +75,10 @@ void main() {
 
     test('el monto sobrevive exacto al centavo', () async {
       await repo.insertar(crear(centavos: 123456));
-      expect((await repo.porMes(agosto)).single.monto,
-          const Dinero.deCentavos(123456));
+      expect(
+        (await repo.porMes(agosto)).single.monto,
+        const Dinero.deCentavos(123456),
+      );
     });
   });
 
@@ -99,23 +100,27 @@ void main() {
       final id = await repo.insertar(crear(centavos: 90000));
       await repo.actualizar(crear(id: id, centavos: 95000));
 
-      expect((await repo.porMes(agosto)).single.monto,
-          const Dinero.deCentavos(95000));
+      expect(
+        (await repo.porMes(agosto)).single.monto,
+        const Dinero.deCentavos(95000),
+      );
     });
 
     test('cambia nombre, categoría y tipo', () async {
       final id = await repo.insertar(crear());
-      await repo.actualizar(crear(
-        id: id,
-        nombre: 'Internet',
-        categoria: Categoria.servicios,
-        tipo: TipoObligacion.variable,
-      ));
+      await repo.actualizar(
+        crear(
+          id: id,
+          nombre: 'Internet',
+          categoria: Categoria.servicios,
+          tipo: TipoObligacion.variable,
+        ),
+      );
 
-      final o = (await repo.porMes(agosto)).single;
-      expect(o.nombre, 'Internet');
-      expect(o.categoria, Categoria.servicios);
-      expect(o.tipo, TipoObligacion.variable);
+      final obligacion = (await repo.porMes(agosto)).single;
+      expect(obligacion.nombre, 'Internet');
+      expect(obligacion.categoria, Categoria.servicios);
+      expect(obligacion.tipo, TipoObligacion.variable);
     });
 
     test('actualizar sin id es un error de programación', () async {

@@ -37,10 +37,7 @@ void main() {
     });
 
     test('meses consecutivos tienen ordinales consecutivos', () {
-      expect(
-        const Mes(2026, 12).ordinal + 1,
-        const Mes(2027, 1).ordinal,
-      );
+      expect(const Mes(2026, 12).ordinal + 1, const Mes(2027, 1).ordinal);
     });
   });
 

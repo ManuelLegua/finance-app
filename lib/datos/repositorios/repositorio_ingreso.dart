@@ -11,9 +11,9 @@ import 'package:sqflite/sqflite.dart';
 final class RepositorioIngreso {
   static const String _tabla = 'ingreso';
 
-  final Database _db;
+  final Database _conexion;
 
-  const RepositorioIngreso(this._db);
+  const RepositorioIngreso(this._conexion);
 
   /// El ingreso del mes, o `null` si no se registró.
   ///
@@ -21,7 +21,7 @@ final class RepositorioIngreso {
   /// pida registrar el ingreso, el segundo sería un sueldo de S/ 0.00.
   Future<Dinero?> obtener(Mes mes) async {
     try {
-      final filas = await _db.query(
+      final filas = await _conexion.query(
         _tabla,
         columns: ['monto_centavos'],
         where: 'mes_ordinal = ?',
@@ -37,14 +37,10 @@ final class RepositorioIngreso {
 
   Future<void> guardar(Mes mes, Dinero monto) async {
     try {
-      await _db.insert(
-        _tabla,
-        <String, Object?>{
-          'mes_ordinal': mes.ordinal,
-          'monto_centavos': monto.centavos,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await _conexion.insert(_tabla, <String, Object?>{
+        'mes_ordinal': mes.ordinal,
+        'monto_centavos': monto.centavos,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     } on Object catch (causa) {
       throw ErrorPersistencia.alGuardar('el ingreso del mes', causa);
     }
@@ -53,7 +49,7 @@ final class RepositorioIngreso {
   /// Quita el ingreso del mes. Si no había, no hace nada.
   Future<void> eliminar(Mes mes) async {
     try {
-      await _db.delete(
+      await _conexion.delete(
         _tabla,
         where: 'mes_ordinal = ?',
         whereArgs: [mes.ordinal],
@@ -66,13 +62,13 @@ final class RepositorioIngreso {
   /// Meses con ingreso registrado, en orden cronológico.
   Future<List<Mes>> mesesConIngreso() async {
     try {
-      final filas = await _db.query(
+      final filas = await _conexion.query(
         _tabla,
         columns: ['mes_ordinal'],
         orderBy: 'mes_ordinal ASC',
       );
       return filas
-          .map((f) => Mes.deOrdinal(f['mes_ordinal']! as int))
+          .map((fila) => Mes.deOrdinal(fila['mes_ordinal']! as int))
           .toList(growable: false);
     } on Object catch (causa) {
       throw ErrorPersistencia.alLeer('los meses registrados', causa);

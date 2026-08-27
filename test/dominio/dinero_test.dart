@@ -51,8 +51,10 @@ void main() {
 
     test('sumar una lista larga no acumula error', () {
       // Con double, 1000 sumas de 0.01 no dan exactamente 10.00.
-      final total = List.filled(1000, const Dinero.deCentavos(1))
-          .fold(Dinero.cero, (acc, d) => acc + d);
+      final total = List.filled(
+        1000,
+        const Dinero.deCentavos(1),
+      ).fold(Dinero.cero, (acc, d) => acc + d);
       expect(total.centavos, 1000);
     });
 

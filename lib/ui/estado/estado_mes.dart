@@ -26,9 +26,9 @@ enum TipoEscritura {
   modificar;
 
   bool permitidaPor(EstadoCierre cierre) => switch (this) {
-        TipoEscritura.crear => cierre.admiteRegistrar,
-        TipoEscritura.modificar => cierre.admiteEditar,
-      };
+    TipoEscritura.crear => cierre.admiteRegistrar,
+    TipoEscritura.modificar => cierre.admiteEditar,
+  };
 }
 
 /// Estado del mes que el usuario tiene abierto.
@@ -47,10 +47,10 @@ class EstadoMes extends ChangeNotifier {
     required RepositorioConfiguracion repoConfiguracion,
     DateTime Function()? ahora,
     Mes? mesInicial,
-  })  : _repoIngreso = repoIngreso,
-        _repoObligaciones = repoObligaciones,
-        _repoConfiguracion = repoConfiguracion,
-        _ahora = ahora ?? DateTime.now {
+  }) : _repoIngreso = repoIngreso,
+       _repoObligaciones = repoObligaciones,
+       _repoConfiguracion = repoConfiguracion,
+       _ahora = ahora ?? DateTime.now {
     _mes = mesInicial ?? Mes.deFecha(_ahora());
   }
 
@@ -83,11 +83,8 @@ class EstadoMes extends ChangeNotifier {
   /// Suma de las obligaciones guardadas. Las cuotas de deuda se suman en US4.
   Dinero get totalComprometido => totalObligaciones(_obligaciones);
 
-  EstadoCierre get estadoCierre => estadoDe(
-        _mes,
-        hoy: _ahora(),
-        diasGraciaCierre: _diasGraciaCierre,
-      );
+  EstadoCierre get estadoCierre =>
+      estadoDe(_mes, hoy: _ahora(), diasGraciaCierre: _diasGraciaCierre);
 
   bool get admiteEditar => estadoCierre.admiteEditar;
 
@@ -102,8 +99,8 @@ class EstadoMes extends ChangeNotifier {
       _diasGraciaCierre = (await _repoConfiguracion.obtener()).diasGraciaCierre;
       _ingreso = await _repoIngreso.obtener(_mes);
       _obligaciones = await _repoObligaciones.porMes(_mes);
-    } on Object catch (e) {
-      _error = _mensajeDe(e);
+    } on Object catch (error) {
+      _error = _mensajeDe(error);
     } finally {
       _cargando = false;
       notifyListeners();
@@ -120,29 +117,29 @@ class EstadoMes extends ChangeNotifier {
   Future<void> irAlMesSiguiente() => irAMes(_mes.siguiente);
 
   Future<bool> guardarIngreso(Dinero monto) => _escribir(
-        () => _repoIngreso.guardar(_mes, monto),
-        tipo: ingresoRegistrado ? TipoEscritura.modificar : TipoEscritura.crear,
-      );
+    () => _repoIngreso.guardar(_mes, monto),
+    tipo: ingresoRegistrado ? TipoEscritura.modificar : TipoEscritura.crear,
+  );
 
   Future<bool> eliminarIngreso() => _escribir(
-        () => _repoIngreso.eliminar(_mes),
-        tipo: TipoEscritura.modificar,
-      );
+    () => _repoIngreso.eliminar(_mes),
+    tipo: TipoEscritura.modificar,
+  );
 
   Future<bool> agregarObligacion(Obligacion obligacion) => _escribir(
-        () => _repoObligaciones.insertar(obligacion.copiarCon(mes: _mes)),
-        tipo: TipoEscritura.crear,
-      );
+    () => _repoObligaciones.insertar(obligacion.copiarCon(mes: _mes)),
+    tipo: TipoEscritura.crear,
+  );
 
   Future<bool> actualizarObligacion(Obligacion obligacion) => _escribir(
-        () => _repoObligaciones.actualizar(obligacion),
-        tipo: TipoEscritura.modificar,
-      );
+    () => _repoObligaciones.actualizar(obligacion),
+    tipo: TipoEscritura.modificar,
+  );
 
   Future<bool> eliminarObligacion(int id) => _escribir(
-        () => _repoObligaciones.eliminar(id),
-        tipo: TipoEscritura.modificar,
-      );
+    () => _repoObligaciones.eliminar(id),
+    tipo: TipoEscritura.modificar,
+  );
 
   /// Las obligaciones fijas del mes anterior, para que el usuario confirme o
   /// ajuste (FR-006). No guarda nada.
@@ -154,8 +151,8 @@ class EstadoMes extends ChangeNotifier {
         mesDestino: _mes,
         obligacionesMesAnterior: fijas,
       );
-    } on Object catch (e) {
-      _error = _mensajeDe(e);
+    } on Object catch (error) {
+      _error = _mensajeDe(error);
       notifyListeners();
       return const [];
     }
@@ -163,9 +160,9 @@ class EstadoMes extends ChangeNotifier {
 
   /// Confirma la precarga completa, en una sola transacción.
   Future<bool> confirmarPrecarga(List<Obligacion> propuestas) => _escribir(
-        () => _repoObligaciones.insertarLote(propuestas),
-        tipo: TipoEscritura.crear,
-      );
+    () => _repoObligaciones.insertarLote(propuestas),
+    tipo: TipoEscritura.crear,
+  );
 
   /// Ejecuta una escritura si el cierre del mes lo permite, y recarga.
   ///
@@ -185,8 +182,8 @@ class EstadoMes extends ChangeNotifier {
       await accion();
       await cargar();
       return true;
-    } on Object catch (e) {
-      _error = _mensajeDe(e);
+    } on Object catch (error) {
+      _error = _mensajeDe(error);
       notifyListeners();
       return false;
     }
@@ -200,7 +197,7 @@ class EstadoMes extends ChangeNotifier {
 
   /// La capa de datos ya tradujo el fallo a algo legible; lo demás es un
   /// defecto del software y no tiene sentido mostrárselo al usuario.
-  static String _mensajeDe(Object e) => e is ErrorPersistencia
-      ? e.mensaje
+  static String _mensajeDe(Object error) => error is ErrorPersistencia
+      ? error.mensaje
       : 'Ocurrió un problema inesperado. Volvé a intentarlo.';
 }

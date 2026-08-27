@@ -17,10 +17,10 @@ void inicializarSqfliteFfi() {
 ///
 /// Cada prueba recibe una base limpia: nada se filtra de un test al siguiente.
 Future<BaseDatos> abrirBaseEnMemoria() async {
-  final bd = BaseDatos(
+  final baseDatos = BaseDatos(
     rutaOverride: inMemoryDatabasePath,
     factoryOverride: databaseFactoryFfi,
   );
-  await bd.abrir();
-  return bd;
+  await baseDatos.abrir();
+  return baseDatos;
 }

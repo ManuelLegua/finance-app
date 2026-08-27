@@ -19,10 +19,10 @@ final class ErrorPersistencia implements Exception {
   /// sigue ahí. Y como esta versión no tiene respaldo ni exportación, esa
   /// confusión no tiene vuelta atrás.
   factory ErrorPersistencia.alAbrir(Object causa) => ErrorPersistencia(
-        'No se pudieron abrir tus datos. La información sigue guardada en el '
-        'dispositivo, pero la app no puede leerla en este momento.',
-        causa,
-      );
+    'No se pudieron abrir tus datos. La información sigue guardada en el '
+    'dispositivo, pero la app no puede leerla en este momento.',
+    causa,
+  );
 
   factory ErrorPersistencia.alGuardar(String que, Object causa) =>
       ErrorPersistencia('No se pudo guardar $que.', causa);
@@ -36,6 +36,7 @@ final class ErrorPersistencia implements Exception {
       ErrorPersistencia(mensaje);
 
   @override
-  String toString() => 'ErrorPersistencia: $mensaje'
+  String toString() =>
+      'ErrorPersistencia: $mensaje'
       '${detalle == null ? '' : ' (causa: $detalle)'}';
 }

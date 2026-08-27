@@ -12,27 +12,27 @@ import 'package:sqflite/sqflite.dart';
 final class RepositorioObligaciones {
   static const String _tabla = 'obligacion';
 
-  final Database _db;
+  final Database _conexion;
 
-  const RepositorioObligaciones(this._db);
+  const RepositorioObligaciones(this._conexion);
 
   Future<List<Obligacion>> porMes(Mes mes) => _consultar(
-        where: 'mes_ordinal = ?',
-        whereArgs: [mes.ordinal],
-        que: 'las obligaciones del mes',
-      );
+    where: 'mes_ordinal = ?',
+    whereArgs: [mes.ordinal],
+    que: 'las obligaciones del mes',
+  );
 
   /// Solo las fijas: es el insumo de la precarga del mes siguiente (FR-006).
   Future<List<Obligacion>> fijasDeMes(Mes mes) => _consultar(
-        where: 'mes_ordinal = ? AND tipo = ?',
-        whereArgs: [mes.ordinal, TipoObligacion.fija.slug],
-        que: 'las obligaciones fijas',
-      );
+    where: 'mes_ordinal = ? AND tipo = ?',
+    whereArgs: [mes.ordinal, TipoObligacion.fija.slug],
+    que: 'las obligaciones fijas',
+  );
 
   /// Inserta y devuelve el id asignado.
   Future<int> insertar(Obligacion obligacion) async {
     try {
-      return await _db.insert(_tabla, _aFila(obligacion));
+      return await _conexion.insert(_tabla, _aFila(obligacion));
     } on Object catch (causa) {
       throw ErrorPersistencia.alGuardar(
         'la obligación "${obligacion.nombre}"',
@@ -48,9 +48,9 @@ final class RepositorioObligaciones {
   Future<void> insertarLote(List<Obligacion> obligaciones) async {
     if (obligaciones.isEmpty) return;
     try {
-      await _db.transaction((txn) async {
+      await _conexion.transaction((transaccionBd) async {
         for (final obligacion in obligaciones) {
-          await txn.insert(_tabla, _aFila(obligacion));
+          await transaccionBd.insert(_tabla, _aFila(obligacion));
         }
       });
     } on Object catch (causa) {
@@ -72,7 +72,7 @@ final class RepositorioObligaciones {
       );
     }
     try {
-      await _db.update(
+      await _conexion.update(
         _tabla,
         _aFila(obligacion),
         where: 'id = ?',
@@ -88,7 +88,7 @@ final class RepositorioObligaciones {
 
   Future<void> eliminar(int id) async {
     try {
-      await _db.delete(_tabla, where: 'id = ?', whereArgs: [id]);
+      await _conexion.delete(_tabla, where: 'id = ?', whereArgs: [id]);
     } on Object catch (causa) {
       throw ErrorPersistencia.alGuardar('el cambio en el presupuesto', causa);
     }
@@ -100,7 +100,7 @@ final class RepositorioObligaciones {
     required String que,
   }) async {
     try {
-      final filas = await _db.query(
+      final filas = await _conexion.query(
         _tabla,
         where: where,
         whereArgs: whereArgs,
@@ -112,20 +112,21 @@ final class RepositorioObligaciones {
     }
   }
 
-  static Map<String, Object?> _aFila(Obligacion o) => <String, Object?>{
-        'mes_ordinal': o.mes.ordinal,
-        'nombre': o.nombre,
-        'categoria': o.categoria.slug,
-        'monto_centavos': o.monto.centavos,
-        'tipo': o.tipo.slug,
+  static Map<String, Object?> _aFila(Obligacion obligacion) =>
+      <String, Object?>{
+        'mes_ordinal': obligacion.mes.ordinal,
+        'nombre': obligacion.nombre,
+        'categoria': obligacion.categoria.slug,
+        'monto_centavos': obligacion.monto.centavos,
+        'tipo': obligacion.tipo.slug,
       };
 
   static Obligacion _desdeFila(Map<String, Object?> fila) => Obligacion(
-        id: fila['id']! as int,
-        mes: Mes.deOrdinal(fila['mes_ordinal']! as int),
-        nombre: fila['nombre']! as String,
-        categoria: Categoria.desdeSlug(fila['categoria']! as String),
-        monto: Dinero.deCentavos(fila['monto_centavos']! as int),
-        tipo: TipoObligacion.desdeSlug(fila['tipo']! as String),
-      );
+    id: fila['id']! as int,
+    mes: Mes.deOrdinal(fila['mes_ordinal']! as int),
+    nombre: fila['nombre']! as String,
+    categoria: Categoria.desdeSlug(fila['categoria']! as String),
+    monto: Dinero.deCentavos(fila['monto_centavos']! as int),
+    tipo: TipoObligacion.desdeSlug(fila['tipo']! as String),
+  );
 }

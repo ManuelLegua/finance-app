@@ -37,12 +37,11 @@ final class Configuracion {
     ReglaAhorro? regla,
     int? porcentajeBp,
     int? diasGraciaCierre,
-  }) =>
-      Configuracion(
-        regla: regla ?? this.regla,
-        porcentajeBp: porcentajeBp ?? this.porcentajeBp,
-        diasGraciaCierre: diasGraciaCierre ?? this.diasGraciaCierre,
-      );
+  }) => Configuracion(
+    regla: regla ?? this.regla,
+    porcentajeBp: porcentajeBp ?? this.porcentajeBp,
+    diasGraciaCierre: diasGraciaCierre ?? this.diasGraciaCierre,
+  );
 
   @override
   bool operator ==(Object other) =>

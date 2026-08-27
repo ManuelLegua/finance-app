@@ -21,10 +21,12 @@ class AvisoMesCerrado extends StatelessWidget {
 
     final esGracia = estado.situacion == SituacionMes.enGracia;
     final esquema = Theme.of(context).colorScheme;
-    final fondo =
-        esGracia ? esquema.tertiaryContainer : esquema.surfaceContainerHighest;
-    final texto =
-        esGracia ? esquema.onTertiaryContainer : esquema.onSurfaceVariant;
+    final fondo = esGracia
+        ? esquema.tertiaryContainer
+        : esquema.surfaceContainerHighest;
+    final texto = esGracia
+        ? esquema.onTertiaryContainer
+        : esquema.onSurfaceVariant;
 
     return Card(
       color: fondo,
@@ -46,17 +48,13 @@ class AvisoMesCerrado extends StatelessWidget {
                 children: [
                   Text(
                     esGracia ? 'Plazo para pagos rezagados' : 'Mes cerrado',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
+                    style: Theme.of(context).textTheme.titleSmall
                         ?.copyWith(color: texto),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     motivo,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
+                    style: Theme.of(context).textTheme.bodySmall
                         ?.copyWith(color: texto),
                   ),
                 ],

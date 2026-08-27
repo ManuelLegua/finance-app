@@ -112,5 +112,5 @@ Iterable<File> _archivosDart(Directory directorio) {
   return directorio
       .listSync(recursive: true)
       .whereType<File>()
-      .where((f) => f.path.endsWith('.dart'));
+      .where((archivo) => archivo.path.endsWith('.dart'));
 }

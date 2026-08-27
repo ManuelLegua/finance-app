@@ -16,8 +16,7 @@ final class Mes implements Comparable<Mes> {
     : assert(mes >= 1 && mes <= 12, 'El mes debe estar entre 1 y 12');
 
   /// Reconstruye un mes desde su ordinal persistido.
-  factory Mes.deOrdinal(int ordinal) =>
-      Mes(ordinal ~/ 12, ordinal % 12 + 1);
+  factory Mes.deOrdinal(int ordinal) => Mes(ordinal ~/ 12, ordinal % 12 + 1);
 
   /// El mes al que pertenece una fecha. El día se descarta.
   ///

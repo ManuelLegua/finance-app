@@ -11,7 +11,7 @@ import 'package:sqflite/sqflite.dart';
 final class BaseDatos {
   static const String nombreArchivo = 'finanzas.db';
 
-  Database? _db;
+  Database? _conexion;
 
   /// Ruta explícita, para las pruebas (`:memory:`). En la app queda `null` y
   /// la ruta la resuelve `getDatabasesPath()`.
@@ -23,18 +23,19 @@ final class BaseDatos {
 
   BaseDatos({this.rutaOverride, this.factoryOverride});
 
-  bool get estaAbierta => _db != null;
+  bool get estaAbierta => _conexion != null;
 
   Future<Database> abrir() async {
-    final abierta = _db;
+    final abierta = _conexion;
     if (abierta != null) return abierta;
 
     try {
       final fabrica = factoryOverride ?? databaseFactory;
-      final ruta = rutaOverride ??
+      final ruta =
+          rutaOverride ??
           p.join(await fabrica.getDatabasesPath(), nombreArchivo);
 
-      _db = await fabrica.openDatabase(
+      _conexion = await fabrica.openDatabase(
         ruta,
         options: OpenDatabaseOptions(
           version: Esquema.version,
@@ -43,7 +44,7 @@ final class BaseDatos {
           onUpgrade: _migrar,
         ),
       );
-      return _db!;
+      return _conexion!;
     } on Object catch (causa) {
       // Se propaga envuelto a propósito. Arrancar con una base vacía haría
       // creer al usuario que perdió su historial cuando el archivo sigue ahí.
@@ -52,24 +53,24 @@ final class BaseDatos {
   }
 
   Future<void> cerrar() async {
-    await _db?.close();
-    _db = null;
+    await _conexion?.close();
+    _conexion = null;
   }
 
   /// SQLite no activa las claves foráneas por defecto, y hay que hacerlo en
   /// **cada** conexión, no una sola vez al crear.
-  static Future<void> _configurar(Database db) async {
-    await db.execute('PRAGMA foreign_keys = ON');
+  static Future<void> _configurar(Database conexion) async {
+    await conexion.execute('PRAGMA foreign_keys = ON');
   }
 
-  static Future<void> _crear(Database db, int version) async {
-    final lote = db.batch();
+  static Future<void> _crear(Database conexion, int version) async {
+    final lote = conexion.batch();
     for (final sentencia in Esquema.creacion) {
       lote.execute(sentencia);
     }
     await lote.commit(noResult: true);
   }
 
-  static Future<void> _migrar(Database db, int desde, int hasta) =>
-      Migraciones.aplicar(db, desde: desde, hasta: hasta);
+  static Future<void> _migrar(Database conexion, int desde, int hasta) =>
+      Migraciones.aplicar(conexion, desde: desde, hasta: hasta);
 }

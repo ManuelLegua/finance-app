@@ -34,9 +34,7 @@ class CampoMonto extends StatelessWidget {
       controller: controlador,
       autofocus: autofocus,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
-      ],
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))],
       textInputAction: TextInputAction.done,
       onFieldSubmitted: (_) => onSubmitted?.call(),
       style: Theme.of(context).textTheme.monto,

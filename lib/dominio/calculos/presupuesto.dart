@@ -119,24 +119,24 @@ String? _normalizarSeparadores(String texto) {
 List<Obligacion> proponerFijasDelMesAnterior({
   required Mes mesDestino,
   required List<Obligacion> obligacionesMesAnterior,
-}) =>
-    obligacionesMesAnterior
-        .where((o) => o.tipo == TipoObligacion.fija)
-        .map((o) => o.copiarCon(mes: mesDestino, limpiarId: true))
-        .toList(growable: false);
+}) => obligacionesMesAnterior
+    .where((obligacion) => obligacion.tipo == TipoObligacion.fija)
+    .map((obligacion) => obligacion.copiarCon(mes: mesDestino, limpiarId: true))
+    .toList(growable: false);
 
 /// Suma de las obligaciones guardadas. **No incluye las cuotas de deuda**:
 /// esas las agrega `calcularResumenMes` en US4, derivándolas (D3).
 Dinero totalObligaciones(List<Obligacion> obligaciones) => obligaciones.fold(
-      Dinero.cero,
-      (acumulado, o) => acumulado + o.monto,
-    );
+  Dinero.cero,
+  (acumulado, obligacion) => acumulado + obligacion.monto,
+);
 
 /// Total por categoría, para las fichas del resumen.
 Map<Categoria, Dinero> totalPorCategoria(List<Obligacion> obligaciones) {
   final totales = <Categoria, Dinero>{};
-  for (final o in obligaciones) {
-    totales[o.categoria] = (totales[o.categoria] ?? Dinero.cero) + o.monto;
+  for (final obligacion in obligaciones) {
+    final acumulado = totales[obligacion.categoria] ?? Dinero.cero;
+    totales[obligacion.categoria] = acumulado + obligacion.monto;
   }
   return totales;
 }

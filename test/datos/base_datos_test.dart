@@ -13,57 +13,63 @@ import 'helper_bd.dart';
 void main() {
   setUpAll(inicializarSqfliteFfi);
 
-  late BaseDatos bd;
-  late Database db;
+  late BaseDatos baseDatos;
+  late Database conexion;
 
   setUp(() async {
-    bd = await abrirBaseEnMemoria();
-    db = await bd.abrir();
+    baseDatos = await abrirBaseEnMemoria();
+    conexion = await baseDatos.abrir();
   });
 
   tearDown(() async {
-    await bd.cerrar();
+    await baseDatos.cerrar();
   });
 
   group('creación del esquema', () {
     test('crea las ocho tablas de data-model.md', () async {
-      final filas = await db.query(
+      final filas = await conexion.query(
         'sqlite_master',
         columns: ['name'],
         where: "type = 'table' AND name NOT LIKE 'sqlite_%'",
       );
-      final tablas = filas.map((f) => f['name']! as String).toSet();
+      final tablas = filas.map((fila) => fila['name']! as String).toSet();
 
-      expect(tablas, containsAll(<String>[
-        'ingreso',
-        'obligacion',
-        'transaccion',
-        'tarjeta',
-        'deuda',
-        'aporte_ahorro',
-        'meta_ahorro',
-        'configuracion',
-      ]));
+      expect(
+        tablas,
+        containsAll(<String>[
+          'ingreso',
+          'obligacion',
+          'transaccion',
+          'tarjeta',
+          'deuda',
+          'aporte_ahorro',
+          'meta_ahorro',
+          'configuracion',
+        ]),
+      );
     });
 
     test('crea los índices por mes, que sostienen las consultas', () async {
-      final filas = await db.query(
+      final filas = await conexion.query(
         'sqlite_master',
         columns: ['name'],
         where: "type = 'index' AND name LIKE 'idx_%'",
       );
-      final indices = filas.map((f) => f['name']! as String).toSet();
+      final indices = filas.map((fila) => fila['name']! as String).toSet();
 
-      expect(indices, containsAll(<String>[
-        'idx_obligacion_mes',
-        'idx_transaccion_mes',
-        'idx_deuda_tarjeta',
-        'idx_aporte_mes',
-      ]));
+      expect(
+        indices,
+        containsAll(<String>[
+          'idx_obligacion_mes',
+          'idx_transaccion_mes',
+          'idx_deuda_tarjeta',
+          'idx_aporte_mes',
+        ]),
+      );
     });
 
     test('la versión del esquema queda en 1', () async {
-      final version = await db.getVersion();
+      final version = await conexion.getVersion();
       expect(version, 1);
       expect(version, Esquema.version);
     });
@@ -71,13 +77,13 @@ void main() {
 
   group('integridad', () {
     test('las claves foráneas están activas en la conexión', () async {
-      final filas = await db.rawQuery('PRAGMA foreign_keys');
+      final filas = await conexion.rawQuery('PRAGMA foreign_keys');
       expect(filas.first.values.first, 1);
     });
 
     test('una deuda no puede apuntar a una tarjeta inexistente', () async {
       expect(
-        () => db.insert('deuda', <String, Object?>{
+        () => conexion.insert('deuda', <String, Object?>{
           'descripcion': 'Celular',
           'tarjeta_id': 999,
           'cuota_centavos': 15000,
@@ -90,14 +96,14 @@ void main() {
 
     test('los montos en cero o negativos se rechazan', () async {
       expect(
-        () => db.insert('ingreso', <String, Object?>{
+        () => conexion.insert('ingreso', <String, Object?>{
           'mes_ordinal': 24319,
           'monto_centavos': 0,
         }),
         throwsA(isA<DatabaseException>()),
       );
       expect(
-        () => db.insert('ingreso', <String, Object?>{
+        () => conexion.insert('ingreso', <String, Object?>{
           'mes_ordinal': 24319,
           'monto_centavos': -100,
         }),
@@ -106,13 +112,13 @@ void main() {
     });
 
     test('una deuda necesita al menos una cuota', () async {
-      final tarjetaId = await db.insert('tarjeta', <String, Object?>{
+      final tarjetaId = await conexion.insert('tarjeta', <String, Object?>{
         'nombre': 'BCP Visa',
         'entidad': 'BCP',
         'tipo': 'credito',
       });
       expect(
-        () => db.insert('deuda', <String, Object?>{
+        () => conexion.insert('deuda', <String, Object?>{
           'descripcion': 'Celular',
           'tarjeta_id': tarjetaId,
           'cuota_centavos': 15000,
@@ -125,7 +131,7 @@ void main() {
 
     test('el tipo de tarjeta es un conjunto cerrado', () async {
       expect(
-        () => db.insert('tarjeta', <String, Object?>{
+        () => conexion.insert('tarjeta', <String, Object?>{
           'nombre': 'Rara',
           'entidad': 'BCP',
           'tipo': 'prepago',
@@ -135,14 +141,14 @@ void main() {
     });
 
     test('la configuración admite una sola fila', () async {
-      await db.insert('configuracion', <String, Object?>{
+      await conexion.insert('configuracion', <String, Object?>{
         'id': 1,
         'regla': 'porcentaje',
         'porcentaje_bp': 2000,
         'dias_gracia_cierre': 5,
       });
       expect(
-        () => db.insert('configuracion', <String, Object?>{
+        () => conexion.insert('configuracion', <String, Object?>{
           'id': 2,
           'regla': 'remanente',
           'porcentaje_bp': 0,
@@ -153,11 +159,11 @@ void main() {
     });
 
     test('los montos se guardan como enteros, nunca como REAL', () async {
-      await db.insert('ingreso', <String, Object?>{
+      await conexion.insert('ingreso', <String, Object?>{
         'mes_ordinal': 24319,
         'monto_centavos': 300000,
       });
-      final filas = await db.rawQuery(
+      final filas = await conexion.rawQuery(
         'SELECT typeof(monto_centavos) AS t FROM ingreso',
       );
       expect(filas.first['t'], 'integer');
@@ -166,7 +172,7 @@ void main() {
 
   group('configuración por defecto', () {
     test('se crea sola con 20% y 5 días de gracia', () async {
-      final repo = RepositorioConfiguracion(db);
+      final repo = RepositorioConfiguracion(conexion);
       final config = await repo.obtener();
 
       expect(config.regla, ReglaAhorro.porcentajeIngreso);
@@ -176,7 +182,7 @@ void main() {
     });
 
     test('lo guardado se relee igual', () async {
-      final repo = RepositorioConfiguracion(db);
+      final repo = RepositorioConfiguracion(conexion);
       await repo.guardar(
         Configuracion.porDefecto.copiarCon(
           regla: ReglaAhorro.remanente,
@@ -198,26 +204,28 @@ void main() {
     test('preservan los datos existentes', () async {
       // Simula un salto de versión con un paso aditivo, que es la única forma
       // admitida: nunca se borra ni se recrea una tabla con datos (D10).
-      await db.insert('ingreso', <String, Object?>{
+      await conexion.insert('ingreso', <String, Object?>{
         'mes_ordinal': 24319,
         'monto_centavos': 300000,
       });
 
-      await db.execute('ALTER TABLE ingreso ADD COLUMN nota TEXT');
+      await conexion.execute('ALTER TABLE ingreso ADD COLUMN nota TEXT');
 
-      final filas = await db.query('ingreso');
+      final filas = await conexion.query('ingreso');
       expect(filas, hasLength(1));
       expect(filas.first['monto_centavos'], 300000);
       expect(filas.first['nota'], isNull);
     });
 
-    test('una versión sin migración definida falla en vez de romper datos',
-        () async {
-      await expectLater(
-        Migraciones.aplicar(db, desde: 1, hasta: 2),
-        throwsA(isA<StateError>()),
-      );
-    });
+    test(
+      'una versión sin migración definida falla en vez de romper datos',
+      () async {
+        await expectLater(
+          Migraciones.aplicar(conexion, desde: 1, hasta: 2),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
   });
 
   group('apertura fallida', () {

@@ -10,14 +10,21 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('formato básico', () {
     test('agrupa miles y siempre muestra dos decimales', () {
-      expect(FormatoSoles.formatear(const Dinero.deCentavos(123456)),
-          r'S/ 1,234.56');
+      expect(
+        FormatoSoles.formatear(const Dinero.deCentavos(123456)),
+        r'S/ 1,234.56',
+      );
     });
 
     test('montos menores a mil no llevan separador', () {
-      expect(FormatoSoles.formatear(const Dinero.deCentavos(4500)), r'S/ 45.00');
-      expect(FormatoSoles.formatear(const Dinero.deCentavos(99999)),
-          r'S/ 999.99');
+      expect(
+        FormatoSoles.formatear(const Dinero.deCentavos(4500)),
+        r'S/ 45.00',
+      );
+      expect(
+        FormatoSoles.formatear(const Dinero.deCentavos(99999)),
+        r'S/ 999.99',
+      );
     });
 
     test('cero se muestra como S/ 0.00, no vacío', () {
@@ -38,8 +45,10 @@ void main() {
 
   group('negativos', () {
     test('el signo va antes del símbolo', () {
-      expect(FormatoSoles.formatear(const Dinero.deCentavos(-35000)),
-          r'-S/ 350.00');
+      expect(
+        FormatoSoles.formatear(const Dinero.deCentavos(-35000)),
+        r'-S/ 350.00',
+      );
     });
 
     test('negativo de céntimos', () {
@@ -50,24 +59,34 @@ void main() {
   group('límites de tamaño', () {
     test('siete cifras enteras se agrupan correctamente', () {
       // Edge case "montos grandes" de la spec.
-      expect(FormatoSoles.formatear(const Dinero.deCentavos(999999999)),
-          r'S/ 9,999,999.99');
+      expect(
+        FormatoSoles.formatear(const Dinero.deCentavos(999999999)),
+        r'S/ 9,999,999.99',
+      );
     });
 
     test('el salto a cada grupo de miles', () {
-      expect(FormatoSoles.formatear(const Dinero.deCentavos(100000)),
-          r'S/ 1,000.00');
-      expect(FormatoSoles.formatear(const Dinero.deCentavos(100000000)),
-          r'S/ 1,000,000.00');
+      expect(
+        FormatoSoles.formatear(const Dinero.deCentavos(100000)),
+        r'S/ 1,000.00',
+      );
+      expect(
+        FormatoSoles.formatear(const Dinero.deCentavos(100000000)),
+        r'S/ 1,000,000.00',
+      );
     });
   });
 
   group('sin símbolo', () {
     test('devuelve solo la cifra, para columnas ya rotuladas', () {
-      expect(FormatoSoles.formatearSinSimbolo(const Dinero.deCentavos(123456)),
-          '1,234.56');
-      expect(FormatoSoles.formatearSinSimbolo(const Dinero.deCentavos(-100)),
-          '-1.00');
+      expect(
+        FormatoSoles.formatearSinSimbolo(const Dinero.deCentavos(123456)),
+        '1,234.56',
+      );
+      expect(
+        FormatoSoles.formatearSinSimbolo(const Dinero.deCentavos(-100)),
+        '-1.00',
+      );
     });
   });
 
@@ -79,8 +98,10 @@ void main() {
     });
 
     test('una suma larga de céntimos se muestra exacta', () {
-      final total = List.filled(1000, const Dinero.deCentavos(1))
-          .fold(Dinero.cero, (acc, d) => acc + d);
+      final total = List.filled(
+        1000,
+        const Dinero.deCentavos(1),
+      ).fold(Dinero.cero, (acc, d) => acc + d);
       expect(FormatoSoles.formatear(total), r'S/ 10.00');
     });
   });

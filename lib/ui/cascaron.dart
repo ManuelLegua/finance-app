@@ -59,8 +59,8 @@ class _CascaronState extends State<Cascaron> {
 
     return Scaffold(
       appBar: AppBar(title: Text(actual.etiqueta)),
-      body: actual.pantalla ??
-          _EnConstruccion(pendiente: actual.pendiente ?? ''),
+      body:
+          actual.pantalla ?? _EnConstruccion(pendiente: actual.pendiente ?? ''),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _destino,
         onDestinationSelected: (indice) => setState(() => _destino = indice),
@@ -112,8 +112,7 @@ class _EnConstruccion extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.construction_outlined,
-                size: 48, color: esquema.outline),
+            Icon(Icons.construction_outlined, size: 48, color: esquema.outline),
             const SizedBox(height: 16),
             Text(
               'Todavía no construido',
@@ -123,9 +122,7 @@ class _EnConstruccion extends StatelessWidget {
             Text(
               pendiente,
               textAlign: TextAlign.center,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
+              style: Theme.of(context).textTheme.bodyMedium
                   ?.copyWith(color: esquema.onSurfaceVariant),
             ),
           ],

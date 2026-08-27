@@ -9,10 +9,10 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('validarMonto', () {
     test('acepta un monto normal', () {
-      final r = validarMonto('900.00');
-      expect(r.esValido, isTrue);
-      expect(r.monto, const Dinero.deCentavos(90000));
-      expect(r.error, isNull);
+      final resultado = validarMonto('900.00');
+      expect(resultado.esValido, isTrue);
+      expect(resultado.monto, const Dinero.deCentavos(90000));
+      expect(resultado.error, isNull);
     });
 
     test('acepta sin decimales y con un solo decimal', () {
@@ -30,11 +30,11 @@ void main() {
     });
 
     test('rechaza vacío indicando el motivo', () {
-      final r = validarMonto('');
-      expect(r.esValido, isFalse);
-      expect(r.monto, isNull);
-      expect(r.error, isNotNull);
-      expect(r.error, contains('monto'));
+      final resultado = validarMonto('');
+      expect(resultado.esValido, isFalse);
+      expect(resultado.monto, isNull);
+      expect(resultado.error, isNotNull);
+      expect(resultado.error, contains('monto'));
     });
 
     test('rechaza solo espacios', () {
@@ -42,45 +42,47 @@ void main() {
     });
 
     test('rechaza texto no numérico', () {
-      final r = validarMonto('novecientos');
-      expect(r.esValido, isFalse);
-      expect(r.error, isNotNull);
+      final resultado = validarMonto('novecientos');
+      expect(resultado.esValido, isFalse);
+      expect(resultado.error, isNotNull);
     });
 
     test('rechaza negativos (FR-005)', () {
-      final r = validarMonto('-50');
-      expect(r.esValido, isFalse);
-      expect(r.error, contains('negativo'));
+      final resultado = validarMonto('-50');
+      expect(resultado.esValido, isFalse);
+      expect(resultado.error, contains('negativo'));
     });
 
     test('rechaza cero: una obligación de S/ 0.00 no es una obligación', () {
-      final r = validarMonto('0');
-      expect(r.esValido, isFalse);
+      final resultado = validarMonto('0');
+      expect(resultado.esValido, isFalse);
     });
 
     test('rechaza más de dos decimales', () {
-      final r = validarMonto('10.005');
-      expect(r.esValido, isFalse);
-      expect(r.error, contains('decimales'));
+      final resultado = validarMonto('10.005');
+      expect(resultado.esValido, isFalse);
+      expect(resultado.error, contains('decimales'));
     });
 
     test('acepta hasta siete cifras enteras', () {
-      final r = validarMonto('9999999.99');
-      expect(r.esValido, isTrue);
-      expect(r.monto, const Dinero.deCentavos(999999999));
+      final resultado = validarMonto('9999999.99');
+      expect(resultado.esValido, isTrue);
+      expect(resultado.monto, const Dinero.deCentavos(999999999));
     });
 
     test('rechaza más de siete cifras enteras', () {
-      final r = validarMonto('10000000.00');
-      expect(r.esValido, isFalse);
+      final resultado = validarMonto('10000000.00');
+      expect(resultado.esValido, isFalse);
     });
 
     test('no pierde centavos en montos con decimales exactos', () {
       // El caso que rompería si el parseo pasara por double.
       expect(validarMonto('0.10').monto, const Dinero.deCentavos(10));
       expect(validarMonto('0.20').monto, const Dinero.deCentavos(20));
-      expect(validarMonto('1234567.89').monto,
-          const Dinero.deCentavos(123456789));
+      expect(
+        validarMonto('1234567.89').monto,
+        const Dinero.deCentavos(123456789),
+      );
     });
   });
 
@@ -108,14 +110,19 @@ void main() {
       );
 
       expect(propuestas, hasLength(2));
-      expect(propuestas.map((o) => o.nombre), ['Alquiler', 'Luz']);
+      expect(propuestas.map((obligacion) => obligacion.nombre), [
+        'Alquiler',
+        'Luz',
+      ]);
       expect(propuestas.first.monto, const Dinero.deCentavos(90000));
     });
 
     test('las propuestas apuntan al mes destino, no al anterior', () {
       final propuestas = proponerFijasDelMesAnterior(
         mesDestino: agosto,
-        obligacionesMesAnterior: [crear('Alquiler', 90000, TipoObligacion.fija)],
+        obligacionesMesAnterior: [
+          crear('Alquiler', 90000, TipoObligacion.fija),
+        ],
       );
       expect(propuestas.single.mes, agosto);
     });
@@ -124,7 +131,9 @@ void main() {
       // FR-006: la app propone, el usuario confirma. Nunca escribe sola.
       final propuestas = proponerFijasDelMesAnterior(
         mesDestino: agosto,
-        obligacionesMesAnterior: [crear('Alquiler', 90000, TipoObligacion.fija)],
+        obligacionesMesAnterior: [
+          crear('Alquiler', 90000, TipoObligacion.fija),
+        ],
       );
       expect(propuestas.single.id, isNull);
     });
@@ -174,13 +183,13 @@ void main() {
     const agosto = Mes(2026, 8);
 
     Obligacion crear(int centavos) => Obligacion(
-          id: null,
-          mes: agosto,
-          nombre: 'x',
-          categoria: Categoria.otros,
-          monto: Dinero.deCentavos(centavos),
-          tipo: TipoObligacion.fija,
-        );
+      id: null,
+      mes: agosto,
+      nombre: 'x',
+      categoria: Categoria.otros,
+      monto: Dinero.deCentavos(centavos),
+      tipo: TipoObligacion.fija,
+    );
 
     test('suma las obligaciones del mes', () {
       final total = totalObligaciones([

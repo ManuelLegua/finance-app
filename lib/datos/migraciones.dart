@@ -20,7 +20,7 @@ abstract final class Migraciones {
 
   /// Aplica los pasos necesarios para ir de [desde] a [hasta].
   static Future<void> aplicar(
-    DatabaseExecutor db, {
+    DatabaseExecutor conexion, {
     required int desde,
     required int hasta,
   }) async {
@@ -34,7 +34,7 @@ abstract final class Migraciones {
         );
       }
       for (final sentencia in sentencias) {
-        await db.execute(sentencia);
+        await conexion.execute(sentencia);
       }
     }
   }

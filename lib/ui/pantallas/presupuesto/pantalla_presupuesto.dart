@@ -69,13 +69,13 @@ class _PantallaPresupuestoState extends State<PantallaPresupuesto> {
     if (monto != null) await estado.guardarIngreso(monto);
   }
 
-  Future<void> _abrirFormulario(EstadoMes estado, [Obligacion? original]) async {
+  Future<void> _abrirFormulario(
+    EstadoMes estado, [
+    Obligacion? original,
+  ]) async {
     final resultado = await showDialog<Obligacion>(
       context: context,
-      builder: (_) => FormularioObligacion(
-        mes: estado.mes,
-        original: original,
-      ),
+      builder: (_) => FormularioObligacion(mes: estado.mes, original: original),
     );
     if (resultado == null) return;
 
@@ -115,8 +115,7 @@ class _PantallaPresupuestoState extends State<PantallaPresupuesto> {
                   obligacion: obligacion,
                   puedeEditar: estado.admiteEditar,
                   onEditar: () => _abrirFormulario(estado, obligacion),
-                  onEliminar: () =>
-                      estado.eliminarObligacion(obligacion.id!),
+                  onEliminar: () => estado.eliminarObligacion(obligacion.id!),
                 ),
           ],
         ),
@@ -144,7 +143,12 @@ class _TarjetaIngreso extends StatelessWidget {
     final tipografia = Theme.of(context).textTheme;
 
     return Card(
-      margin: const EdgeInsets.fromLTRB(Espaciado.normal, Espaciado.normal, Espaciado.normal, Espaciado.chico),
+      margin: const EdgeInsets.fromLTRB(
+        Espaciado.normal,
+        Espaciado.normal,
+        Espaciado.normal,
+        Espaciado.chico,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(Espaciado.normal),
         child: Column(
@@ -201,12 +205,17 @@ class _EncabezadoObligaciones extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(Espaciado.normal, Espaciado.normal, Espaciado.normal, Espaciado.chico),
-        child: Text(
-          total == 0 ? 'Obligaciones' : 'Obligaciones ($total)',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(
+      Espaciado.normal,
+      Espaciado.normal,
+      Espaciado.normal,
+      Espaciado.chico,
+    ),
+    child: Text(
+      total == 0 ? 'Obligaciones' : 'Obligaciones ($total)',
+      style: Theme.of(context).textTheme.titleMedium,
+    ),
+  );
 }
 
 class _FilaObligacion extends StatelessWidget {
@@ -266,16 +275,18 @@ class _SinObligaciones extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Espaciado.amplio, vertical: Espaciado.amplio),
-        child: Text(
-          'Todavía no cargaste obligaciones. Agregá el alquiler, los '
-          'servicios y lo que estimás gastar en el mes.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(
+      horizontal: Espaciado.amplio,
+      vertical: Espaciado.amplio,
+    ),
+    child: Text(
+      'Todavía no cargaste obligaciones. Agregá el alquiler, los '
+      'servicios y lo que estimás gastar en el mes.',
+      textAlign: TextAlign.center,
+      style: Theme.of(context).textTheme.bodyMedium
+          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+    ),
+  );
 }
 
 class _BannerError extends StatelessWidget {
@@ -288,7 +299,10 @@ class _BannerError extends StatelessWidget {
     final esquema = Theme.of(context).colorScheme;
     return Card(
       color: esquema.errorContainer,
-      margin: const EdgeInsets.symmetric(horizontal: Espaciado.normal, vertical: Espaciado.chico),
+      margin: const EdgeInsets.symmetric(
+        horizontal: Espaciado.normal,
+        vertical: Espaciado.chico,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(Espaciado.interno),
         child: Row(
@@ -326,8 +340,9 @@ class _DialogoPrecarga extends StatefulWidget {
 }
 
 class _DialogoPrecargaState extends State<_DialogoPrecarga> {
-  late final Set<int> _elegidas =
-      {for (var i = 0; i < widget.propuestas.length; i++) i};
+  late final Set<int> _elegidas = {
+    for (var i = 0; i < widget.propuestas.length; i++) i,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -369,12 +384,10 @@ class _DialogoPrecargaState extends State<_DialogoPrecarga> {
           child: const Text('Ahora no'),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(context).pop(
-            [
-              for (var i = 0; i < widget.propuestas.length; i++)
-                if (_elegidas.contains(i)) widget.propuestas[i],
-            ],
-          ),
+          onPressed: () => Navigator.of(context).pop([
+            for (var i = 0; i < widget.propuestas.length; i++)
+              if (_elegidas.contains(i)) widget.propuestas[i],
+          ]),
           child: const Text('Confirmar'),
         ),
       ],

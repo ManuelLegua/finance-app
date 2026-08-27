@@ -109,8 +109,10 @@ void main() {
     });
 
     test('no admiten registrar ni editar (FR-052)', () {
-      expect(puedeRegistrarEn(viejo, hoy: diaTres, diasGraciaCierre: 5),
-          isFalse);
+      expect(
+        puedeRegistrarEn(viejo, hoy: diaTres, diasGraciaCierre: 5),
+        isFalse,
+      );
       expect(puedeEditarEn(viejo, hoy: diaTres), isFalse);
     });
 
@@ -138,8 +140,11 @@ void main() {
     test('en enero, diciembre del año anterior entra en gracia', () {
       final dosDeEnero = DateTime(2027, 1, 2);
       expect(
-        estadoDe(const Mes(2026, 12), hoy: dosDeEnero, diasGraciaCierre: 5)
-            .situacion,
+        estadoDe(
+          const Mes(2026, 12),
+          hoy: dosDeEnero,
+          diasGraciaCierre: 5,
+        ).situacion,
         SituacionMes.enGracia,
       );
     });
@@ -147,8 +152,11 @@ void main() {
     test('en enero, noviembre ya está cerrado', () {
       final dosDeEnero = DateTime(2027, 1, 2);
       expect(
-        estadoDe(const Mes(2026, 11), hoy: dosDeEnero, diasGraciaCierre: 5)
-            .situacion,
+        estadoDe(
+          const Mes(2026, 11),
+          hoy: dosDeEnero,
+          diasGraciaCierre: 5,
+        ).situacion,
         SituacionMes.cerrado,
       );
     });

@@ -88,12 +88,10 @@ extension EstilosDeMonto on TextTheme {
   );
 
   /// Montos de una fila o ficha: obligaciones, gastos, cuotas.
-  TextStyle? get monto => titleMedium?.copyWith(
-    fontFeatures: const [FontFeature.tabularFigures()],
-  );
+  TextStyle? get monto =>
+      titleMedium?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
 
   /// Montos subordinados: totales de apoyo, restantes, diferencias.
-  TextStyle? get montoSecundario => bodyMedium?.copyWith(
-    fontFeatures: const [FontFeature.tabularFigures()],
-  );
+  TextStyle? get montoSecundario =>
+      bodyMedium?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
 }

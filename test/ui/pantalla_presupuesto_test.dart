@@ -25,7 +25,7 @@ import '../datos/helper_bd.dart';
 void main() {
   setUpAll(inicializarSqfliteFfi);
 
-  late BaseDatos bd;
+  late BaseDatos baseDatos;
   late EstadoMes estado;
 
   const agosto = Mes(2026, 8);
@@ -59,23 +59,24 @@ void main() {
   }
 
   setUp(() async {
-    bd = await abrirBaseEnMemoria();
-    final db = await bd.abrir();
+    baseDatos = await abrirBaseEnMemoria();
+    final conexion = await baseDatos.abrir();
     estado = EstadoMes(
-      repoIngreso: RepositorioIngreso(db),
-      repoObligaciones: RepositorioObligaciones(db),
-      repoConfiguracion: RepositorioConfiguracion(db),
+      repoIngreso: RepositorioIngreso(conexion),
+      repoObligaciones: RepositorioObligaciones(conexion),
+      repoConfiguracion: RepositorioConfiguracion(conexion),
       ahora: () => hoy,
       mesInicial: agosto,
     );
     await estado.cargar();
   });
 
-  tearDown(() async => bd.cerrar());
+  tearDown(() async => baseDatos.cerrar());
 
   group('ingreso', () {
-    testWidgets('un mes sin ingreso lo pide en vez de mostrar S/ 0.00',
-        (tester) async {
+    testWidgets('un mes sin ingreso lo pide en vez de mostrar S/ 0.00', (
+      tester,
+    ) async {
       await montar(tester);
 
       expect(
@@ -86,8 +87,7 @@ void main() {
       expect(find.text('Registrar'), findsOneWidget);
     });
 
-    testWidgets('con ingreso registrado lo muestra formateado',
-        (tester) async {
+    testWidgets('con ingreso registrado lo muestra formateado', (tester) async {
       await estado.guardarIngreso(const Dinero.deCentavos(300000));
       await montar(tester);
 
@@ -114,8 +114,9 @@ void main() {
       expect(estado.obligaciones, isEmpty);
     });
 
-    testWidgets('un monto negativo se rechaza indicando el motivo',
-        (tester) async {
+    testWidgets('un monto negativo se rechaza indicando el motivo', (
+      tester,
+    ) async {
       await montar(tester);
 
       await tester.tap(find.widgetWithText(FloatingActionButton, 'Obligación'));
@@ -134,8 +135,9 @@ void main() {
       expect(estado.obligaciones, isEmpty);
     });
 
-    testWidgets('un monto válido se guarda y aparece en la lista',
-        (tester) async {
+    testWidgets('un monto válido se guarda y aparece en la lista', (
+      tester,
+    ) async {
       await montar(tester);
 
       await tester.tap(find.widgetWithText(FloatingActionButton, 'Obligación'));
@@ -156,8 +158,9 @@ void main() {
   });
 
   group('categorías', () {
-    testWidgets('tarjeta de crédito no aparece entre las elegibles',
-        (tester) async {
+    testWidgets('tarjeta de crédito no aparece entre las elegibles', (
+      tester,
+    ) async {
       // Ese compromiso lo derivan las deudas: registrarlo a mano duplicaría
       // el monto del presupuesto (D3).
       await montar(tester);
@@ -175,10 +178,11 @@ void main() {
   });
 
   group('mes cerrado', () {
-    testWidgets('no ofrece acciones de escritura y explica por qué',
-        (tester) async {
-      final db = await bd.abrir();
-      await RepositorioObligaciones(db).insertar(
+    testWidgets('no ofrece acciones de escritura y explica por qué', (
+      tester,
+    ) async {
+      final conexion = await baseDatos.abrir();
+      await RepositorioObligaciones(conexion).insertar(
         const Obligacion(
           id: null,
           mes: Mes(2026, 5),

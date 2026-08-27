@@ -26,17 +26,18 @@ enum Categoria {
   ///
   /// Excluye `tarjetaCredito`: ese compromiso lo derivan las deudas en cuotas.
   /// Registrarlo a mano duplicaría el monto en el presupuesto del mes.
-  static List<Categoria> get presupuestables =>
-      values.where((c) => c != Categoria.tarjetaCredito).toList();
+  static List<Categoria> get presupuestables => values
+      .where((categoria) => categoria != Categoria.tarjetaCredito)
+      .toList();
 
   static Categoria desdeSlug(String slug) => values.firstWhere(
-        (c) => c.slug == slug,
-        orElse: () => throw ArgumentError.value(
-          slug,
-          'slug',
-          'Categoría desconocida en la base de datos',
-        ),
-      );
+    (categoria) => categoria.slug == slug,
+    orElse: () => throw ArgumentError.value(
+      slug,
+      'slug',
+      'Categoría desconocida en la base de datos',
+    ),
+  );
 }
 
 /// Distingue una obligación de monto fijo de una estimación variable (FR-004).
@@ -52,13 +53,13 @@ enum TipoObligacion {
   final String etiqueta;
 
   static TipoObligacion desdeSlug(String slug) => values.firstWhere(
-        (t) => t.slug == slug,
-        orElse: () => throw ArgumentError.value(
-          slug,
-          'slug',
-          'Tipo de obligación desconocido en la base de datos',
-        ),
-      );
+    (tipo) => tipo.slug == slug,
+    orElse: () => throw ArgumentError.value(
+      slug,
+      'slug',
+      'Tipo de obligación desconocido en la base de datos',
+    ),
+  );
 }
 
 /// Cómo se calcula el ahorro sugerido del mes (FR-031).
@@ -72,13 +73,13 @@ enum ReglaAhorro {
   final String etiqueta;
 
   static ReglaAhorro desdeSlug(String slug) => values.firstWhere(
-        (r) => r.slug == slug,
-        orElse: () => throw ArgumentError.value(
-          slug,
-          'slug',
-          'Regla de ahorro desconocida en la base de datos',
-        ),
-      );
+    (regla) => regla.slug == slug,
+    orElse: () => throw ArgumentError.value(
+      slug,
+      'slug',
+      'Regla de ahorro desconocida en la base de datos',
+    ),
+  );
 }
 
 /// Tipo de tarjeta (FR-059).
@@ -96,11 +97,11 @@ enum TipoTarjeta {
   bool get admiteCuotas => this == TipoTarjeta.credito;
 
   static TipoTarjeta desdeSlug(String slug) => values.firstWhere(
-        (t) => t.slug == slug,
-        orElse: () => throw ArgumentError.value(
-          slug,
-          'slug',
-          'Tipo de tarjeta desconocido en la base de datos',
-        ),
-      );
+    (tipo) => tipo.slug == slug,
+    orElse: () => throw ArgumentError.value(
+      slug,
+      'slug',
+      'Tipo de tarjeta desconocido en la base de datos',
+    ),
+  );
 }

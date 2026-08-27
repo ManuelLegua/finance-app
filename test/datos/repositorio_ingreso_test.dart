@@ -9,18 +9,18 @@ import 'helper_bd.dart';
 void main() {
   setUpAll(inicializarSqfliteFfi);
 
-  late BaseDatos bd;
+  late BaseDatos baseDatos;
   late RepositorioIngreso repo;
 
   const agosto = Mes(2026, 8);
   const julio = Mes(2026, 7);
 
   setUp(() async {
-    bd = await abrirBaseEnMemoria();
-    repo = RepositorioIngreso(await bd.abrir());
+    baseDatos = await abrirBaseEnMemoria();
+    repo = RepositorioIngreso(await baseDatos.abrir());
   });
 
-  tearDown(() async => bd.cerrar());
+  tearDown(() async => baseDatos.cerrar());
 
   group('obtener', () {
     test('un mes sin ingreso devuelve null, no cero', () async {
@@ -83,10 +83,11 @@ void main() {
       await repo.guardar(const Mes(2026, 6), const Dinero.deCentavos(280000));
       await repo.guardar(julio, const Dinero.deCentavos(290000));
 
-      expect(
-        await repo.mesesConIngreso(),
-        const [Mes(2026, 6), Mes(2026, 7), Mes(2026, 8)],
-      );
+      expect(await repo.mesesConIngreso(), const [
+        Mes(2026, 6),
+        Mes(2026, 7),
+        Mes(2026, 8),
+      ]);
     });
 
     test('sin ingresos devuelve lista vacía', () async {

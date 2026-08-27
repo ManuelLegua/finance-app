@@ -60,15 +60,13 @@ bool puedeRegistrarEn(
   required DateTime hoy,
   required int diasGraciaCierre,
 }) =>
-    estadoDe(mes, hoy: hoy, diasGraciaCierre: diasGraciaCierre)
-        .admiteRegistrar;
+    estadoDe(mes, hoy: hoy, diasGraciaCierre: diasGraciaCierre).admiteRegistrar;
 
 /// Si se puede **editar o eliminar** un registro de [mes].
 ///
 /// No depende de los días de gracia: la gracia habilita registrar, nunca
 /// editar (FR-056).
-bool puedeEditarEn(Mes mes, {required DateTime hoy}) =>
-    mes >= Mes.deFecha(hoy);
+bool puedeEditarEn(Mes mes, {required DateTime hoy}) => mes >= Mes.deFecha(hoy);
 
 void _validarDiasGracia(int dias) {
   if (dias < _diasGraciaMinimo || dias > _diasGraciaMaximo) {

@@ -74,8 +74,8 @@ class _ArranqueState extends State<_Arranque> {
         if (snapshot.hasError) {
           return _PantallaErrorArranque(error: snapshot.error!);
         }
-        final db = snapshot.data;
-        if (db == null) {
+        final conexion = snapshot.data;
+        if (conexion == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
@@ -84,13 +84,13 @@ class _ArranqueState extends State<_Arranque> {
         return MultiProvider(
           providers: [
             Provider<RepositorioIngreso>(
-              create: (_) => RepositorioIngreso(db),
+              create: (_) => RepositorioIngreso(conexion),
             ),
             Provider<RepositorioObligaciones>(
-              create: (_) => RepositorioObligaciones(db),
+              create: (_) => RepositorioObligaciones(conexion),
             ),
             Provider<RepositorioConfiguracion>(
-              create: (_) => RepositorioConfiguracion(db),
+              create: (_) => RepositorioConfiguracion(conexion),
             ),
             ChangeNotifierProvider<EstadoMes>(
               create: (contexto) => EstadoMes(
