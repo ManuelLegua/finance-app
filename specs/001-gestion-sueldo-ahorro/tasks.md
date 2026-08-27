@@ -31,12 +31,12 @@ Proyecto Flutter único (ver *Structure Decision* en plan.md): código en `lib/`
 
 **Propósito**: dejar el proyecto listo para trabajar, sin lógica de negocio todavía.
 
-- [ ] T001 Añadir dependencias con `flutter pub add sqflite path provider intl`, `flutter pub add --dev sqflite_common_ffi` y la entrada `flutter_localizations` del SDK, verificando el resultado en `pubspec.yaml`
-- [ ] T002 [P] Crear la estructura de directorios `lib/core/`, `lib/dominio/modelos/`, `lib/dominio/calculos/`, `lib/datos/repositorios/`, `lib/ui/estado/`, `lib/ui/pantallas/`, `lib/ui/widgets/`, `test/dominio/`, `test/datos/`, `test/ui/` según plan.md
-- [ ] T003 [P] Endurecer el análisis estático en `analysis_options.yaml`: `strict-casts`, `strict-raw-types`, y reglas de estilo del proyecto sobre `flutter_lints`
-- [ ] T004 [P] Definir el tema en `lib/ui/tema.dart` según D11: `ColorScheme.fromSeed()` de Material 3 en claro y oscuro, un `TextStyle` de montos con `fontFeatures: [FontFeature.tabularFigures()]`, y contraste AA. Sin librerías de componentes
-- [ ] T005 [P] Escribir la guarda de pureza en `test/pureza_test.dart`: recorre `lib/dominio/` y falla si algún archivo importa `package:flutter/` o `package:sqflite/` (Principio III, D8)
-- [ ] T006 Reemplazar el contador de demo en `lib/main.dart` por la raíz real: `MaterialApp` con `flutter_localizations`, `locale` fijo `es_PE`, el tema de T004 y los `Provider` raíz vacíos
+- [X] T001 Añadir dependencias con `flutter pub add sqflite path provider intl`, `flutter pub add --dev sqflite_common_ffi` y la entrada `flutter_localizations` del SDK, verificando el resultado en `pubspec.yaml`
+- [X] T002 [P] Crear la estructura de directorios `lib/core/`, `lib/dominio/modelos/`, `lib/dominio/calculos/`, `lib/datos/repositorios/`, `lib/ui/estado/`, `lib/ui/pantallas/`, `lib/ui/widgets/`, `test/dominio/`, `test/datos/`, `test/ui/` según plan.md
+- [X] T003 [P] Endurecer el análisis estático en `analysis_options.yaml`: `strict-casts`, `strict-raw-types`, y reglas de estilo del proyecto sobre `flutter_lints`
+- [X] T004 [P] Definir el tema en `lib/ui/tema.dart` según D11: `ColorScheme.fromSeed()` de Material 3 en claro y oscuro, un `TextStyle` de montos con `fontFeatures: [FontFeature.tabularFigures()]`, y contraste AA. Sin librerías de componentes
+- [X] T005 [P] Escribir la guarda de pureza en `test/pureza_test.dart`: recorre `lib/dominio/` y falla si algún archivo importa `package:flutter/` o `package:sqflite/` (Principio III, D8)
+- [X] T006 Reemplazar el contador de demo en `lib/main.dart` por la raíz real: `MaterialApp` con `flutter_localizations`, `locale` fijo `es_PE`, el tema de T004 y los `Provider` raíz vacíos
 
 **Checkpoint**: `flutter analyze` y `flutter test` corren limpios sobre un esqueleto vacío.
 
@@ -48,26 +48,26 @@ Proyecto Flutter único (ver *Structure Decision* en plan.md): código en `lib/`
 
 **⚠️ CRÍTICO**: ninguna historia puede empezar hasta terminar esta fase.
 
-- [ ] T007 [P] Escribir `test/dominio/dinero_test.dart` **antes de implementar**: aritmética entera, `porPuntosBase` con redondeo half-up, comparaciones, negativos, y ausencia de constructor desde `double`
-- [ ] T008 [P] Escribir `test/dominio/mes_test.dart` **antes de implementar**: `ordinal`, `siguiente`/`anterior`/`mas`, `diferencia`, cruce de año, rechazo de mes fuera de 1–12
-- [ ] T009 [P] Escribir `test/dominio/formato_soles_test.dart` **antes de implementar**: `S/ 1,234.56`, cero, negativos, siete cifras `S/ 9,999,999.99`, siempre dos decimales
-- [ ] T010 Implementar `lib/core/dinero.dart` hasta que T007 pase (int de centavos, D2)
-- [ ] T011 Implementar `lib/core/mes.dart` hasta que T008 pase (ordinal `anio * 12 + mes - 1`, D5)
-- [ ] T012 Implementar `lib/core/formato_soles.dart` hasta que T009 pase, formateando desde el entero sin `double` ni `NumberFormat`
-- [ ] T013 [P] Implementar `lib/core/formato_fecha.dart` con `DateFormat` de `intl` en `es_PE`
-- [ ] T014 [P] Definir `Categoria`, `TipoObligacion`, `ReglaAhorro` y `TipoTarjeta` con sus slugs de persistencia y etiquetas en español en `lib/dominio/modelos/enums.dart`
-- [ ] T015 [P] Escribir `test/dominio/cierre_mes_test.dart` **antes de implementar**: el mes en curso admite todo; el mes anterior admite registrar mientras `hoy.day <= diasGraciaCierre` pero **nunca** editar ni eliminar; con `diasGraciaCierre == 0` el mes anterior queda cerrado de inmediato; cualquier mes previo al anterior es solo lectura; `hoy` siempre entra como parámetro, sin tocar el reloj del sistema
-- [ ] T016 Implementar `estadoDe`, `puedeRegistrarEn` y `puedeEditarEn` en `lib/dominio/calculos/cierre_mes.dart` hasta que T015 pase, más el derivado `EstadoCierre` con su `motivo` legible en `lib/dominio/modelos/estado_cierre.dart` (D13, FR-058)
-- [ ] T017 [P] Crear el modelo `Configuracion` (regla de ahorro, porcentaje en puntos base, días de gracia) en `lib/dominio/modelos/configuracion.dart`
-- [ ] T018 Escribir el DDL de la versión 1 en `lib/datos/esquema.dart` copiando el esquema de data-model.md §5 (ocho tablas: `ingreso`, `obligacion`, `transaccion`, `tarjeta`, `deuda`, `aporte_ahorro`, `meta_ahorro`, `configuracion`), con sus `CHECK` e índices
-- [ ] T019 Implementar el andamiaje de migraciones incrementales en `lib/datos/migraciones.dart` (pasos v(n) → v(n+1), nunca destructivos, D10)
-- [ ] T020 Implementar `lib/datos/base_datos.dart`: apertura por `getDatabasesPath()`, `onCreate`, `onUpgrade`, `PRAGMA foreign_keys = ON` en cada conexión
-- [ ] T021 Implementar el manejo de errores de persistencia en `lib/datos/error_persistencia.dart` según [contracts/repositorios.md](./contracts/repositorios.md) §Errores: envolver las excepciones de `sqflite` con contexto legible sin exponer el SQL, no-op silencioso ante id inexistente, y propagación explícita si la base no abre — la app debe decir "no pude abrir tus datos" en vez de arrancar vacía y hacer creer que se perdió todo
-- [ ] T022 [P] Implementar `lib/datos/repositorios/repositorio_configuracion.dart` con los valores por defecto (regla `porcentaje` al 20%, 5 días de gracia)
-- [ ] T023 [P] Crear el helper de pruebas `test/datos/helper_bd.dart` que inicializa `sqflite_common_ffi` y abre una base en memoria
-- [ ] T024 Escribir `test/datos/base_datos_test.dart`: se crea el esquema completo, `user_version` queda en 1, las FK están activas, un paso de migración simulado preserva los datos existentes, y una base ilegible produce un `ErrorPersistencia` en vez de una base vacía
-- [ ] T025 Construir el cascarón de navegación en `lib/ui/cascaron.dart`: `Scaffold` raíz con `NavigationBar` y los cinco destinos (resumen, gastos, deudas, ahorro, categorías), con espacios reservados para las pantallas que aún no existen, y engancharlo desde `lib/main.dart`
-- [ ] T026 [P] Crear `lib/ui/widgets/aviso_mes_cerrado.dart`: banner con ícono y texto que explica que el mes está cerrado o en ventana de gracia y qué se puede hacer, legible sin distinguir colores (FR-058)
+- [X] T007 [P] Escribir `test/dominio/dinero_test.dart` **antes de implementar**: aritmética entera, `porPuntosBase` con redondeo half-up, comparaciones, negativos, y ausencia de constructor desde `double`
+- [X] T008 [P] Escribir `test/dominio/mes_test.dart` **antes de implementar**: `ordinal`, `siguiente`/`anterior`/`mas`, `diferencia`, cruce de año, rechazo de mes fuera de 1–12
+- [X] T009 [P] Escribir `test/dominio/formato_soles_test.dart` **antes de implementar**: `S/ 1,234.56`, cero, negativos, siete cifras `S/ 9,999,999.99`, siempre dos decimales
+- [X] T010 Implementar `lib/core/dinero.dart` hasta que T007 pase (int de centavos, D2)
+- [X] T011 Implementar `lib/core/mes.dart` hasta que T008 pase (ordinal `anio * 12 + mes - 1`, D5)
+- [X] T012 Implementar `lib/core/formato_soles.dart` hasta que T009 pase, formateando desde el entero sin `double` ni `NumberFormat`
+- [X] T013 [P] Implementar `lib/core/formato_fecha.dart` con `DateFormat` de `intl` en `es_PE`
+- [X] T014 [P] Definir `Categoria`, `TipoObligacion`, `ReglaAhorro` y `TipoTarjeta` con sus slugs de persistencia y etiquetas en español en `lib/dominio/modelos/enums.dart`
+- [X] T015 [P] Escribir `test/dominio/cierre_mes_test.dart` **antes de implementar**: el mes en curso admite todo; el mes anterior admite registrar mientras `hoy.day <= diasGraciaCierre` pero **nunca** editar ni eliminar; con `diasGraciaCierre == 0` el mes anterior queda cerrado de inmediato; cualquier mes previo al anterior es solo lectura; `hoy` siempre entra como parámetro, sin tocar el reloj del sistema
+- [X] T016 Implementar `estadoDe`, `puedeRegistrarEn` y `puedeEditarEn` en `lib/dominio/calculos/cierre_mes.dart` hasta que T015 pase, más el derivado `EstadoCierre` con su `motivo` legible en `lib/dominio/modelos/estado_cierre.dart` (D13, FR-058)
+- [X] T017 [P] Crear el modelo `Configuracion` (regla de ahorro, porcentaje en puntos base, días de gracia) en `lib/dominio/modelos/configuracion.dart`
+- [X] T018 Escribir el DDL de la versión 1 en `lib/datos/esquema.dart` copiando el esquema de data-model.md §5 (ocho tablas: `ingreso`, `obligacion`, `transaccion`, `tarjeta`, `deuda`, `aporte_ahorro`, `meta_ahorro`, `configuracion`), con sus `CHECK` e índices
+- [X] T019 Implementar el andamiaje de migraciones incrementales en `lib/datos/migraciones.dart` (pasos v(n) → v(n+1), nunca destructivos, D10)
+- [X] T020 Implementar `lib/datos/base_datos.dart`: apertura por `getDatabasesPath()`, `onCreate`, `onUpgrade`, `PRAGMA foreign_keys = ON` en cada conexión
+- [X] T021 Implementar el manejo de errores de persistencia en `lib/datos/error_persistencia.dart` según [contracts/repositorios.md](./contracts/repositorios.md) §Errores: envolver las excepciones de `sqflite` con contexto legible sin exponer el SQL, no-op silencioso ante id inexistente, y propagación explícita si la base no abre — la app debe decir "no pude abrir tus datos" en vez de arrancar vacía y hacer creer que se perdió todo
+- [X] T022 [P] Implementar `lib/datos/repositorios/repositorio_configuracion.dart` con los valores por defecto (regla `porcentaje` al 20%, 5 días de gracia)
+- [X] T023 [P] Crear el helper de pruebas `test/datos/helper_bd.dart` que inicializa `sqflite_common_ffi` y abre una base en memoria
+- [X] T024 Escribir `test/datos/base_datos_test.dart`: se crea el esquema completo, `user_version` queda en 1, las FK están activas, un paso de migración simulado preserva los datos existentes, y una base ilegible produce un `ErrorPersistencia` en vez de una base vacía
+- [X] T025 Construir el cascarón de navegación en `lib/ui/cascaron.dart`: `Scaffold` raíz con `NavigationBar` y los cinco destinos (resumen, gastos, deudas, ahorro, categorías), con espacios reservados para las pantallas que aún no existen, y engancharlo desde `lib/main.dart`
+- [X] T026 [P] Crear `lib/ui/widgets/aviso_mes_cerrado.dart`: banner con ícono y texto que explica que el mes está cerrado o en ventana de gracia y qué se puede hacer, legible sin distinguir colores (FR-058)
 
 **Checkpoint**: el dinero es exacto, la base abre y migra, la regla de cierre está probada y se puede navegar entre secciones vacías.
 
