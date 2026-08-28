@@ -11,6 +11,69 @@ App Flutter de finanzas personales, individual y sin conexión, para administrar
 - `flutter pub get` · `flutter analyze` · `flutter test` · `flutter run`
 - Las pruebas corren en Windows sin emulador (`sqflite_common_ffi`). Solo la validación manual necesita un Android real.
 
+## Correr la app en un emulador
+
+En la máquina principal ya está todo instalado. **En una máquina nueva hay que montarlo**, y son unos 2 GB de descarga.
+
+```powershell
+$sdk = "$env:LOCALAPPDATA\Android\Sdk"
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+$android = "$sdk\cmdline-tools\latest\bin\android.exe"
+
+# El SDK manager nuevo se llama `android`, no `sdkmanager`
+& $android sdk install "emulator" "system-images/android-35-ext15/google_apis/x86_64"
+
+& "$sdk\cmdline-tools\latest\bin\avdmanager.bat" create avd `
+  --name finanzas_pixel `
+  --package "system-images;android-35-ext15;google_apis;x86_64" `
+  --device pixel_7
+```
+
+**Aceleración por hardware.** Sin ella el emulador es inusable. Verificá con `& "$sdk\emulator\emulator.exe" -accel-check`: tiene que devolver `0`.
+
+En **CPU AMD** (como el Ryzen 7 5800H de la máquina principal) hace falta el driver AEHD de Google, y su instalador pide **administrador**:
+
+```powershell
+& $android sdk install "extras/google/Android_Emulator_Hypervisor_Driver"
+# Después, en una terminal como administrador:
+cd "$env:LOCALAPPDATA\Android\Sdk\extras\google\Android_Emulator_Hypervisor_Driver"
+.\silent_install.bat
+```
+
+En Intel se usa HAXM, o `Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -All` (requiere reiniciar).
+
+**Correr la app:**
+
+```powershell
+$env:PATH = "C:\Users\manue\dev\flutter\bin;$env:PATH"
+flutter emulators --launch finanzas_pixel
+flutter run    # r = hot reload · R = hot restart · q = salir
+```
+
+### Tropiezos conocidos del emulador
+
+| Síntoma | Solución |
+|---|---|
+| `adb: device offline` intermitente | `adb reconnect`, o esperar unos segundos y reintentar |
+| El teclado sale como una barrita flotante | `adb shell pm clear com.google.android.inputmethod.latin` |
+| No aparece el teclado en pantalla | Android detecta el teclado físico de la laptop. Tipeá con él, o tocá el ícono de teclado en la franja negra inferior |
+| Empezar con datos limpios | `adb shell pm clear com.example.finanzas` |
+
+`adb` vive en `$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe`.
+
+## Recorrido de prueba manual
+
+Lo que la suite no puede verificar: si la pantalla se entiende de un vistazo (Principio IV). Los dos defectos de layout que aparecieron hasta ahora — etiquetas más largas que su contenedor — salieron de acá, no de las pruebas.
+
+1. **Presupuesto** → registrar el sueldo y dos o tres obligaciones.
+2. **Resumen** → el disponible tiene que leerse sin hacer cuentas. Subí las obligaciones por encima del ingreso: el déficit se comunica con ícono y texto, no solo con color.
+3. **Gastos** → anotar uno debe llevar menos de quince segundos (SC-002). Gastá de más en una categoría y mirá la marca de sobregiro.
+4. **Tarjetas** (menú lateral) → una de crédito y una de débito. La de débito **no** debe ofrecerse al crear una deuda (FR-061).
+5. **Deudas** → 12 cuotas de S/ 150 desde este mes. Tiene que decir "0 de 12 pagadas": la cuota del mes en curso todavía no se pagó (D4).
+6. **Resumen** → la categoría tarjeta de crédito se despliega y muestra de qué deuda sale el monto (FR-017).
+7. **Editar la deuda** y cambiarle la cuota: el comprometido se recalcula solo, sin reescribir nada. Es D3 funcionando.
+8. **Ajustes** → poner los días de gracia en 0 y navegar al mes anterior: queda cerrado de inmediato.
+
 ## Cómo se trabaja acá
 
 Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se implementa antes de estar descrita en `specs/` y aprobada.** El orden es spec → plan → tasks → implementación; un cambio de alcance se refleja primero en la spec, nunca directo en el código.
@@ -100,6 +163,16 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 
 ## Estado actual
 
-Especificación, plan y tareas completos. **La implementación no ha empezado**: `lib/main.dart` sigue siendo el contador de demo de Flutter.
+**82 de 108 tareas.** US1 a US4 completas y validadas en emulador; 280 pruebas en verde y `flutter analyze` sin issues.
 
-Lo siguiente es el MVP — tareas **T001 a T049** de `tasks.md` (Setup, Foundational, US1 registrar presupuesto, US2 resumen y déficit). Al terminarlas conviene parar y probar en un Android real antes de seguir con US3.
+| Historia | Estado |
+|---|---|
+| US1 · ingreso y presupuesto | ✅ |
+| US2 · resumen y déficit | ✅ |
+| US3 · gastos reales | ✅ |
+| US4 · deudas en cuotas | ✅ |
+| US5 · ahorro (T083–T094) | pendiente |
+| US6 · desglose por categoría (T095–T099) | pendiente |
+| Polish (T100–T108) | pendiente |
+
+Sigue pendiente, fuera de la spec: **no hay respaldo ni exportación**. Con un solo usuario es asumible; antes de repartir la app a probadores conviene que sea una feature propia.
