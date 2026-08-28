@@ -111,18 +111,18 @@ Proyecto Flutter único (ver *Structure Decision* en plan.md): código en `lib/`
 
 ### Tests para US2 ⚠️ (escribir primero, deben fallar)
 
-- [ ] T041 [P] [US2] Escribir `test/dominio/resumen_mes_test.dart`: caso normal (S/ 3,000 − S/ 1,800 = S/ 1,200), déficit con faltante exacto de S/ 350.00, saldo exactamente cero **sin** déficit, y mes sin ingreso registrado
+- [X] T041 [P] [US2] Escribir `test/dominio/resumen_mes_test.dart`: caso normal (S/ 3,000 − S/ 1,800 = S/ 1,200), déficit con faltante exacto de S/ 350.00, saldo exactamente cero **sin** déficit, y mes sin ingreso registrado
 
 ### Implementación para US2
 
-- [ ] T042 [P] [US2] Crear el derivado `ResumenMes` en `lib/dominio/modelos/resumen_mes.dart` con `ingresoRegistrado`, `enDeficit` y `faltante`
-- [ ] T043 [US2] Implementar `calcularResumenMes` en `lib/dominio/calculos/resumen_mes.dart`. Los parámetros `deudas` y `transacciones` aceptan lista vacía: las deudas llegan en US4 y las transacciones en US3, así que hasta entonces `disponibleReal` será igual al ingreso
-- [ ] T044 [P] [US2] Implementar `lib/datos/repositorios/repositorio_meses.dart`: meses con datos y detección de mes nuevo (FR-051)
-- [ ] T045 [US2] Extender `lib/ui/estado/estado_mes.dart` para exponer el `ResumenMes` recalculado tras cada cambio
-- [ ] T046 [P] [US2] Crear `lib/ui/widgets/aviso_deficit.dart`: ícono más texto explícito con el faltante, legible sin distinguir colores (FR-029)
-- [ ] T047 [P] [US2] Crear `lib/ui/widgets/selector_mes.dart` para navegar entre meses registrados, señalando cuáles están cerrados
-- [ ] T048 [US2] Construir `lib/ui/pantallas/resumen_mes/pantalla_resumen.dart` como destino principal del cascarón: ingreso, comprometido, disponible proyectado y estado de déficit, con el disponible en la jerarquía tipográfica mayor (D11)
-- [ ] T049 [US2] Escribir `test/ui/pantalla_resumen_test.dart`: el déficit se lee sin color, y el mes sin ingreso pide registrarlo en vez de mostrar ceros
+- [X] T042 [P] [US2] Crear el derivado `ResumenMes` en `lib/dominio/modelos/resumen_mes.dart` con `ingresoRegistrado`, `enDeficit` y `faltante`
+- [X] T043 [US2] Implementar `calcularResumenMes` en `lib/dominio/calculos/resumen_mes.dart`. Los parámetros `deudas` y `transacciones` aceptan lista vacía: las deudas llegan en US4 y las transacciones en US3, así que hasta entonces `disponibleReal` será igual al ingreso
+- [X] T044 [P] [US2] Implementar `lib/datos/repositorios/repositorio_meses_sqlite.dart` y su puerto en `lib/dominio/repositorios/`: meses con datos y detección de mes nuevo (FR-051)
+- [X] T045 [US2] Extender `lib/ui/estado/estado_mes.dart` para exponer el `ResumenMes` recalculado tras cada cambio
+- [X] T046 [P] [US2] Crear `lib/shared/componentes/aviso_deficit.dart`: ícono más texto explícito con el faltante, legible sin distinguir colores (FR-029)
+- [X] T047 [P] [US2] Crear `lib/shared/componentes/selector_mes.dart` para navegar entre meses registrados, señalando cuáles están cerrados
+- [X] T048 [US2] Construir `lib/ui/pantallas/resumen_mes/pantalla_resumen.dart` como destino principal del cascarón: ingreso, comprometido, disponible proyectado y estado de déficit, con el disponible en la jerarquía tipográfica mayor (D11)
+- [X] T049 [US2] Escribir `test/ui/pantalla_resumen_test.dart`: el déficit se lee sin color, y el mes sin ingreso pide registrarlo en vez de mostrar ceros
 
 **Checkpoint**: **MVP completo.** US1 + US2 responden la pregunta central de la app.
 
@@ -149,7 +149,7 @@ Proyecto Flutter único (ver *Structure Decision* en plan.md): código en `lib/`
 - [ ] T057 [P] [US3] Construir el alta y edición de gastos en `lib/ui/pantallas/transacciones/formulario_transaccion.dart` (monto, fecha, categoría, descripción), optimizado para menos de 15 segundos (SC-002)
 - [ ] T058 [US3] Implementar el flujo de **pago rezagado** en `lib/ui/pantallas/transacciones/pantalla_transacciones.dart`: dentro de la ventana de gracia se admite registrar un gasto con fecha del mes anterior, avisando de forma explícita que quedará inmutable al guardarse (FR-055, FR-056); pasada la ventana, la fecha del mes anterior se rechaza con el motivo
 - [ ] T059 [US3] Construir `lib/ui/pantallas/transacciones/pantalla_transacciones.dart`: listado del mes por fecha descendente, con editar y eliminar solo cuando el mes lo permite
-- [ ] T060 [P] [US3] Crear `lib/ui/widgets/ficha_categoria.dart` (presupuestado, gastado, restante, marca de sobregiro) y mostrarlo en la pantalla de resumen junto al disponible real
+- [ ] T060 [P] [US3] Crear `lib/shared/componentes/ficha_categoria.dart` (presupuestado, gastado, restante, marca de sobregiro) y mostrarlo en la pantalla de resumen junto al disponible real
 - [ ] T061 [US3] Escribir `test/ui/pantalla_transacciones_test.dart`: orden del listado, marca visible de gasto no presupuestado, un gasto que excede el presupuesto **se guarda igual** (FR-014), y un gasto registrado en gracia no ofrece editar ni eliminar
 
 **Checkpoint**: núcleo funcional completo. La app sirve para el uso diario.

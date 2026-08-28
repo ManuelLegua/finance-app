@@ -66,6 +66,9 @@ abstract final class Espaciado {
   static const double normal = 16;
   static const double entreCampos = 16;
 
+  /// Separación entre bloques de una tarjeta, y alto de un divisor.
+  static const double grande = 24;
+
   /// Alrededor de un estado vacio o un mensaje centrado.
   static const double amplio = 32;
 

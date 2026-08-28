@@ -12,13 +12,19 @@ Esta es la interfaz que la app expone hacia adentro: funciones **puras** de Dart
 
 ```dart
 ResumenMes calcularResumenMes({
-  required Mes mes,
   required Dinero? ingreso,            // null = mes sin ingreso registrado
   required List<Obligacion> obligaciones,
-  required List<Deuda> deudas,         // todas; la función filtra las vigentes
-  required List<Transaccion> transacciones,
+  Dinero cuotasVigentes = Dinero.cero, // ya sumadas: las deriva deudas.dart
+  Dinero gastoRealTotal = Dinero.cero, // ya sumado: lo aporta el desglose
 });
 ```
+
+**Cuotas y gasto entran como totales, no como listas.** El resumen solo
+necesita sus sumas; recibir `List<Deuda>` y `List<Transaccion>` lo acoplaría a
+modelos que no usa y obligaría a crearlos antes de tiempo. Quien sabe derivar
+las cuotas vigentes es `deudas.dart` (D3) y quien suma el gasto es
+`desglose_categorias.dart`: cada uno entrega su total ya calculado. Ambos
+valen cero hasta que existan sus historias.
 
 | Garantía | Requisito |
 |---|---|

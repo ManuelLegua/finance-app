@@ -1,4 +1,5 @@
 import 'package:finanzas/ui/pantallas/presupuesto/pantalla_presupuesto.dart';
+import 'package:finanzas/ui/pantallas/resumen_mes/pantalla_resumen.dart';
 import 'package:flutter/material.dart';
 
 /// Cascarón de navegación: el `Scaffold` raíz con los cinco destinos.
@@ -21,6 +22,12 @@ class _CascaronState extends State<Cascaron> {
   int _destino = 0;
 
   static const List<_Destino> _destinos = <_Destino>[
+    _Destino(
+      etiqueta: 'Resumen',
+      icono: Icons.donut_small_outlined,
+      iconoActivo: Icons.donut_small,
+      pantalla: PantallaResumen(),
+    ),
     _Destino(
       etiqueta: 'Presupuesto',
       icono: Icons.account_balance_wallet_outlined,

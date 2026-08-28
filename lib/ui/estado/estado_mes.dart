@@ -6,10 +6,12 @@
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/calculos/cierre_mes.dart';
 import 'package:finanzas/dominio/calculos/presupuesto.dart';
+import 'package:finanzas/dominio/calculos/resumen_mes.dart';
 import 'package:finanzas/dominio/modelos/estado_cierre.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_meses.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
@@ -45,11 +47,13 @@ class EstadoMes extends ChangeNotifier {
     required RepositorioIngreso repoIngreso,
     required RepositorioObligaciones repoObligaciones,
     required RepositorioConfiguracion repoConfiguracion,
+    RepositorioMeses? repoMeses,
     DateTime Function()? ahora,
     Mes? mesInicial,
   }) : _repoIngreso = repoIngreso,
        _repoObligaciones = repoObligaciones,
        _repoConfiguracion = repoConfiguracion,
+       _repoMeses = repoMeses,
        _ahora = ahora ?? DateTime.now {
     _mes = mesInicial ?? Mes.deFecha(_ahora());
   }
@@ -57,11 +61,15 @@ class EstadoMes extends ChangeNotifier {
   final RepositorioIngreso _repoIngreso;
   final RepositorioObligaciones _repoObligaciones;
   final RepositorioConfiguracion _repoConfiguracion;
+
+  /// Opcional: sin él, el selector de mes no ofrece navegación por historial.
+  final RepositorioMeses? _repoMeses;
   final DateTime Function() _ahora;
 
   late Mes _mes;
   Dinero? _ingreso;
   List<Obligacion> _obligaciones = const [];
+  List<Mes> _mesesRegistrados = const [];
   int _diasGraciaCierre = 5;
   bool _cargando = true;
   String? _error;
@@ -80,8 +88,18 @@ class EstadoMes extends ChangeNotifier {
   /// Mensaje de error listo para mostrar, o `null`.
   String? get error => _error;
 
+  /// Meses con datos, para el selector. Vacío si no se inyectó el repositorio.
+  List<Mes> get mesesRegistrados => List.unmodifiable(_mesesRegistrados);
+
+  /// Los totales del mes y su estado de déficit (FR-025 a FR-030).
+  ///
+  /// Se recalcula en cada lectura: es barato y evita que quede desfasado tras
+  /// una escritura. Las cuotas de deuda entran en US4 y el gasto real en US3.
+  ResumenMes get resumen =>
+      calcularResumenMes(ingreso: _ingreso, obligaciones: _obligaciones);
+
   /// Suma de las obligaciones guardadas. Las cuotas de deuda se suman en US4.
-  Dinero get totalComprometido => totalObligaciones(_obligaciones);
+  Dinero get totalComprometido => resumen.totalComprometido;
 
   EstadoCierre get estadoCierre =>
       estadoDe(_mes, hoy: _ahora(), diasGraciaCierre: _diasGraciaCierre);
@@ -99,6 +117,7 @@ class EstadoMes extends ChangeNotifier {
       _diasGraciaCierre = (await _repoConfiguracion.obtener()).diasGraciaCierre;
       _ingreso = await _repoIngreso.obtener(_mes);
       _obligaciones = await _repoObligaciones.porMes(_mes);
+      _mesesRegistrados = await _repoMeses?.mesesRegistrados() ?? const [];
     } on Object catch (error) {
       _error = _mensajeDe(error);
     } finally {
