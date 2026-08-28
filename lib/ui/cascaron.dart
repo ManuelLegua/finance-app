@@ -1,22 +1,26 @@
+import 'package:finanzas/shared/estilos/tema.dart';
+import 'package:finanzas/shared/formato/formato_fecha.dart';
+import 'package:finanzas/ui/estado/estado_mes.dart';
+import 'package:finanzas/ui/pantallas/ajustes/pantalla_ajustes.dart';
 import 'package:finanzas/ui/pantallas/presupuesto/pantalla_presupuesto.dart';
 import 'package:finanzas/ui/pantallas/resumen_mes/pantalla_resumen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-/// Cascarón de navegación: el `Scaffold` raíz con los cinco destinos.
+/// Cascarón de navegación (D16).
 ///
-/// Se construye en la fase Foundational, antes que las pantallas, para que
-/// cada historia de usuario solo tenga que enchufar la suya. Sin esto, al
-/// terminar las 105 tareas habría pantallas construidas a las que no se
-/// podría llegar.
+/// **Barra inferior** para lo frecuente, **drawer** para lo ocasional. El
+/// reparto sale de la frecuencia de uso, no de la importancia: Gastos se usa
+/// varias veces al día y Resumen a diario, mientras que Tarjetas o Ajustes se
+/// consultan de vez en cuando y aguantan el toque extra sin costo real.
 ///
-/// **Son cinco y no seis a propósito.** Material 3 admite de tres a cinco
-/// destinos; con seis, "Presupuesto" no entraba y se partía en dos líneas en
-/// una pantalla de 1080 px. El desglose por categoría (US6) se alcanza desde
-/// el resumen, que es donde tiene sentido: es una vista de detalle del mes,
-/// no una sección propia.
+/// Meter todo en el drawer cobraría ese toque también a registrar un gasto,
+/// y hay dos criterios de éxito que lo penalizan: SC-002 pide menos de 15
+/// segundos para anotar un gasto y SC-001 un máximo de dos interacciones para
+/// conocer el saldo.
 ///
-/// Los destinos sin pantalla todavía muestran un marcador que dice a qué
-/// tarea corresponden, en vez de una pantalla en blanco.
+/// Los destinos sin pantalla muestran un marcador que dice a qué historia
+/// corresponden, en vez de una pantalla en blanco.
 class Cascaron extends StatefulWidget {
   const Cascaron({super.key});
 
@@ -25,9 +29,14 @@ class Cascaron extends StatefulWidget {
 }
 
 class _CascaronState extends State<Cascaron> {
-  int _destino = 0;
+  /// Índice dentro de [_frecuentes], o `null` cuando se está viendo un
+  /// destino del drawer.
+  int _destinoFrecuente = 0;
+  _Destino? _destinoDelDrawer;
 
-  static const List<_Destino> _destinos = <_Destino>[
+  /// Uso diario o mensual: van en la barra inferior. Material 3 admite hasta
+  /// cinco, y con seis la etiqueta "Presupuesto" se partía en dos líneas.
+  static const List<_Destino> _frecuentes = <_Destino>[
     _Destino(
       etiqueta: 'Resumen',
       icono: Icons.donut_small_outlined,
@@ -60,19 +69,64 @@ class _CascaronState extends State<Cascaron> {
     ),
   ];
 
+  /// Consultas ocasionales y ajustes. Acá crecen las features siguientes sin
+  /// volver a romper la barra.
+  static const List<_Destino> _ocasionales = <_Destino>[
+    _Destino(
+      // "Desglose por categoría" desbordaba los 280 px del drawer. Mismo tipo
+      // de defecto que "Presupuesto" en la barra inferior: etiqueta más larga
+      // que su contenedor.
+      etiqueta: 'Categorías',
+      icono: Icons.pie_chart_outline,
+      iconoActivo: Icons.pie_chart,
+      pendiente: 'US6 · en qué se va el dinero',
+    ),
+    _Destino(
+      etiqueta: 'Tarjetas',
+      icono: Icons.credit_score_outlined,
+      iconoActivo: Icons.credit_score,
+      pendiente: 'US4 · tarjetas y entidades emisoras',
+    ),
+    _Destino(
+      etiqueta: 'Ajustes',
+      icono: Icons.settings_outlined,
+      iconoActivo: Icons.settings,
+      pantalla: PantallaAjustes(),
+    ),
+  ];
+
+  _Destino get _actual => _destinoDelDrawer ?? _frecuentes[_destinoFrecuente];
+
+  void _irAFrecuente(int indice) => setState(() {
+    _destinoFrecuente = indice;
+    _destinoDelDrawer = null;
+  });
+
+  void _irAOcasional(_Destino destino) => setState(() {
+    _destinoDelDrawer = destino;
+  });
+
   @override
   Widget build(BuildContext context) {
-    final actual = _destinos[_destino];
+    final actual = _actual;
 
     return Scaffold(
       appBar: AppBar(title: Text(actual.etiqueta)),
+      drawer: _MenuLateral(
+        seleccionado: _destinoDelDrawer,
+        ocasionales: _ocasionales,
+        onElegir: _irAOcasional,
+      ),
       body:
           actual.pantalla ?? _EnConstruccion(pendiente: actual.pendiente ?? ''),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _destino,
-        onDestinationSelected: (indice) => setState(() => _destino = indice),
+        // Con un destino del drawer en pantalla ninguno de la barra está
+        // activo, pero NavigationBar exige un índice: se conserva el último
+        // para que volver de Ajustes devuelva a donde estabas.
+        selectedIndex: _destinoFrecuente,
+        onDestinationSelected: _irAFrecuente,
         destinations: [
-          for (final destino in _destinos)
+          for (final destino in _frecuentes)
             NavigationDestination(
               icon: Icon(destino.icono),
               selectedIcon: Icon(destino.iconoActivo),
@@ -80,6 +134,64 @@ class _CascaronState extends State<Cascaron> {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Drawer con los destinos ocasionales.
+class _MenuLateral extends StatelessWidget {
+  const _MenuLateral({
+    required this.seleccionado,
+    required this.ocasionales,
+    required this.onElegir,
+  });
+
+  final _Destino? seleccionado;
+  final List<_Destino> ocasionales;
+  final void Function(_Destino) onElegir;
+
+  @override
+  Widget build(BuildContext context) {
+    final mes = context.watch<EstadoMes>().mes;
+
+    return NavigationDrawer(
+      selectedIndex: seleccionado == null
+          ? null
+          : ocasionales.indexOf(seleccionado!),
+      onDestinationSelected: (indice) {
+        Navigator.of(context).pop();
+        onElegir(ocasionales[indice]);
+      },
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Espaciado.grande,
+            Espaciado.grande,
+            Espaciado.normal,
+            Espaciado.interno,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Finanzas', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: Espaciado.minimo),
+              Text(
+                FormatoFecha.mesTitulo(mes),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(),
+        for (final destino in ocasionales)
+          NavigationDrawerDestination(
+            icon: Icon(destino.icono),
+            selectedIcon: Icon(destino.iconoActivo),
+            label: Text(destino.etiqueta),
+          ),
+      ],
     );
   }
 }
@@ -115,17 +227,17 @@ class _EnConstruccion extends StatelessWidget {
     final esquema = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(Espaciado.amplio),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.construction_outlined, size: 48, color: esquema.outline),
-            const SizedBox(height: 16),
+            const SizedBox(height: Espaciado.normal),
             Text(
               'Todavía no construido',
               style: Theme.of(context).textTheme.titleMedium,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: Espaciado.chico),
             Text(
               pendiente,
               textAlign: TextAlign.center,

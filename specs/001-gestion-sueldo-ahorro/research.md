@@ -190,6 +190,25 @@ El beneficio secundario resultó mayor que el motivo original: habilitó probar 
 
 ---
 
+## D16 — Navegación: barra inferior de cinco más un drawer
+
+**Decisión**: `NavigationBar` con cinco destinos de uso frecuente (Resumen, Presupuesto, Gastos, Deudas, Ahorro) más un `NavigationDrawer` con hamburguesa en el `AppBar` para lo ocasional: desglose por categoría, tarjetas, ajustes, y lo que agreguen las features siguientes.
+
+**Rationale**: cuando terminen las 105 tareas habrá nueve lugares distintos, y la barra ya se rompió con seis (D11). Un drawer solo, sin barra, cobraría **un toque extra a todo** — y hay dos criterios de éxito que lo penalizan directamente: SC-002 pide registrar un gasto en menos de 15 segundos y SC-001 pide conocer el saldo en un máximo de dos interacciones. Lo diario tiene que quedar a un toque.
+
+El reparto sale de la frecuencia de uso, no de la importancia: Gastos se usa varias veces al día, Resumen a diario, Presupuesto y Ahorro una vez al mes, Deudas de vez en cuando. Categorías, Tarjetas y Ajustes son consultas ocasionales que aguantan el toque extra sin costo real.
+
+**Lo que destrabó la decisión**: cuatro pantallas ya estaban planificadas como anidadas (Tarjetas dentro de Deudas, Categorías dentro de Resumen, configuración de ahorro dentro de Ahorro, y la captura de la spec 002 dentro de Gastos), así que los cinco destinos alcanzaban. Pero `T088` metía los **días de gracia del cierre de meses** dentro de la configuración de ahorro, y eso está mal agrupado: el cierre no tiene nada que ver con el ahorro. Es un ajuste transversal, igual que las tarjetas. Ahí aparece la necesidad real de un lugar de Ajustes que no pertenece a ninguna pantalla, y con él el noveno destino.
+
+**Frente al Principio V**: normalmente construir un drawer con dos pantallas hechas sería infraestructura adelantada. Acá no lo es — las specs comprometen nueve pantallas por escrito, y la navegación ya se rehizo una vez al detectar el corte de "Presupuesto" en el emulador. Hacerlo bien ahora evita una tercera vuelta.
+
+**Alternativas consideradas**:
+- **Solo drawer, sin barra inferior**: cobra un toque a todo, incluido registrar un gasto. Rechazada por SC-001 y SC-002.
+- **Barra inferior con un destino "Más"** que abre una hoja: equivalente al drawer pero menos convencional en Android y sin lugar para el encabezado que identifica el mes en curso.
+- **Anidar todo y quedarse en cinco**: es lo que se intentó, y funciona salvo por los ajustes transversales. Forzarlos dentro de una pantalla temática es lo que produjo el error de agrupación de T088.
+
+---
+
 ## Dependencias resultantes
 
 | Paquete | Uso | Justificación frente a hacerlo a mano |
