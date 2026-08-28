@@ -1,6 +1,7 @@
 import 'package:finanzas/dominio/modelos/resumen_mes.dart';
 import 'package:finanzas/shared/componentes/aviso_deficit.dart';
 import 'package:finanzas/shared/componentes/aviso_mes_cerrado.dart';
+import 'package:finanzas/shared/componentes/ficha_categoria.dart';
 import 'package:finanzas/shared/componentes/selector_mes.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_soles.dart';
@@ -46,10 +47,32 @@ class PantallaResumen extends StatelessWidget {
             _Disponible(resumen: resumen),
           ],
           _DesgloseDeTotales(resumen: resumen),
+          if (estado.desglose.isNotEmpty) ...[
+            const _TituloCategorias(),
+            for (final linea in estado.desglose) FichaCategoria(linea: linea),
+          ],
         ],
       ),
     );
   }
+}
+
+class _TituloCategorias extends StatelessWidget {
+  const _TituloCategorias();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(
+      Espaciado.normal,
+      Espaciado.grande,
+      Espaciado.normal,
+      Espaciado.chico,
+    ),
+    child: Text(
+      'Por categoría',
+      style: Theme.of(context).textTheme.titleMedium,
+    ),
+  );
 }
 
 /// Mes sin ingreso: se pide registrarlo en vez de mostrar totales en cero

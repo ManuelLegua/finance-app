@@ -42,6 +42,7 @@ void main() {
       repoIngreso: RepositorioIngresoEnMemoria(),
       repoObligaciones: RepositorioObligacionesEnMemoria(),
       repoConfiguracion: repoConfiguracion,
+      repoTransacciones: RepositorioTransaccionesEnMemoria(),
       ahora: () => quinceDeAgosto,
       mesInicial: agosto,
     );

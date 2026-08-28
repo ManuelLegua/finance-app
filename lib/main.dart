@@ -3,10 +3,12 @@ import 'package:finanzas/datos/repositorios/repositorio_configuracion_sqlite.dar
 import 'package:finanzas/datos/repositorios/repositorio_ingreso_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_meses_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
+import 'package:finanzas/datos/repositorios/repositorio_transacciones_sqlite.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_meses.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/ui/cascaron.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
@@ -97,6 +99,9 @@ class _ArranqueState extends State<_Arranque> {
             Provider<RepositorioConfiguracion>(
               create: (_) => RepositorioConfiguracionSqlite(conexion),
             ),
+            Provider<RepositorioTransacciones>(
+              create: (_) => RepositorioTransaccionesSqlite(conexion),
+            ),
             Provider<RepositorioMeses>(
               create: (_) => RepositorioMesesSqlite(conexion),
             ),
@@ -105,6 +110,7 @@ class _ArranqueState extends State<_Arranque> {
                 repoIngreso: contexto.read<RepositorioIngreso>(),
                 repoObligaciones: contexto.read<RepositorioObligaciones>(),
                 repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
+                repoTransacciones: contexto.read<RepositorioTransacciones>(),
                 repoMeses: contexto.read<RepositorioMeses>(),
               )..cargar(),
             ),

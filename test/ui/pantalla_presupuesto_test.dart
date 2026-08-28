@@ -43,6 +43,7 @@ void main() {
       repoIngreso: repoIngreso,
       repoObligaciones: repoObligaciones,
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
+      repoTransacciones: RepositorioTransaccionesEnMemoria(),
       ahora: () => quinceDeAgosto,
       mesInicial: agosto,
     );
@@ -193,6 +194,7 @@ void main() {
         repoConfiguracion: RepositorioConfiguracionEnMemoria(
           Configuracion.porDefecto.copiarCon(diasGraciaCierre: 5),
         ),
+        repoTransacciones: RepositorioTransaccionesEnMemoria(),
         ahora: () => tresDeAgosto,
         mesInicial: const Mes(2026, 7),
       );

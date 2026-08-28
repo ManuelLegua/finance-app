@@ -155,21 +155,21 @@ enchufa su pantalla donde corresponde.
 
 ### Tests para US3 ⚠️ (escribir primero, deben fallar)
 
-- [ ] T053 [P] [US3] Escribir `test/dominio/desglose_test.dart`: comida S/ 45 de S/ 600 deja S/ 555; pasajes sobregirados en S/ 15; categoría sin presupuesto marcada como no presupuestada; Σ gastado por categoría == gasto real total
-- [ ] T054 [P] [US3] Escribir `test/datos/repositorio_transacciones_test.dart`: orden por fecha descendente estable, `mes_ordinal` derivado de la fecha, y que cambiar la fecha reubica la transacción de mes
+- [X] T053 [P] [US3] Escribir `test/dominio/desglose_test.dart`: comida S/ 45 de S/ 600 deja S/ 555; pasajes sobregirados en S/ 15; categoría sin presupuesto marcada como no presupuestada; Σ gastado por categoría == gasto real total
+- [X] T054 [P] [US3] Escribir `test/datos/repositorio_transacciones_test.dart`: orden por fecha descendente estable, `mes_ordinal` derivado de la fecha, y que cambiar la fecha reubica la transacción de mes
 
 ### Implementación para US3
 
-- [ ] T055 [P] [US3] Crear el modelo `Transaccion` en `lib/dominio/modelos/transaccion.dart`
-- [ ] T056 [P] [US3] Crear el derivado `LineaCategoria` en `lib/dominio/modelos/linea_categoria.dart` con `sobregirada` y `noPresupuestada` como campos, no como color
-- [ ] T057 [US3] Implementar `calcularDesglose` en `lib/dominio/calculos/desglose_categorias.dart` (peso porcentual y orden llegan en US6)
-- [ ] T058 [US3] Implementar `lib/datos/repositorios/repositorio_transacciones.dart`, derivando `mes_ordinal` de la fecha en toda ruta de escritura
-- [ ] T059 [US3] Extender `lib/ui/estado/estado_mes.dart` con las transacciones del mes, el gasto real acumulado y la verificación de cierre antes de cada escritura
-- [ ] T060 [P] [US3] Construir el alta y edición de gastos en `lib/ui/pantallas/transacciones/formulario_transaccion.dart` (monto, fecha, categoría, descripción), optimizado para menos de 15 segundos (SC-002)
-- [ ] T061 [US3] Implementar el flujo de **pago rezagado** en `lib/ui/pantallas/transacciones/pantalla_transacciones.dart`: dentro de la ventana de gracia se admite registrar un gasto con fecha del mes anterior, avisando de forma explícita que quedará inmutable al guardarse (FR-055, FR-056); pasada la ventana, la fecha del mes anterior se rechaza con el motivo
-- [ ] T062 [US3] Construir `lib/ui/pantallas/transacciones/pantalla_transacciones.dart`: listado del mes por fecha descendente, con editar y eliminar solo cuando el mes lo permite
-- [ ] T063 [P] [US3] Crear `lib/shared/componentes/ficha_categoria.dart` (presupuestado, gastado, restante, marca de sobregiro) y mostrarlo en la pantalla de resumen junto al disponible real
-- [ ] T064 [US3] Escribir `test/ui/pantalla_transacciones_test.dart`: orden del listado, marca visible de gasto no presupuestado, un gasto que excede el presupuesto **se guarda igual** (FR-014), y un gasto registrado en gracia no ofrece editar ni eliminar
+- [X] T055 [P] [US3] Crear el modelo `Transaccion` en `lib/dominio/modelos/transaccion.dart`
+- [X] T056 [P] [US3] Crear el derivado `LineaCategoria` en `lib/dominio/modelos/linea_categoria.dart` con `sobregirada` y `noPresupuestada` como campos, no como color
+- [X] T057 [US3] Implementar `calcularDesglose` en `lib/dominio/calculos/desglose_categorias.dart` (peso porcentual y orden llegan en US6)
+- [X] T058 [US3] Implementar `lib/datos/repositorios/repositorio_transacciones.dart`, derivando `mes_ordinal` de la fecha en toda ruta de escritura
+- [X] T059 [US3] Extender `lib/ui/estado/estado_mes.dart` con las transacciones del mes, el gasto real acumulado y la verificación de cierre antes de cada escritura
+- [X] T060 [P] [US3] Construir el alta y edición de gastos en `lib/ui/pantallas/transacciones/formulario_transaccion.dart` (monto, fecha, categoría, descripción), optimizado para menos de 15 segundos (SC-002)
+- [X] T061 [US3] Implementar el flujo de **pago rezagado** en `lib/ui/pantallas/transacciones/pantalla_transacciones.dart`: dentro de la ventana de gracia se admite registrar un gasto con fecha del mes anterior, avisando de forma explícita que quedará inmutable al guardarse (FR-055, FR-056); pasada la ventana, la fecha del mes anterior se rechaza con el motivo
+- [X] T062 [US3] Construir `lib/ui/pantallas/transacciones/pantalla_transacciones.dart`: listado del mes por fecha descendente, con editar y eliminar solo cuando el mes lo permite
+- [X] T063 [P] [US3] Crear `lib/shared/componentes/ficha_categoria.dart` (presupuestado, gastado, restante, marca de sobregiro) y mostrarlo en la pantalla de resumen junto al disponible real
+- [X] T064 [US3] Escribir `test/ui/pantalla_transacciones_test.dart`: orden del listado, marca visible de gasto no presupuestado, un gasto que excede el presupuesto **se guarda igual** (FR-014), y un gasto registrado en gracia no ofrece editar ni eliminar
 
 **Checkpoint**: núcleo funcional completo. La app sirve para el uso diario.
 

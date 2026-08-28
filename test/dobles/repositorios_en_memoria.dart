@@ -1,8 +1,10 @@
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/dominio/modelos/transaccion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 
@@ -138,4 +140,66 @@ final class RepositorioConfiguracionEnMemoria
 
   @override
   Future<void> guardar(Configuracion config) async => _actual = config;
+}
+
+/// Gastos reales en memoria.
+///
+/// Replica los dos comportamientos que la pantalla observa: el orden por
+/// fecha descendente con desempate por id, y que el mes salga de la fecha.
+final class RepositorioTransaccionesEnMemoria
+    implements RepositorioTransacciones {
+  final List<Transaccion> _guardadas = <Transaccion>[];
+  int _proximoId = 1;
+
+  /// Si se fija, la próxima escritura falla con este error.
+  Object? errorEnLaProximaEscritura;
+
+  @override
+  Future<List<Transaccion>> porMes(Mes mes) async {
+    final delMes = _guardadas
+        .where((transaccion) => transaccion.mes == mes)
+        .toList();
+    delMes.sort((primera, segunda) {
+      final porFecha = segunda.fecha.compareTo(primera.fecha);
+      if (porFecha != 0) return porFecha;
+      return (segunda.id ?? 0).compareTo(primera.id ?? 0);
+    });
+    return delMes;
+  }
+
+  @override
+  Future<int> insertar(Transaccion transaccion) async {
+    _fallarSiCorresponde();
+    final id = _proximoId++;
+    _guardadas.add(transaccion.copiarCon(id: id));
+    return id;
+  }
+
+  @override
+  Future<void> actualizar(Transaccion transaccion) async {
+    final id = transaccion.id;
+    if (id == null) {
+      throw ArgumentError.value(
+        transaccion,
+        'transaccion',
+        'No se puede actualizar una transacción sin id; usá insertar()',
+      );
+    }
+    _fallarSiCorresponde();
+    final indice = _guardadas.indexWhere((guardada) => guardada.id == id);
+    if (indice != -1) _guardadas[indice] = transaccion;
+  }
+
+  @override
+  Future<void> eliminar(int id) async {
+    _fallarSiCorresponde();
+    _guardadas.removeWhere((transaccion) => transaccion.id == id);
+  }
+
+  void _fallarSiCorresponde() {
+    final error = errorEnLaProximaEscritura;
+    if (error == null) return;
+    errorEnLaProximaEscritura = null;
+    throw error;
+  }
 }

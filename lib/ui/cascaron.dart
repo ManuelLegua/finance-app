@@ -4,6 +4,7 @@ import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/pantallas/ajustes/pantalla_ajustes.dart';
 import 'package:finanzas/ui/pantallas/presupuesto/pantalla_presupuesto.dart';
 import 'package:finanzas/ui/pantallas/resumen_mes/pantalla_resumen.dart';
+import 'package:finanzas/ui/pantallas/transacciones/pantalla_transacciones.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -53,7 +54,7 @@ class _CascaronState extends State<Cascaron> {
       etiqueta: 'Gastos',
       icono: Icons.receipt_long_outlined,
       iconoActivo: Icons.receipt_long,
-      pendiente: 'US3 · registro de gastos reales',
+      pantalla: PantallaTransacciones(),
     ),
     _Destino(
       etiqueta: 'Deudas',

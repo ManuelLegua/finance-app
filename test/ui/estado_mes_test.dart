@@ -17,6 +17,7 @@ import '../dobles/repositorios_en_memoria.dart';
 void main() {
   late RepositorioIngresoEnMemoria repoIngreso;
   late RepositorioObligacionesEnMemoria repoObligaciones;
+  late RepositorioTransaccionesEnMemoria repoTransacciones;
 
   const agosto = Mes(2026, 8);
   const julio = Mes(2026, 7);
@@ -32,6 +33,7 @@ void main() {
     repoConfiguracion: RepositorioConfiguracionEnMemoria(
       Configuracion.porDefecto.copiarCon(diasGraciaCierre: diasGraciaCierre),
     ),
+    repoTransacciones: repoTransacciones,
     ahora: () => hoy,
     mesInicial: mes,
   );
@@ -48,6 +50,7 @@ void main() {
   setUp(() {
     repoIngreso = RepositorioIngresoEnMemoria();
     repoObligaciones = RepositorioObligacionesEnMemoria();
+    repoTransacciones = RepositorioTransaccionesEnMemoria();
   });
 
   group('mes en curso', () {

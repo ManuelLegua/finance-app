@@ -23,6 +23,7 @@ void main() {
     repoIngreso: repoIngreso,
     repoObligaciones: repoObligaciones,
     repoConfiguracion: RepositorioConfiguracionEnMemoria(),
+    repoTransacciones: RepositorioTransaccionesEnMemoria(),
     ahora: () => quinceDeAgosto,
     mesInicial: mes,
   );
@@ -103,8 +104,10 @@ void main() {
       expect(find.text('Tus compromisos superan tu ingreso'), findsNothing);
       expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
       expect(find.text('Disponible este mes'), findsOneWidget);
-      // Destacado, disponible proyectado y gasto real: los tres en cero.
-      expect(find.text(r'S/ 0.00'), findsNWidgets(3));
+      // El disponible en cero se muestra, y no se declara déficit: es
+      // exactamente lo que exige FR-030. La cantidad de ceros en pantalla
+      // depende de cuántas categorías haya, así que no se cuenta.
+      expect(find.text(r'S/ 0.00'), findsWidgets);
     });
   });
 
