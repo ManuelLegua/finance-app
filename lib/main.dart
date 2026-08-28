@@ -1,7 +1,10 @@
 import 'package:finanzas/datos/base_datos.dart';
-import 'package:finanzas/datos/repositorios/repositorio_configuracion.dart';
-import 'package:finanzas/datos/repositorios/repositorio_ingreso.dart';
-import 'package:finanzas/datos/repositorios/repositorio_obligaciones.dart';
+import 'package:finanzas/datos/repositorios/repositorio_configuracion_sqlite.dart';
+import 'package:finanzas/datos/repositorios/repositorio_ingreso_sqlite.dart';
+import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/ui/cascaron.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
@@ -84,13 +87,13 @@ class _ArranqueState extends State<_Arranque> {
         return MultiProvider(
           providers: [
             Provider<RepositorioIngreso>(
-              create: (_) => RepositorioIngreso(conexion),
+              create: (_) => RepositorioIngresoSqlite(conexion),
             ),
             Provider<RepositorioObligaciones>(
-              create: (_) => RepositorioObligaciones(conexion),
+              create: (_) => RepositorioObligacionesSqlite(conexion),
             ),
             Provider<RepositorioConfiguracion>(
-              create: (_) => RepositorioConfiguracion(conexion),
+              create: (_) => RepositorioConfiguracionSqlite(conexion),
             ),
             ChangeNotifierProvider<EstadoMes>(
               create: (contexto) => EstadoMes(

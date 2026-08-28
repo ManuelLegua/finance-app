@@ -1,5 +1,6 @@
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
@@ -9,13 +10,14 @@ import 'package:sqflite/sqflite.dart';
 ///
 /// Devuelve **solo lo guardado**. Las cuotas de deuda no aparecen acá: se
 /// derivan en la capa de cálculo (D3), y no existe tabla de cuotas.
-final class RepositorioObligaciones {
+final class RepositorioObligacionesSqlite implements RepositorioObligaciones {
   static const String _tabla = 'obligacion';
 
   final Database _conexion;
 
-  const RepositorioObligaciones(this._conexion);
+  const RepositorioObligacionesSqlite(this._conexion);
 
+  @override
   Future<List<Obligacion>> porMes(Mes mes) => _consultar(
     where: 'mes_ordinal = ?',
     whereArgs: [mes.ordinal],
@@ -23,6 +25,7 @@ final class RepositorioObligaciones {
   );
 
   /// Solo las fijas: es el insumo de la precarga del mes siguiente (FR-006).
+  @override
   Future<List<Obligacion>> fijasDeMes(Mes mes) => _consultar(
     where: 'mes_ordinal = ? AND tipo = ?',
     whereArgs: [mes.ordinal, TipoObligacion.fija.slug],
@@ -30,6 +33,7 @@ final class RepositorioObligaciones {
   );
 
   /// Inserta y devuelve el id asignado.
+  @override
   Future<int> insertar(Obligacion obligacion) async {
     try {
       return await _conexion.insert(_tabla, _aFila(obligacion));
@@ -45,6 +49,7 @@ final class RepositorioObligaciones {
   ///
   /// Es atómico a propósito (FR-006): media precarga guardada dejaría al
   /// usuario con un presupuesto que nunca terminó de revisar.
+  @override
   Future<void> insertarLote(List<Obligacion> obligaciones) async {
     if (obligaciones.isEmpty) return;
     try {
@@ -62,6 +67,7 @@ final class RepositorioObligaciones {
   ///
   /// Si el id no existe es un no-op silencioso: el usuario ya no ve ese
   /// registro y no hay nada que informarle.
+  @override
   Future<void> actualizar(Obligacion obligacion) async {
     final id = obligacion.id;
     if (id == null) {
@@ -86,6 +92,7 @@ final class RepositorioObligaciones {
     }
   }
 
+  @override
   Future<void> eliminar(int id) async {
     try {
       await _conexion.delete(_tabla, where: 'id = ?', whereArgs: [id]);

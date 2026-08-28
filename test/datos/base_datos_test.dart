@@ -2,7 +2,7 @@ import 'package:finanzas/datos/base_datos.dart';
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/datos/esquema.dart';
 import 'package:finanzas/datos/migraciones.dart';
-import 'package:finanzas/datos/repositorios/repositorio_configuracion.dart';
+import 'package:finanzas/datos/repositorios/repositorio_configuracion_sqlite.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -172,7 +172,7 @@ void main() {
 
   group('configuración por defecto', () {
     test('se crea sola con 20% y 5 días de gracia', () async {
-      final repo = RepositorioConfiguracion(conexion);
+      final repo = RepositorioConfiguracionSqlite(conexion);
       final config = await repo.obtener();
 
       expect(config.regla, ReglaAhorro.porcentajeIngreso);
@@ -182,7 +182,7 @@ void main() {
     });
 
     test('lo guardado se relee igual', () async {
-      final repo = RepositorioConfiguracion(conexion);
+      final repo = RepositorioConfiguracionSqlite(conexion);
       await repo.guardar(
         Configuracion.porDefecto.copiarCon(
           regla: ReglaAhorro.remanente,

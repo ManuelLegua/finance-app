@@ -4,13 +4,13 @@
 // algo que el lenguaje no permite en este caso.
 
 import 'package:finanzas/datos/error_persistencia.dart';
-import 'package:finanzas/datos/repositorios/repositorio_configuracion.dart';
-import 'package:finanzas/datos/repositorios/repositorio_ingreso.dart';
-import 'package:finanzas/datos/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/calculos/cierre_mes.dart';
 import 'package:finanzas/dominio/calculos/presupuesto.dart';
 import 'package:finanzas/dominio/modelos/estado_cierre.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter/foundation.dart';

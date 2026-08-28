@@ -6,6 +6,31 @@ Los repositorios son la única puerta entre SQLite y el resto de la app. Devuelv
 
 **Regla transversal**: ningún repositorio calcula reglas financieras. Suma en SQL solo cuando el resultado es un total plano de filas guardadas; todo lo que dependa de deudas, déficit o ahorro pasa por `lib/dominio/calculos/`.
 
+**Interfaz e implementación separadas**: cada repositorio se declara como
+`abstract interface class` en `lib/dominio/repositorios/` y se implementa en
+`lib/datos/repositorios/` con el sufijo `Sqlite`. Las capas de arriba dependen
+de la interfaz, nunca de la implementación.
+
+Vive en `lib/dominio/` y no en `lib/shared/` por la dirección de las
+dependencias: las firmas hablan de `Obligacion`, `Ingreso` y `Configuracion`,
+que son modelos del dominio. Ponerlas en `shared/` obligaría a que `shared/`
+importe de `dominio/`, invirtiendo la regla `ui → datos → dominio → shared`.
+Es la ubicación habitual de un puerto en arquitectura hexagonal: el puerto
+pertenece al dominio, el adaptador a la infraestructura.
+
+**Motivo, para que no parezca ceremonia**: las pruebas de widget no pueden
+usar SQLite. `sqflite_common_ffi` no completa dentro del reloj falso de
+`testWidgets` y la prueba se cuelga en vez de fallar. La interfaz permite
+dobles en memoria para probar pantallas y para probar la lógica de
+`lib/ui/estado/`, que decide si una escritura está permitida según el cierre
+del mes — una decisión que toca dinero y merece pruebas propias.
+
+**Lo que esto NO cambia**: las pruebas de `test/datos/` siguen corriendo
+contra SQLite real. El contrato se verifica contra la base de verdad; los
+dobles solo se usan donde el comportamiento de la base no es lo que se está
+probando. Si un doble se desincroniza del real, es la suite de datos la que
+tiene que atraparlo.
+
 **Regla de cierre**: los repositorios **no** validan si un mes está abierto, en gracia o cerrado. Esa decisión es de `cierre_mes.dart` y la aplica la capa de estado antes de llamar a la escritura. Un repositorio que además validara el cierre duplicaría la regla en dos sitios que se desincronizan. La única excepción de negocio la fija FR-057: las deudas se editan siempre, sin consultar el cierre.
 
 ---

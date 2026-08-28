@@ -1,5 +1,5 @@
 import 'package:finanzas/datos/base_datos.dart';
-import 'package:finanzas/datos/repositorios/repositorio_ingreso.dart';
+import 'package:finanzas/datos/repositorios/repositorio_ingreso_sqlite.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,14 +10,14 @@ void main() {
   setUpAll(inicializarSqfliteFfi);
 
   late BaseDatos baseDatos;
-  late RepositorioIngreso repo;
+  late RepositorioIngresoSqlite repo;
 
   const agosto = Mes(2026, 8);
   const julio = Mes(2026, 7);
 
   setUp(() async {
     baseDatos = await abrirBaseEnMemoria();
-    repo = RepositorioIngreso(await baseDatos.abrir());
+    repo = RepositorioIngresoSqlite(await baseDatos.abrir());
   });
 
   tearDown(() async => baseDatos.cerrar());

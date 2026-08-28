@@ -170,6 +170,24 @@ Sobre las tasas, la decisión ya estaba tomada en la spec y se ratifica: la app 
 
 ---
 
+## D15 — Repositorios con interfaz, para poder probar sin base de datos
+
+**Decisión**: cada repositorio se declara como `abstract interface class` en `lib/dominio/repositorios/` y se implementa en `lib/datos/repositorios/` con el sufijo `Sqlite`. Las capas de arriba dependen de la interfaz. Las pruebas de widget y las de `lib/ui/estado/` usan dobles en memoria en `test/dobles/`.
+
+**Rationale**: no es una abstracción preventiva, resuelve un problema demostrado. `sqflite_common_ffi` no completa dentro del reloj falso de `testWidgets`: la prueba de la pantalla de presupuesto se colgaba indefinidamente en vez de fallar, y `runAsync` no alcanzó. Sin la interfaz, cada historia sumaría una prueba de widget saltada.
+
+El beneficio secundario resultó mayor que el motivo original: habilitó probar `EstadoMes`, que decide si una escritura está permitida según el cierre del mes. Esa decisión toca dinero — si dejara pasar una edición sobre un mes cerrado, el histórico dejaría de ser confiable — y antes no tenía cobertura propia.
+
+**Ubicación**: en `lib/dominio/` y no en `lib/shared/`, aunque `shared/` sea donde vive lo reutilizable. Las firmas hablan de `Obligacion`, `Ingreso` y `Configuracion`, que son modelos del dominio; ponerlas en `shared/` obligaría a que `shared/` importe de `dominio/`, invirtiendo la regla `ui → datos → dominio → shared`. Es la ubicación habitual de un puerto en arquitectura hexagonal: el puerto pertenece al dominio, el adaptador a la infraestructura.
+
+**Riesgo asumido**: un doble puede desincronizarse del adaptador real y hacer pasar una prueba que en la app falla. Se acota manteniendo `test/datos/` contra SQLite real: el contrato se verifica contra la base de verdad, y los dobles solo se usan donde el comportamiento de la base no es lo que se está probando. También se pierde la cobertura de integración pantalla-más-base, que queda a cargo de la validación manual del quickstart en un dispositivo.
+
+**Frente al Principio V**: hay exactamente una implementación real y un doble por interfaz. No se declara ninguna interfaz cuyo repositorio no exista.
+
+**Alternativas consideradas**: una costura única en `EstadoMes`, con un doble del propio notificador — menos código, pero deja sin cubrir la lógica de `EstadoMes`, que es justamente la que decide sobre escrituras de dinero. Rechazada.
+
+---
+
 ## Dependencias resultantes
 
 | Paquete | Uso | Justificación frente a hacerlo a mano |

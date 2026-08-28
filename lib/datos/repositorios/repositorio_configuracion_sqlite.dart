@@ -1,5 +1,6 @@
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -7,13 +8,14 @@ import 'package:sqflite/sqflite.dart';
 ///
 /// Fila única con `id = 1`. Si no existe, se crea con los valores por defecto:
 /// el usuario no tiene que configurar nada antes de poder usar la app.
-final class RepositorioConfiguracion {
+final class RepositorioConfiguracionSqlite implements RepositorioConfiguracion {
   static const String _tabla = 'configuracion';
 
   final Database _conexion;
 
-  const RepositorioConfiguracion(this._conexion);
+  const RepositorioConfiguracionSqlite(this._conexion);
 
+  @override
   Future<Configuracion> obtener() async {
     try {
       final filas = await _conexion.query(_tabla, where: 'id = 1', limit: 1);
@@ -29,6 +31,7 @@ final class RepositorioConfiguracion {
     }
   }
 
+  @override
   Future<void> guardar(Configuracion config) async {
     try {
       await _conexion.insert(_tabla, <String, Object?>{

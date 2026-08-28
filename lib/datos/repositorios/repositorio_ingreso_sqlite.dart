@@ -1,4 +1,5 @@
 import 'package:finanzas/datos/error_persistencia.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:sqflite/sqflite.dart';
@@ -8,17 +9,18 @@ import 'package:sqflite/sqflite.dart';
 /// **No valida el cierre del mes**: eso lo decide `cierre_mes.dart` y lo
 /// aplica la capa de estado. Duplicar la regla acá crearía dos verdades que se
 /// desincronizan (contracts/repositorios.md).
-final class RepositorioIngreso {
+final class RepositorioIngresoSqlite implements RepositorioIngreso {
   static const String _tabla = 'ingreso';
 
   final Database _conexion;
 
-  const RepositorioIngreso(this._conexion);
+  const RepositorioIngresoSqlite(this._conexion);
 
   /// El ingreso del mes, o `null` si no se registró.
   ///
   /// `null` y `Dinero.cero` son cosas distintas: el primero hace que la app
   /// pida registrar el ingreso, el segundo sería un sueldo de S/ 0.00.
+  @override
   Future<Dinero?> obtener(Mes mes) async {
     try {
       final filas = await _conexion.query(
@@ -35,6 +37,7 @@ final class RepositorioIngreso {
     }
   }
 
+  @override
   Future<void> guardar(Mes mes, Dinero monto) async {
     try {
       await _conexion.insert(_tabla, <String, Object?>{
@@ -47,6 +50,7 @@ final class RepositorioIngreso {
   }
 
   /// Quita el ingreso del mes. Si no había, no hace nada.
+  @override
   Future<void> eliminar(Mes mes) async {
     try {
       await _conexion.delete(
@@ -60,6 +64,7 @@ final class RepositorioIngreso {
   }
 
   /// Meses con ingreso registrado, en orden cronológico.
+  @override
   Future<List<Mes>> mesesConIngreso() async {
     try {
       final filas = await _conexion.query(

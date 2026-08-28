@@ -1,6 +1,6 @@
 import 'package:finanzas/datos/base_datos.dart';
 import 'package:finanzas/datos/error_persistencia.dart';
-import 'package:finanzas/datos/repositorios/repositorio_obligaciones.dart';
+import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
@@ -13,14 +13,14 @@ void main() {
   setUpAll(inicializarSqfliteFfi);
 
   late BaseDatos baseDatos;
-  late RepositorioObligaciones repo;
+  late RepositorioObligacionesSqlite repo;
 
   const agosto = Mes(2026, 8);
   const julio = Mes(2026, 7);
 
   setUp(() async {
     baseDatos = await abrirBaseEnMemoria();
-    repo = RepositorioObligaciones(await baseDatos.abrir());
+    repo = RepositorioObligacionesSqlite(await baseDatos.abrir());
   });
 
   tearDown(() async => baseDatos.cerrar());
