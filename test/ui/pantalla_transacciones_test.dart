@@ -58,6 +58,7 @@ void main() {
       repoObligaciones: repoObligaciones,
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: repoTransacciones,
+      repoDeudas: RepositorioDeudasEnMemoria(),
       ahora: () => quinceDeAgosto,
       mesInicial: agosto,
     );
@@ -164,6 +165,7 @@ void main() {
         repoObligaciones: repoObligaciones,
         repoConfiguracion: RepositorioConfiguracionEnMemoria(),
         repoTransacciones: repoTransacciones,
+        repoDeudas: RepositorioDeudasEnMemoria(),
         ahora: () => tresDeAgosto,
         mesInicial: agosto,
       );
@@ -191,6 +193,7 @@ void main() {
         repoObligaciones: repoObligaciones,
         repoConfiguracion: RepositorioConfiguracionEnMemoria(),
         repoTransacciones: repoTransacciones,
+        repoDeudas: RepositorioDeudasEnMemoria(),
         ahora: () => quinceDeAgosto,
         mesInicial: const Mes(2026, 7),
       );

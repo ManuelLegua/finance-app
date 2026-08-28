@@ -1,9 +1,14 @@
+import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
+import 'package:finanzas/dominio/modelos/deuda.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/dominio/modelos/tarjeta.dart';
 import 'package:finanzas/dominio/modelos/transaccion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
@@ -194,6 +199,107 @@ final class RepositorioTransaccionesEnMemoria
   Future<void> eliminar(int id) async {
     _fallarSiCorresponde();
     _guardadas.removeWhere((transaccion) => transaccion.id == id);
+  }
+
+  void _fallarSiCorresponde() {
+    final error = errorEnLaProximaEscritura;
+    if (error == null) return;
+    errorEnLaProximaEscritura = null;
+    throw error;
+  }
+}
+
+/// Tarjetas en memoria.
+final class RepositorioTarjetasEnMemoria implements RepositorioTarjetas {
+  final List<Tarjeta> _guardadas = <Tarjeta>[];
+  int _proximoId = 1;
+
+  /// Ids de tarjetas que el doble considera con deudas asociadas, para poder
+  /// probar el rechazo del borrado sin montar la base entera.
+  final Set<int> conDeudas = <int>{};
+
+  @override
+  Future<List<Tarjeta>> todas() async => List.of(_guardadas);
+
+  @override
+  Future<List<Tarjeta>> deCredito() async =>
+      _guardadas.where((tarjeta) => tarjeta.admiteCuotas).toList();
+
+  @override
+  Future<int> insertar(Tarjeta tarjeta) async {
+    final id = _proximoId++;
+    _guardadas.add(tarjeta.copiarCon(id: id));
+    return id;
+  }
+
+  @override
+  Future<void> actualizar(Tarjeta tarjeta) async {
+    final indice = _guardadas.indexWhere(
+      (guardada) => guardada.id == tarjeta.id,
+    );
+    if (indice != -1) _guardadas[indice] = tarjeta;
+  }
+
+  @override
+  Future<void> eliminar(int id) async {
+    if (conDeudas.contains(id)) {
+      throw ErrorPersistencia.integridad(
+        'Esa tarjeta tiene deudas registradas. Eliminá o reasigná las deudas '
+        'antes de borrarla.',
+      );
+    }
+    _guardadas.removeWhere((tarjeta) => tarjeta.id == id);
+  }
+}
+
+/// Deudas en memoria.
+final class RepositorioDeudasEnMemoria implements RepositorioDeudas {
+  final List<Deuda> _guardadas = <Deuda>[];
+  int _proximoId = 1;
+
+  Object? errorEnLaProximaEscritura;
+
+  @override
+  Future<List<Deuda>> todas() async => List.of(_guardadas);
+
+  @override
+  Future<List<Deuda>> activas() async =>
+      _guardadas.where((deuda) => deuda.mesSaldadaAnticipada == null).toList();
+
+  @override
+  Future<List<Deuda>> porTarjeta(int tarjetaId) async =>
+      _guardadas.where((deuda) => deuda.tarjetaId == tarjetaId).toList();
+
+  @override
+  Future<int> insertar(Deuda deuda) async {
+    _fallarSiCorresponde();
+    final id = _proximoId++;
+    _guardadas.add(deuda.copiarCon(id: id));
+    return id;
+  }
+
+  @override
+  Future<void> actualizar(Deuda deuda) async {
+    _fallarSiCorresponde();
+    final indice = _guardadas.indexWhere((guardada) => guardada.id == deuda.id);
+    if (indice != -1) _guardadas[indice] = deuda;
+  }
+
+  @override
+  Future<void> marcarSaldada(int id, Mes mes) async {
+    _fallarSiCorresponde();
+    final indice = _guardadas.indexWhere((deuda) => deuda.id == id);
+    if (indice != -1) {
+      _guardadas[indice] = _guardadas[indice].copiarCon(
+        mesSaldadaAnticipada: mes,
+      );
+    }
+  }
+
+  @override
+  Future<void> eliminar(int id) async {
+    _fallarSiCorresponde();
+    _guardadas.removeWhere((deuda) => deuda.id == id);
   }
 
   void _fallarSiCorresponde() {

@@ -43,6 +43,7 @@ void main() {
       repoObligaciones: RepositorioObligacionesEnMemoria(),
       repoConfiguracion: repoConfiguracion,
       repoTransacciones: RepositorioTransaccionesEnMemoria(),
+      repoDeudas: RepositorioDeudasEnMemoria(),
       ahora: () => quinceDeAgosto,
       mesInicial: agosto,
     );
@@ -75,10 +76,10 @@ void main() {
     testWidgets('tocar un destino cambia la pantalla', (tester) async {
       await montar(tester);
 
-      await tester.tap(find.text('Deudas').last);
+      await tester.tap(find.text('Ahorro').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('US4 · deudas de tarjeta en cuotas'), findsOneWidget);
+      expect(find.text('US5 · meta de ahorro y aportes'), findsOneWidget);
     });
   });
 

@@ -183,27 +183,27 @@ enchufa su pantalla donde corresponde.
 
 ### Tests para US4 ⚠️ (escribir primero, deben fallar)
 
-- [ ] T065 [P] [US4] Escribir `test/dominio/deudas_test.dart` cubriendo los ocho escenarios de la HU4: saldo S/ 1,800 al registrar 12×S/ 150 en el mes de inicio (la cuota del mes en curso cuenta como pendiente, D4), 3 pagadas → 9 restantes y S/ 1,350, dos deudas de la misma tarjeta sumando S/ 230, deuda vencida que deja de aportar, deuda de inicio futuro fuera del presupuesto pero dentro del total adeudado, edición retroactiva **que sí afecta meses cerrados** (FR-057), saldado anticipado y deuda de una sola cuota
-- [ ] T066 [P] [US4] Escribir `test/datos/repositorio_tarjetas_test.dart`: alta con entidad y tipo, `deCredito` filtra correctamente, y borrar una tarjeta con deudas se rechaza
-- [ ] T067 [P] [US4] Escribir `test/datos/repositorio_deudas_test.dart`: alta, `activas`, `porTarjeta`, `marcarSaldada` y edición
+- [X] T065 [P] [US4] Escribir `test/dominio/deudas_test.dart` cubriendo los ocho escenarios de la HU4: saldo S/ 1,800 al registrar 12×S/ 150 en el mes de inicio (la cuota del mes en curso cuenta como pendiente, D4), 3 pagadas → 9 restantes y S/ 1,350, dos deudas de la misma tarjeta sumando S/ 230, deuda vencida que deja de aportar, deuda de inicio futuro fuera del presupuesto pero dentro del total adeudado, edición retroactiva **que sí afecta meses cerrados** (FR-057), saldado anticipado y deuda de una sola cuota
+- [X] T066 [P] [US4] Escribir `test/datos/repositorio_tarjetas_test.dart`: alta con entidad y tipo, `deCredito` filtra correctamente, y borrar una tarjeta con deudas se rechaza
+- [X] T067 [P] [US4] Escribir `test/datos/repositorio_deudas_test.dart`: alta, `activas`, `porTarjeta`, `marcarSaldada` y edición
 
 ### Implementación para US4
 
-- [ ] T068 [P] [US4] Crear el modelo `Tarjeta` (nombre, entidad, tipo) en `lib/dominio/modelos/tarjeta.dart`
-- [ ] T069 [P] [US4] Crear la constante `EntidadesPeru` en `lib/dominio/modelos/entidades.dart` con los emisores peruanos habituales (BCP, Interbank, BBVA, Scotiabank, Falabella, Ripley, Pichincha, BanBif, Mibanco, Banco de la Nación, Caja Arequipa, Caja Huancayo, Oh!, Yape, Plin). **Lista local, sin API ni acceso a red** (D14, FR-060)
-- [ ] T070 [P] [US4] Crear el modelo `Deuda` en `lib/dominio/modelos/deuda.dart` con `mesSaldadaAnticipada` opcional
-- [ ] T071 [P] [US4] Crear los derivados `EstadoDeuda` y `PanoramaDeuda` en `lib/dominio/modelos/estado_deuda.dart`
-- [ ] T072 [US4] Implementar `calcularEstadoDeuda`, `cuotaVigenteEnMes`, `compromisoDeudasEnMes` y `calcularPanorama` en `lib/dominio/calculos/deudas.dart`, sin materializar cuotas (D3) y **sin consultar la regla de cierre** (FR-057)
-- [ ] T073 [US4] Integrar las cuotas vigentes en `lib/dominio/calculos/resumen_mes.dart` y `lib/dominio/calculos/desglose_categorias.dart`, y ampliar `test/dominio/resumen_mes_test.dart` y `test/dominio/desglose_test.dart` con casos que incluyan deudas
-- [ ] T074 [P] [US4] Implementar `lib/datos/repositorios/repositorio_tarjetas.dart` con `deCredito`, rechazando borrar tarjetas con deudas asociadas
-- [ ] T075 [US4] Implementar `lib/datos/repositorios/repositorio_deudas.dart`
-- [ ] T076 [US4] Crear `lib/ui/estado/estado_deudas.dart` y conectarlo al recálculo del mes en curso
-- [ ] T077 [P] [US4] Construir la gestión de tarjetas en `lib/ui/pantallas/deudas/pantalla_tarjetas.dart`: alta, edición y baja con nombre, entidad elegida de `EntidadesPeru` o escrita a mano, y tipo débito/crédito (FR-059, FR-060)
-- [ ] T078 [P] [US4] Construir el alta y edición en `lib/ui/pantallas/deudas/formulario_deuda.dart` (descripción, tarjeta, cuota, número de cuotas, mes de inicio), con el selector de tarjeta limitado a las **de crédito** (FR-061) y registrando la cuota tal como la informa el banco, sin calcular intereses (FR-024)
-- [ ] T079 [US4] Construir `lib/ui/pantallas/deudas/pantalla_deudas.dart`: total adeudado, compromiso mensual agregado, mes libre de deudas y estado explícito cuando no hay deudas
-- [ ] T080 [US4] Hacer desplegable el compromiso de tarjeta de crédito en `lib/ui/pantallas/resumen_mes/pantalla_resumen.dart`, mostrando las deudas que lo componen (FR-017)
-- [ ] T081 [US4] Añadir la acción de saldar anticipadamente en `lib/ui/pantallas/deudas/pantalla_deudas.dart`, con confirmación
-- [ ] T082 [US4] Escribir `test/ui/pantalla_deudas_test.dart`: sin deudas activas comunica el estado libre de deuda; una tarjeta de débito no aparece al crear una deuda
+- [X] T068 [P] [US4] Crear el modelo `Tarjeta` (nombre, entidad, tipo) en `lib/dominio/modelos/tarjeta.dart`
+- [X] T069 [P] [US4] Crear la constante `EntidadesPeru` en `lib/dominio/modelos/entidades.dart` con los emisores peruanos habituales (BCP, Interbank, BBVA, Scotiabank, Falabella, Ripley, Pichincha, BanBif, Mibanco, Banco de la Nación, Caja Arequipa, Caja Huancayo, Oh!, Yape, Plin). **Lista local, sin API ni acceso a red** (D14, FR-060)
+- [X] T070 [P] [US4] Crear el modelo `Deuda` en `lib/dominio/modelos/deuda.dart` con `mesSaldadaAnticipada` opcional
+- [X] T071 [P] [US4] Crear los derivados `EstadoDeuda` y `PanoramaDeuda` en `lib/dominio/modelos/estado_deuda.dart`
+- [X] T072 [US4] Implementar `calcularEstadoDeuda`, `cuotaVigenteEnMes`, `compromisoDeudasEnMes` y `calcularPanorama` en `lib/dominio/calculos/deudas.dart`, sin materializar cuotas (D3) y **sin consultar la regla de cierre** (FR-057)
+- [X] T073 [US4] Integrar las cuotas vigentes en `lib/dominio/calculos/resumen_mes.dart` y `lib/dominio/calculos/desglose_categorias.dart`, y ampliar `test/dominio/resumen_mes_test.dart` y `test/dominio/desglose_test.dart` con casos que incluyan deudas
+- [X] T074 [P] [US4] Implementar `lib/datos/repositorios/repositorio_tarjetas.dart` con `deCredito`, rechazando borrar tarjetas con deudas asociadas
+- [X] T075 [US4] Implementar `lib/datos/repositorios/repositorio_deudas.dart`
+- [X] T076 [US4] Crear `lib/ui/estado/estado_deudas.dart` y conectarlo al recálculo del mes en curso
+- [X] T077 [P] [US4] Construir la gestión de tarjetas en `lib/ui/pantallas/deudas/pantalla_tarjetas.dart`: alta, edición y baja con nombre, entidad elegida de `EntidadesPeru` o escrita a mano, y tipo débito/crédito (FR-059, FR-060)
+- [X] T078 [P] [US4] Construir el alta y edición en `lib/ui/pantallas/deudas/formulario_deuda.dart` (descripción, tarjeta, cuota, número de cuotas, mes de inicio), con el selector de tarjeta limitado a las **de crédito** (FR-061) y registrando la cuota tal como la informa el banco, sin calcular intereses (FR-024)
+- [X] T079 [US4] Construir `lib/ui/pantallas/deudas/pantalla_deudas.dart`: total adeudado, compromiso mensual agregado, mes libre de deudas y estado explícito cuando no hay deudas
+- [X] T080 [US4] Hacer desplegable el compromiso de tarjeta de crédito en `lib/ui/pantallas/resumen_mes/pantalla_resumen.dart`, mostrando las deudas que lo componen (FR-017)
+- [X] T081 [US4] Añadir la acción de saldar anticipadamente en `lib/ui/pantallas/deudas/pantalla_deudas.dart`, con confirmación
+- [X] T082 [US4] Escribir `test/ui/pantalla_deudas_test.dart`: sin deudas activas comunica el estado libre de deuda; una tarjeta de débito no aparece al crear una deuda
 
 **Checkpoint**: el usuario ve el año, no solo el mes.
 

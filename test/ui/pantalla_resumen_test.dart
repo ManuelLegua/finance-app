@@ -24,6 +24,7 @@ void main() {
     repoObligaciones: repoObligaciones,
     repoConfiguracion: RepositorioConfiguracionEnMemoria(),
     repoTransacciones: RepositorioTransaccionesEnMemoria(),
+    repoDeudas: RepositorioDeudasEnMemoria(),
     ahora: () => quinceDeAgosto,
     mesInicial: mes,
   );

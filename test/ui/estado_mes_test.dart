@@ -34,6 +34,7 @@ void main() {
       Configuracion.porDefecto.copiarCon(diasGraciaCierre: diasGraciaCierre),
     ),
     repoTransacciones: repoTransacciones,
+    repoDeudas: RepositorioDeudasEnMemoria(),
     ahora: () => hoy,
     mesInicial: mes,
   );

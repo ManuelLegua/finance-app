@@ -1,8 +1,11 @@
+import 'package:finanzas/dominio/modelos/deuda.dart';
+import 'package:finanzas/dominio/modelos/linea_categoria.dart';
 import 'package:finanzas/dominio/modelos/resumen_mes.dart';
 import 'package:finanzas/shared/componentes/aviso_deficit.dart';
 import 'package:finanzas/shared/componentes/aviso_mes_cerrado.dart';
 import 'package:finanzas/shared/componentes/ficha_categoria.dart';
 import 'package:finanzas/shared/componentes/selector_mes.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_soles.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
@@ -49,10 +52,66 @@ class PantallaResumen extends StatelessWidget {
           _DesgloseDeTotales(resumen: resumen),
           if (estado.desglose.isNotEmpty) ...[
             const _TituloCategorias(),
-            for (final linea in estado.desglose) FichaCategoria(linea: linea),
+            for (final linea in estado.desglose)
+              if (linea.categoria == Categoria.tarjetaCredito &&
+                  estado.deudasDelMes.isNotEmpty)
+                _TarjetaDesplegable(
+                  linea: linea,
+                  deudas: estado.deudasDelMes,
+                )
+              else
+                FichaCategoria(linea: linea),
           ],
         ],
       ),
+    );
+  }
+}
+
+/// El compromiso de tarjeta de crédito, desglosado en las deudas que lo
+/// componen (FR-017).
+///
+/// Ese monto no se escribe a mano: lo derivan las cuotas vigentes (D3). Poder
+/// abrirlo es lo que evita que el usuario lo vea como un número mágico.
+class _TarjetaDesplegable extends StatelessWidget {
+  const _TarjetaDesplegable({required this.linea, required this.deudas});
+
+  final LineaCategoria linea;
+  final List<Deuda> deudas;
+
+  @override
+  Widget build(BuildContext context) {
+    final tipografia = Theme.of(context).textTheme;
+    final esquema = Theme.of(context).colorScheme;
+
+    return ExpansionTile(
+      tilePadding: const EdgeInsets.symmetric(horizontal: Espaciado.normal),
+      title: Text(linea.categoria.etiqueta, style: tipografia.bodyLarge),
+      subtitle: Text(
+        deudas.length == 1
+            ? 'Una deuda en cuotas'
+            : '${deudas.length} deudas en cuotas',
+        style: tipografia.bodySmall?.copyWith(color: esquema.onSurfaceVariant),
+      ),
+      trailing: Text(
+        FormatoSoles.formatear(linea.presupuestado),
+        style: tipografia.monto,
+      ),
+      children: [
+        for (final deuda in deudas)
+          ListTile(
+            dense: true,
+            contentPadding: const EdgeInsets.only(
+              left: Espaciado.amplio,
+              right: Espaciado.normal,
+            ),
+            title: Text(deuda.descripcion, style: tipografia.bodyMedium),
+            trailing: Text(
+              FormatoSoles.formatear(deuda.cuotaMensual),
+              style: tipografia.montoSecundario,
+            ),
+          ),
+      ],
     );
   }
 }
