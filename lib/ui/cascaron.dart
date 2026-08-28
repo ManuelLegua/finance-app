@@ -9,6 +9,12 @@ import 'package:flutter/material.dart';
 /// terminar las 105 tareas habría pantallas construidas a las que no se
 /// podría llegar.
 ///
+/// **Son cinco y no seis a propósito.** Material 3 admite de tres a cinco
+/// destinos; con seis, "Presupuesto" no entraba y se partía en dos líneas en
+/// una pantalla de 1080 px. El desglose por categoría (US6) se alcanza desde
+/// el resumen, que es donde tiene sentido: es una vista de detalle del mes,
+/// no una sección propia.
+///
 /// Los destinos sin pantalla todavía muestran un marcador que dice a qué
 /// tarea corresponden, en vez de una pantalla en blanco.
 class Cascaron extends StatefulWidget {
@@ -51,12 +57,6 @@ class _CascaronState extends State<Cascaron> {
       icono: Icons.savings_outlined,
       iconoActivo: Icons.savings,
       pendiente: 'US5 · meta de ahorro y aportes',
-    ),
-    _Destino(
-      etiqueta: 'Categorías',
-      icono: Icons.pie_chart_outline,
-      iconoActivo: Icons.pie_chart,
-      pendiente: 'US6 · desglose por categoría',
     ),
   ];
 

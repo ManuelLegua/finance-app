@@ -130,6 +130,8 @@ Además, una **prueba de guarda** que recorre `lib/dominio/` y falla si algún a
 
 **Rationale**: el Principio IV pide que el usuario entienda su situación de un vistazo y prohíbe añadir elementos que no respondan a un requisito. Un kit de componentes traería decenas de widgets que nadie va a usar y una estética que habría que domar. Material 3 ya resuelve contraste, tamaño táctil y jerarquía tipográfica, y no cuesta una dependencia.
 
+**Navegación**: `NavigationBar` con **cinco destinos** (resumen, presupuesto, gastos, deudas, ahorro). Material 3 admite de tres a cinco; con seis, la etiqueta "Presupuesto" no entraba y se partía en dos líneas en una pantalla de 1080 px — se detectó corriendo la app en el emulador, no en las pruebas. El desglose por categoría (US6) se alcanza desde el resumen: es una vista de detalle del mes, no una sección propia.
+
 **Alternativas consideradas**:
 - **`flex_color_scheme`** (v8.4.0, publisher verificado, 90.8k descargas semanales, sin dependencias de red): produce temas claro y oscuro más pulidos que `fromSeed` a mano. Es solo `ThemeData`, así que entra y sale sin tocar las pantallas. **Aplazada a la fase de Polish**: se evalúa cuando haya pantallas reales que juzgar, no antes.
 - **`google_fonts`**: **rechazada**. Descarga las tipografías desde servidores de Google en tiempo de ejecución, lo que rompe SC-012 (uso sin conexión) y contradice el Principio I. Si en algún momento se quiere una tipografía propia, se empaqueta el archivo como asset.

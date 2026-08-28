@@ -104,7 +104,7 @@ lib/
 │   ├── migraciones.dart           # pasos incrementales v(n) → v(n+1)
 │   └── repositorios/
 └── ui/
-    ├── cascaron.dart              # Scaffold raíz + NavigationBar
+    ├── cascaron.dart              # Scaffold raíz + NavigationBar (5 destinos)
     ├── estado/                    # ChangeNotifiers; aplican la regla de cierre
     └── pantallas/                 # una carpeta por historia de usuario
 

@@ -66,7 +66,7 @@ Proyecto Flutter único (ver *Structure Decision* en plan.md): código en `lib/`
 - [X] T022 [P] Implementar `lib/datos/repositorios/repositorio_configuracion.dart` con los valores por defecto (regla `porcentaje` al 20%, 5 días de gracia)
 - [X] T023 [P] Crear el helper de pruebas `test/datos/helper_bd.dart` que inicializa `sqflite_common_ffi` y abre una base en memoria
 - [X] T024 Escribir `test/datos/base_datos_test.dart`: se crea el esquema completo, `user_version` queda en 1, las FK están activas, un paso de migración simulado preserva los datos existentes, y una base ilegible produce un `ErrorPersistencia` en vez de una base vacía
-- [X] T025 Construir el cascarón de navegación en `lib/ui/cascaron.dart`: `Scaffold` raíz con `NavigationBar` y los cinco destinos (resumen, gastos, deudas, ahorro, categorías), con espacios reservados para las pantallas que aún no existen, y engancharlo desde `lib/main.dart`
+- [X] T025 Construir el cascarón de navegación en `lib/ui/cascaron.dart`: `Scaffold` raíz con `NavigationBar` y los cinco destinos (resumen, presupuesto, gastos, deudas, ahorro), con espacios reservados para las pantallas que aún no existen, y engancharlo desde `lib/main.dart`
 - [X] T026 [P] Crear `lib/ui/widgets/aviso_mes_cerrado.dart`: banner con ícono y texto que explica que el mes está cerrado o en ventana de gracia y qué se puede hacer, legible sin distinguir colores (FR-058)
 
 **Checkpoint**: el dinero es exacto, la base abre y migra, la regla de cierre está probada y se puede navegar entre secciones vacías.
