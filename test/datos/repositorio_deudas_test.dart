@@ -2,13 +2,13 @@ import 'package:finanzas/datos/base_datos.dart';
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/datos/repositorios/repositorio_deudas_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_tarjetas_sqlite.dart';
-import 'package:finanzas/dominio/modelos/deuda.dart';
-import 'package:finanzas/dominio/modelos/tarjeta.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../builders/deuda_builder.dart';
+import '../builders/tarjeta_builder.dart';
 import 'helper_bd.dart';
 
 void main() {
@@ -26,35 +26,10 @@ void main() {
     final conexion = await baseDatos.abrir();
     repoTarjetas = RepositorioTarjetasSqlite(conexion);
     repoDeudas = RepositorioDeudasSqlite(conexion);
-    tarjetaCredito = await repoTarjetas.insertar(
-      const Tarjeta(
-        id: null,
-        nombre: 'BCP Visa',
-        entidad: 'BCP',
-        tipo: TipoTarjeta.credito,
-      ),
-    );
+    tarjetaCredito = await repoTarjetas.insertar(TarjetaBuilder().build());
   });
 
   tearDown(() async => baseDatos.cerrar());
-
-  Deuda deuda({
-    int? id,
-    String descripcion = 'Celular',
-    int cuotaCentavos = 15000,
-    int numCuotas = 12,
-    Mes mesInicio = agosto,
-    Mes? mesSaldadaAnticipada,
-    int? tarjetaId,
-  }) => Deuda(
-    id: id,
-    descripcion: descripcion,
-    tarjetaId: tarjetaId ?? tarjetaCredito,
-    cuotaMensual: Dinero.deCentavos(cuotaCentavos),
-    numCuotas: numCuotas,
-    mesInicio: mesInicio,
-    mesSaldadaAnticipada: mesSaldadaAnticipada,
-  );
 
   group('tarjetas', () {
     test('guarda nombre, entidad y tipo', () async {
@@ -67,12 +42,7 @@ void main() {
 
     test('deCredito filtra las de débito (FR-061)', () async {
       await repoTarjetas.insertar(
-        const Tarjeta(
-          id: null,
-          nombre: 'BCP Débito',
-          entidad: 'BCP',
-          tipo: TipoTarjeta.debito,
-        ),
+        TarjetaBuilder(nombre: 'BCP Débito', tipo: TipoTarjeta.debito).build(),
       );
 
       expect(await repoTarjetas.todas(), hasLength(2));
@@ -83,20 +53,15 @@ void main() {
 
     test('el nombre es único', () async {
       await expectLater(
-        repoTarjetas.insertar(
-          const Tarjeta(
-            id: null,
-            nombre: 'BCP Visa',
-            entidad: 'Interbank',
-            tipo: TipoTarjeta.credito,
-          ),
-        ),
+        repoTarjetas.insertar(TarjetaBuilder(entidad: 'Interbank').build()),
         throwsA(isA<ErrorPersistencia>()),
       );
     });
 
     test('borrar una tarjeta con deudas se rechaza con motivo', () async {
-      await repoDeudas.insertar(deuda());
+      await repoDeudas.insertar(
+        DeudaBuilder(tarjetaId: tarjetaCredito).build(),
+      );
 
       await expectLater(
         repoTarjetas.eliminar(tarjetaCredito),
@@ -120,7 +85,9 @@ void main() {
 
   group('deudas', () {
     test('guarda todos sus campos', () async {
-      await repoDeudas.insertar(deuda());
+      await repoDeudas.insertar(
+        DeudaBuilder(tarjetaId: tarjetaCredito).build(),
+      );
       final guardada = (await repoDeudas.todas()).single;
 
       expect(guardada.descripcion, 'Celular');
@@ -132,9 +99,15 @@ void main() {
     });
 
     test('activas excluye las saldadas anticipadamente', () async {
-      await repoDeudas.insertar(deuda(descripcion: 'Vigente'));
       await repoDeudas.insertar(
-        deuda(descripcion: 'Saldada', mesSaldadaAnticipada: const Mes(2026, 9)),
+        DeudaBuilder(descripcion: 'Vigente', tarjetaId: tarjetaCredito).build(),
+      );
+      await repoDeudas.insertar(
+        DeudaBuilder(
+          descripcion: 'Saldada',
+          tarjetaId: tarjetaCredito,
+          mesSaldadaAnticipada: const Mes(2026, 9),
+        ).build(),
       );
 
       expect(await repoDeudas.todas(), hasLength(2));
@@ -145,15 +118,14 @@ void main() {
 
     test('porTarjeta filtra por su tarjeta', () async {
       final otra = await repoTarjetas.insertar(
-        const Tarjeta(
-          id: null,
-          nombre: 'Oh! Mastercard',
-          entidad: 'Oh!',
-          tipo: TipoTarjeta.credito,
-        ),
+        TarjetaBuilder(nombre: 'Oh! Mastercard', entidad: 'Oh!').build(),
       );
-      await repoDeudas.insertar(deuda(descripcion: 'De BCP'));
-      await repoDeudas.insertar(deuda(descripcion: 'De Oh!', tarjetaId: otra));
+      await repoDeudas.insertar(
+        DeudaBuilder(descripcion: 'De BCP', tarjetaId: tarjetaCredito).build(),
+      );
+      await repoDeudas.insertar(
+        DeudaBuilder(descripcion: 'De Oh!', tarjetaId: otra).build(),
+      );
 
       final deBcp = await repoDeudas.porTarjeta(tarjetaCredito);
       expect(deBcp, hasLength(1));
@@ -162,9 +134,16 @@ void main() {
 
     test('actualizar recalcula sin tocar filas de cuotas', () async {
       // No hay filas de cuotas que reescribir: es una sola escritura (D3).
-      final id = await repoDeudas.insertar(deuda(numCuotas: 12));
+      final id = await repoDeudas.insertar(
+        DeudaBuilder(numCuotas: 12, tarjetaId: tarjetaCredito).build(),
+      );
       await repoDeudas.actualizar(
-        deuda(id: id, numCuotas: 10, cuotaCentavos: 20000),
+        DeudaBuilder(
+          id: id,
+          numCuotas: 10,
+          cuotaCentavos: 20000,
+          tarjetaId: tarjetaCredito,
+        ).build(),
       );
 
       final corregida = (await repoDeudas.todas()).single;
@@ -173,7 +152,9 @@ void main() {
     });
 
     test('marcarSaldada fija el mes y la saca de activas', () async {
-      final id = await repoDeudas.insertar(deuda());
+      final id = await repoDeudas.insertar(
+        DeudaBuilder(tarjetaId: tarjetaCredito).build(),
+      );
       await repoDeudas.marcarSaldada(id, const Mes(2026, 11));
 
       final saldada = (await repoDeudas.todas()).single;
@@ -183,18 +164,20 @@ void main() {
 
     test('no puede apuntar a una tarjeta inexistente', () async {
       await expectLater(
-        repoDeudas.insertar(deuda(tarjetaId: 999)),
+        repoDeudas.insertar(DeudaBuilder(tarjetaId: 999).build()),
         throwsA(isA<ErrorPersistencia>()),
       );
     });
 
     test('rechaza cuotas menores a una', () async {
       // La invariante vive en el modelo, antes de llegar a la base.
-      expect(() => deuda(numCuotas: 0), throwsAssertionError);
+      expect(() => DeudaBuilder(numCuotas: 0).build(), throwsAssertionError);
     });
 
     test('eliminar la quita', () async {
-      final id = await repoDeudas.insertar(deuda());
+      final id = await repoDeudas.insertar(
+        DeudaBuilder(tarjetaId: tarjetaCredito).build(),
+      );
       await repoDeudas.eliminar(id);
       expect(await repoDeudas.todas(), isEmpty);
     });

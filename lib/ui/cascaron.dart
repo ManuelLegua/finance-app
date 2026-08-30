@@ -1,6 +1,7 @@
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_fecha.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
+import 'package:finanzas/ui/pantallas/ahorro/pantalla_ahorro.dart';
 import 'package:finanzas/ui/pantallas/ajustes/pantalla_ajustes.dart';
 import 'package:finanzas/ui/pantallas/deudas/pantalla_deudas.dart';
 import 'package:finanzas/ui/pantallas/deudas/pantalla_tarjetas.dart';
@@ -68,7 +69,7 @@ class _CascaronState extends State<Cascaron> {
       etiqueta: 'Ahorro',
       icono: Icons.savings_outlined,
       iconoActivo: Icons.savings,
-      pendiente: 'US5 · meta de ahorro y aportes',
+      pantalla: PantallaAhorro(),
     ),
   ];
 

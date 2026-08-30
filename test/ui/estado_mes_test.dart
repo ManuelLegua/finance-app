@@ -1,11 +1,11 @@
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
-import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../builders/obligacion_builder.dart';
 import '../dobles/repositorios_en_memoria.dart';
 
 /// `EstadoMes` es donde se aplica la regla de cierre antes de cada escritura
@@ -39,14 +39,8 @@ void main() {
     mesInicial: mes,
   );
 
-  Obligacion obligacionDe(Mes mes, {int? id}) => Obligacion(
-    id: id,
-    mes: mes,
-    nombre: 'Alquiler',
-    categoria: Categoria.departamento,
-    monto: const Dinero.deCentavos(90000),
-    tipo: TipoObligacion.fija,
-  );
+  Obligacion obligacionDe(Mes mes, {int? id}) =>
+      ObligacionBuilder(id: id, mes: mes).build();
 
   setUp(() {
     repoIngreso = RepositorioIngresoEnMemoria();

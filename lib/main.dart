@@ -1,4 +1,5 @@
 import 'package:finanzas/datos/base_datos.dart';
+import 'package:finanzas/datos/repositorios/repositorio_ahorro_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_configuracion_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_deudas_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_ingreso_sqlite.dart';
@@ -6,6 +7,7 @@ import 'package:finanzas/datos/repositorios/repositorio_meses_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_tarjetas_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_transacciones_sqlite.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_ahorro.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
@@ -14,7 +16,9 @@ import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
+import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/cascaron.dart';
+import 'package:finanzas/ui/estado/estado_ahorro.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_tarjetas.dart';
 import 'package:flutter/material.dart';
@@ -116,6 +120,9 @@ class _ArranqueState extends State<_Arranque> {
             Provider<RepositorioMeses>(
               create: (_) => RepositorioMesesSqlite(conexion),
             ),
+            Provider<RepositorioAhorro>(
+              create: (_) => RepositorioAhorroSqlite(conexion),
+            ),
             ChangeNotifierProvider<EstadoMes>(
               create: (contexto) => EstadoMes(
                 repoIngreso: contexto.read<RepositorioIngreso>(),
@@ -130,6 +137,16 @@ class _ArranqueState extends State<_Arranque> {
               create: (contexto) => EstadoTarjetas(
                 repoTarjetas: contexto.read<RepositorioTarjetas>(),
               )..cargar(),
+            ),
+            ChangeNotifierProvider<EstadoAhorro>(
+              // El mismo mes inicial que EstadoMes (hoy): así la tarjeta de
+              // sugerencia en Resumen ya tiene la regla y el porcentaje
+              // reales desde el primer render, sin esperar a que el usuario
+              // visite la pestaña de Ahorro.
+              create: (contexto) => EstadoAhorro(
+                repoAhorro: contexto.read<RepositorioAhorro>(),
+                repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
+              )..cargar(Mes.deFecha(DateTime.now())),
             ),
           ],
           child: const Cascaron(),

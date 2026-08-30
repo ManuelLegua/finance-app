@@ -5,10 +5,12 @@ import 'package:finanzas/shared/componentes/aviso_deficit.dart';
 import 'package:finanzas/shared/componentes/aviso_mes_cerrado.dart';
 import 'package:finanzas/shared/componentes/ficha_categoria.dart';
 import 'package:finanzas/shared/componentes/selector_mes.dart';
+import 'package:finanzas/shared/componentes/tarjeta_sugerencia_ahorro.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_soles.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
+import 'package:finanzas/ui/estado/estado_ahorro.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,6 +26,7 @@ class PantallaResumen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final estado = context.watch<EstadoMes>();
+    final estadoAhorro = context.watch<EstadoAhorro>();
 
     if (estado.cargando) {
       return const Center(child: CircularProgressIndicator());
@@ -48,6 +51,13 @@ class PantallaResumen extends StatelessWidget {
           else ...[
             AvisoDeficit(resumen: resumen),
             _Disponible(resumen: resumen),
+            TarjetaSugerenciaAhorro(
+              sugerencia: estadoAhorro.sugerenciaPara(
+                ingreso: resumen.ingreso,
+                disponibleProyectado: resumen.disponibleProyectado,
+                enDeficit: resumen.enDeficit,
+              ),
+            ),
           ],
           _DesgloseDeTotales(resumen: resumen),
           if (estado.desglose.isNotEmpty) ...[

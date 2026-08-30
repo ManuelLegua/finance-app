@@ -1,6 +1,7 @@
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/cascaron.dart';
+import 'package:finanzas/ui/estado/estado_ahorro.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +13,7 @@ import '../dobles/repositorios_en_memoria.dart';
 /// para lo ocasional.
 void main() {
   late EstadoMes estado;
+  late EstadoAhorro estadoAhorro;
   late RepositorioConfiguracionEnMemoria repoConfiguracion;
 
   const agosto = Mes(2026, 8);
@@ -29,6 +31,7 @@ void main() {
         providers: [
           Provider<RepositorioConfiguracion>.value(value: repoConfiguracion),
           ChangeNotifierProvider<EstadoMes>.value(value: estado),
+          ChangeNotifierProvider<EstadoAhorro>.value(value: estadoAhorro),
         ],
         child: const MaterialApp(home: Cascaron()),
       ),
@@ -48,6 +51,12 @@ void main() {
       mesInicial: agosto,
     );
     await estado.cargar();
+    estadoAhorro = EstadoAhorro(
+      repoAhorro: RepositorioAhorroEnMemoria(),
+      repoConfiguracion: repoConfiguracion,
+      ahora: () => quinceDeAgosto,
+    );
+    await estadoAhorro.cargar(agosto);
   });
 
   group('barra inferior', () {
@@ -79,7 +88,7 @@ void main() {
       await tester.tap(find.text('Ahorro').last);
       await tester.pumpAndSettle();
 
-      expect(find.text('US5 · meta de ahorro y aportes'), findsOneWidget);
+      expect(find.text('Aportes de este mes'), findsOneWidget);
     });
   });
 

@@ -1,6 +1,3 @@
-import 'package:finanzas/dominio/modelos/deuda.dart';
-import 'package:finanzas/dominio/modelos/tarjeta.dart';
-import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
@@ -10,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import '../builders/deuda_builder.dart';
+import '../builders/tarjeta_builder.dart';
 import '../dobles/repositorios_en_memoria.dart';
 
 /// Reglas de presentación de las deudas en cuotas (HU4).
@@ -21,23 +20,6 @@ void main() {
 
   const agosto = Mes(2026, 8);
   final quinceDeAgosto = DateTime(2026, 8, 15);
-
-  Deuda deuda({
-    String descripcion = 'Celular',
-    int cuotaCentavos = 15000,
-    int numCuotas = 12,
-    Mes mesInicio = agosto,
-    Mes? mesSaldadaAnticipada,
-    int tarjetaId = 1,
-  }) => Deuda(
-    id: null,
-    descripcion: descripcion,
-    tarjetaId: tarjetaId,
-    cuotaMensual: Dinero.deCentavos(cuotaCentavos),
-    numCuotas: numCuotas,
-    mesInicio: mesInicio,
-    mesSaldadaAnticipada: mesSaldadaAnticipada,
-  );
 
   Future<void> montar(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
@@ -59,14 +41,7 @@ void main() {
   setUp(() async {
     repoDeudas = RepositorioDeudasEnMemoria();
     repoTarjetas = RepositorioTarjetasEnMemoria();
-    await repoTarjetas.insertar(
-      const Tarjeta(
-        id: null,
-        nombre: 'BCP Visa',
-        entidad: 'BCP',
-        tipo: TipoTarjeta.credito,
-      ),
-    );
+    await repoTarjetas.insertar(TarjetaBuilder().build());
     estado = EstadoMes(
       repoIngreso: RepositorioIngresoEnMemoria(),
       repoObligaciones: RepositorioObligacionesEnMemoria(),
@@ -98,9 +73,15 @@ void main() {
     testWidgets('total, cuota del mes y mes libre en una sola pantalla', (
       tester,
     ) async {
-      await repoDeudas.insertar(deuda(cuotaCentavos: 15000, numCuotas: 12));
       await repoDeudas.insertar(
-        deuda(descripcion: 'Refri', cuotaCentavos: 8000, numCuotas: 6),
+        DeudaBuilder(cuotaCentavos: 15000, numCuotas: 12).build(),
+      );
+      await repoDeudas.insertar(
+        DeudaBuilder(
+          descripcion: 'Refri',
+          cuotaCentavos: 8000,
+          numCuotas: 6,
+        ).build(),
       );
       await estado.cargar();
       await montar(tester);
@@ -117,7 +98,9 @@ void main() {
     testWidgets('una deuda futura suma al total pero no a la cuota del mes', (
       tester,
     ) async {
-      await repoDeudas.insertar(deuda(mesInicio: const Mes(2026, 11)));
+      await repoDeudas.insertar(
+        DeudaBuilder(mesInicio: const Mes(2026, 11)).build(),
+      );
       await estado.cargar();
       await montar(tester);
 
@@ -131,7 +114,7 @@ void main() {
     testWidgets('muestra cuotas pagadas, restantes y mes de término', (
       tester,
     ) async {
-      await repoDeudas.insertar(deuda());
+      await repoDeudas.insertar(DeudaBuilder().build());
       await estado.irAMes(const Mes(2026, 11));
       await montar(tester);
 
@@ -144,7 +127,7 @@ void main() {
     });
 
     testWidgets('identifica la tarjeta que la respalda', (tester) async {
-      await repoDeudas.insertar(deuda());
+      await repoDeudas.insertar(DeudaBuilder().build());
       await estado.cargar();
       await montar(tester);
 
@@ -154,7 +137,7 @@ void main() {
 
   group('saldar anticipadamente (FR-021)', () {
     testWidgets('pide confirmación antes de saldar', (tester) async {
-      await repoDeudas.insertar(deuda());
+      await repoDeudas.insertar(DeudaBuilder().build());
       await estado.cargar();
       await montar(tester);
 
@@ -170,7 +153,7 @@ void main() {
     testWidgets('al confirmar, deja de aportar y su saldo pasa a cero', (
       tester,
     ) async {
-      await repoDeudas.insertar(deuda());
+      await repoDeudas.insertar(DeudaBuilder().build());
       await estado.cargar();
 
       expect(estado.cuotasVigentes, const Dinero.deCentavos(15000));
@@ -187,9 +170,9 @@ void main() {
     testWidgets('se suman al comprometido del mes sin escribirse a mano', (
       tester,
     ) async {
-      await repoDeudas.insertar(deuda(cuotaCentavos: 15000));
+      await repoDeudas.insertar(DeudaBuilder(cuotaCentavos: 15000).build());
       await repoDeudas.insertar(
-        deuda(descripcion: 'Refri', cuotaCentavos: 8000),
+        DeudaBuilder(descripcion: 'Refri', cuotaCentavos: 8000).build(),
       );
       await estado.cargar();
 
@@ -205,7 +188,9 @@ void main() {
     ) async {
       // FR-023 y FR-057: es la única corrección admitida sobre un mes cerrado,
       // porque la cuota nunca fue un dato del mes (D3).
-      await repoDeudas.insertar(deuda(cuotaCentavos: 15000, numCuotas: 12));
+      await repoDeudas.insertar(
+        DeudaBuilder(cuotaCentavos: 15000, numCuotas: 12).build(),
+      );
       await estado.cargar();
 
       final guardada = estado.deudas.single;

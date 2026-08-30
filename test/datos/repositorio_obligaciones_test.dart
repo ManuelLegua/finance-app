@@ -1,12 +1,12 @@
 import 'package:finanzas/datos/base_datos.dart';
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
-import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../builders/obligacion_builder.dart';
 import 'helper_bd.dart';
 
 void main() {
@@ -25,30 +25,14 @@ void main() {
 
   tearDown(() async => baseDatos.cerrar());
 
-  Obligacion crear({
-    Mes mes = agosto,
-    String nombre = 'Alquiler',
-    Categoria categoria = Categoria.departamento,
-    int centavos = 90000,
-    TipoObligacion tipo = TipoObligacion.fija,
-    int? id,
-  }) => Obligacion(
-    id: id,
-    mes: mes,
-    nombre: nombre,
-    categoria: categoria,
-    monto: Dinero.deCentavos(centavos),
-    tipo: tipo,
-  );
-
   group('insertar y leer', () {
     test('devuelve el id asignado', () async {
-      final id = await repo.insertar(crear());
+      final id = await repo.insertar(ObligacionBuilder().build());
       expect(id, greaterThan(0));
     });
 
     test('porMes devuelve lo guardado con todos sus campos', () async {
-      await repo.insertar(crear());
+      await repo.insertar(ObligacionBuilder().build());
       final obligaciones = await repo.porMes(agosto);
 
       expect(obligaciones, hasLength(1));
@@ -62,8 +46,12 @@ void main() {
     });
 
     test('porMes no mezcla meses', () async {
-      await repo.insertar(crear(mes: agosto, nombre: 'Alquiler agosto'));
-      await repo.insertar(crear(mes: julio, nombre: 'Alquiler julio'));
+      await repo.insertar(
+        ObligacionBuilder(mes: agosto, nombre: 'Alquiler agosto').build(),
+      );
+      await repo.insertar(
+        ObligacionBuilder(mes: julio, nombre: 'Alquiler julio').build(),
+      );
 
       expect((await repo.porMes(agosto)).single.nombre, 'Alquiler agosto');
       expect((await repo.porMes(julio)).single.nombre, 'Alquiler julio');
@@ -74,7 +62,7 @@ void main() {
     });
 
     test('el monto sobrevive exacto al centavo', () async {
-      await repo.insertar(crear(centavos: 123456));
+      await repo.insertar(ObligacionBuilder(centavos: 123456).build());
       expect(
         (await repo.porMes(agosto)).single.monto,
         const Dinero.deCentavos(123456),
@@ -84,9 +72,17 @@ void main() {
 
   group('fijasDeMes', () {
     test('devuelve solo las fijas, insumo de la precarga', () async {
-      await repo.insertar(crear(nombre: 'Alquiler', tipo: TipoObligacion.fija));
       await repo.insertar(
-        crear(nombre: 'Comida', tipo: TipoObligacion.variable),
+        ObligacionBuilder(
+          nombre: 'Alquiler',
+          tipo: TipoObligacion.fija,
+        ).build(),
+      );
+      await repo.insertar(
+        ObligacionBuilder(
+          nombre: 'Comida',
+          tipo: TipoObligacion.variable,
+        ).build(),
       );
 
       final fijas = await repo.fijasDeMes(agosto);
@@ -97,8 +93,10 @@ void main() {
 
   group('actualizar', () {
     test('cambia el monto y los totales se releen recalculados', () async {
-      final id = await repo.insertar(crear(centavos: 90000));
-      await repo.actualizar(crear(id: id, centavos: 95000));
+      final id = await repo.insertar(
+        ObligacionBuilder(centavos: 90000).build(),
+      );
+      await repo.actualizar(ObligacionBuilder(id: id, centavos: 95000).build());
 
       expect(
         (await repo.porMes(agosto)).single.monto,
@@ -107,14 +105,14 @@ void main() {
     });
 
     test('cambia nombre, categoría y tipo', () async {
-      final id = await repo.insertar(crear());
+      final id = await repo.insertar(ObligacionBuilder().build());
       await repo.actualizar(
-        crear(
+        ObligacionBuilder(
           id: id,
           nombre: 'Internet',
           categoria: Categoria.servicios,
           tipo: TipoObligacion.variable,
-        ),
+        ).build(),
       );
 
       final obligacion = (await repo.porMes(agosto)).single;
@@ -125,20 +123,23 @@ void main() {
 
     test('actualizar sin id es un error de programación', () async {
       await expectLater(
-        repo.actualizar(crear()),
+        repo.actualizar(ObligacionBuilder().build()),
         throwsA(isA<ArgumentError>()),
       );
     });
 
     test('actualizar un id inexistente es no-op silencioso', () async {
-      await expectLater(repo.actualizar(crear(id: 999)), completes);
+      await expectLater(
+        repo.actualizar(ObligacionBuilder(id: 999).build()),
+        completes,
+      );
       expect(await repo.porMes(agosto), isEmpty);
     });
   });
 
   group('eliminar', () {
     test('quita la obligación del mes', () async {
-      final id = await repo.insertar(crear());
+      final id = await repo.insertar(ObligacionBuilder().build());
       await repo.eliminar(id);
       expect(await repo.porMes(agosto), isEmpty);
     });
@@ -151,9 +152,17 @@ void main() {
   group('insertarLote', () {
     test('inserta todas las obligaciones de la precarga', () async {
       await repo.insertarLote([
-        crear(nombre: 'Alquiler'),
-        crear(nombre: 'Luz', categoria: Categoria.servicios, centavos: 12000),
-        crear(nombre: 'Agua', categoria: Categoria.servicios, centavos: 5000),
+        ObligacionBuilder(nombre: 'Alquiler').build(),
+        ObligacionBuilder(
+          nombre: 'Luz',
+          categoria: Categoria.servicios,
+          centavos: 12000,
+        ).build(),
+        ObligacionBuilder(
+          nombre: 'Agua',
+          categoria: Categoria.servicios,
+          centavos: 5000,
+        ).build(),
       ]);
 
       expect(await repo.porMes(agosto), hasLength(3));
@@ -164,8 +173,9 @@ void main() {
       // dejaría al usuario con un presupuesto que no revisó.
       await expectLater(
         repo.insertarLote([
-          crear(nombre: 'Alquiler'),
-          crear(nombre: '   '), // viola el CHECK de nombre no vacío
+          ObligacionBuilder(nombre: 'Alquiler').build(),
+          ObligacionBuilder(nombre: '   ')
+              .build(), // viola el CHECK de nombre no vacío
         ]),
         throwsA(isA<ErrorPersistencia>()),
       );

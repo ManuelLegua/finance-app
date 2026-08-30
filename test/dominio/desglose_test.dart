@@ -3,31 +3,32 @@ import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/dominio/modelos/transaccion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
-import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../builders/obligacion_builder.dart';
+import '../builders/transaccion_builder.dart';
 
 /// FR-009 a FR-012: acumulado por categoría, presupuestado contra gastado, y
 /// las marcas de sobregiro y de gasto no presupuestado.
 void main() {
-  const agosto = Mes(2026, 8);
-
-  Obligacion presupuesto(Categoria categoria, int centavos) => Obligacion(
-    id: null,
-    mes: agosto,
-    nombre: categoria.etiqueta,
-    categoria: categoria,
-    monto: Dinero.deCentavos(centavos),
-    tipo: TipoObligacion.variable,
-  );
+  // Atajos posicionales sobre los builders compartidos: en este archivo se
+  // usan más de veinte veces con la misma forma (categoría + monto), así que
+  // ganan legibilidad sin reintroducir construcción de entidades a mano.
+  Obligacion presupuesto(Categoria categoria, int centavos) =>
+      ObligacionBuilder(
+        categoria: categoria,
+        nombre: categoria.etiqueta,
+        centavos: centavos,
+        tipo: TipoObligacion.variable,
+      ).build();
 
   Transaccion gasto(Categoria categoria, int centavos, {int dia = 15}) =>
-      Transaccion(
-        id: null,
-        fecha: DateTime(2026, 8, dia),
+      TransaccionBuilder(
         categoria: categoria,
-        monto: Dinero.deCentavos(centavos),
+        centavos: centavos,
+        fecha: DateTime(2026, 8, dia),
         descripcion: '',
-      );
+      ).build();
 
   LineaCategoria lineaDe(List<LineaCategoria> lineas, Categoria categoria) =>
       lineas.firstWhere((linea) => linea.categoria == categoria);

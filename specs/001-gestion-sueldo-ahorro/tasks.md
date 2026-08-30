@@ -217,21 +217,21 @@ enchufa su pantalla donde corresponde.
 
 ### Tests para US5 ⚠️ (escribir primero, deben fallar)
 
-- [ ] T083 [P] [US5] Escribir `test/dominio/ahorro_test.dart` cubriendo los trece escenarios de la HU5: 20% de S/ 3,000 = S/ 600; el 20% que excede el disponible de S/ 300 y ofrece lo alcanzable; regla remanente; meta alcanzable con margen S/ 700; meta no alcanzable con recorte S/ 300; supresión en déficit; aportes que suman S/ 550 con excedente S/ 50; acumulado histórico; meses sin aportes en S/ 0.00; **un mes pasado con meta S/ 400 evaluado contra S/ 400 y no contra la meta actual de S/ 700 (FR-054)**; y **`proponerMetaDelMes` que devuelve la meta del último mes que la tuvo sin guardarla (FR-053)**
-- [ ] T084 [P] [US5] Escribir `test/datos/repositorio_ahorro_test.dart`: `metaDeMes` distingue `null` de cero, `metasHasta` en orden cronológico, `SUM()` entero del acumulado, aportes por mes, edición y borrado
+- [X] T083 [P] [US5] Escribir `test/dominio/ahorro_test.dart` cubriendo los trece escenarios de la HU5: 20% de S/ 3,000 = S/ 600; el 20% que excede el disponible de S/ 300 y ofrece lo alcanzable; regla remanente; meta alcanzable con margen S/ 700; meta no alcanzable con recorte S/ 300; supresión en déficit; aportes que suman S/ 550 con excedente S/ 50; acumulado histórico; meses sin aportes en S/ 0.00; **un mes pasado con meta S/ 400 evaluado contra S/ 400 y no contra la meta actual de S/ 700 (FR-054)**; y **`proponerMetaDelMes` que devuelve la meta del último mes que la tuvo sin guardarla (FR-053)**
+- [X] T084 [P] [US5] Escribir `test/datos/repositorio_ahorro_test.dart`: `metaDeMes` distingue `null` de cero, `metasHasta` en orden cronológico, `SUM()` entero del acumulado, aportes por mes, edición y borrado
 
 ### Implementación para US5
 
-- [ ] T085 [P] [US5] Crear el modelo `MetaAhorro` (mes + monto) en `lib/dominio/modelos/meta_ahorro.dart`
-- [ ] T086 [P] [US5] Crear el modelo `AporteAhorro` en `lib/dominio/modelos/aporte_ahorro.dart`
-- [ ] T087 [P] [US5] Crear los derivados `SugerenciaAhorro` y `ProgresoAhorro` en `lib/dominio/modelos/progreso_ahorro.dart`, con la meta del mes evaluado y el historial que lleva la meta de cada mes
-- [ ] T088 [US5] Implementar `calcularSugerencia`, `calcularProgreso` y `proponerMetaDelMes` en `lib/dominio/calculos/ahorro.dart`, con aritmética entera half-up
-- [ ] T089 [US5] Implementar `lib/datos/repositorios/repositorio_ahorro.dart`: metas por mes (`metaDeMes`, `guardarMeta`, `eliminarMeta`, `metasHasta`), aportes, acumulado e historial
-- [ ] T090 [US5] Crear `lib/ui/estado/estado_ahorro.dart`, aplicando la regla de cierre a los aportes igual que a las transacciones
-- [ ] T091 [P] [US5] Construir `lib/ui/pantallas/ahorro/configuracion_ahorro.dart`: regla y porcentaje (globales) y meta **del mes en curso** precargada con `proponerMetaDelMes` y sin fijarse hasta que el usuario confirme (FR-053)
-- [ ] T092 [US5] Construir `lib/ui/pantallas/ahorro/pantalla_ahorro.dart`: sugerencia, progreso contra la meta del mes, alta de aportes, historial mes a mes con la meta de cada uno, y acumulado histórico en una sola pantalla (SC-010)
-- [ ] T093 [US5] Añadir la tarjeta de ahorro sugerido a `lib/ui/pantallas/resumen_mes/pantalla_resumen.dart`, suprimida en déficit con el motivo explícito (FR-037)
-- [ ] T094 [US5] Escribir `test/ui/pantalla_ahorro_test.dart`: aporte mayor que el disponible se acepta e informa; un mes sin meta figura sin veredicto; la meta propuesta no queda guardada hasta confirmarla; un mes cerrado no admite nuevos aportes
+- [X] T085 [P] [US5] Crear el modelo `MetaAhorro` (mes + monto) en `lib/dominio/modelos/meta_ahorro.dart`
+- [X] T086 [P] [US5] Crear el modelo `AporteAhorro` en `lib/dominio/modelos/aporte_ahorro.dart`
+- [X] T087 [P] [US5] Crear los derivados `SugerenciaAhorro` y `ProgresoAhorro` en `lib/dominio/modelos/progreso_ahorro.dart`, con la meta del mes evaluado y el historial que lleva la meta de cada mes
+- [X] T088 [US5] Implementar `calcularSugerencia`, `calcularProgreso` y `proponerMetaDelMes` en `lib/dominio/calculos/ahorro.dart`, con aritmética entera half-up
+- [X] T089 [US5] Implementar `lib/datos/repositorios/repositorio_ahorro.dart`: metas por mes (`metaDeMes`, `guardarMeta`, `eliminarMeta`, `metasHasta`), aportes, acumulado e historial
+- [X] T090 [US5] Crear `lib/ui/estado/estado_ahorro.dart`, aplicando la regla de cierre a los aportes igual que a las transacciones
+- [X] T091 [P] [US5] Construir `lib/ui/pantallas/ahorro/configuracion_ahorro.dart`: regla y porcentaje (globales) y meta **del mes en curso** precargada con `proponerMetaDelMes` y sin fijarse hasta que el usuario confirme (FR-053)
+- [X] T092 [US5] Construir `lib/ui/pantallas/ahorro/pantalla_ahorro.dart`: sugerencia, progreso contra la meta del mes, alta de aportes, historial mes a mes con la meta de cada uno, y acumulado histórico en una sola pantalla (SC-010)
+- [X] T093 [US5] Añadir la tarjeta de ahorro sugerido a `lib/ui/pantallas/resumen_mes/pantalla_resumen.dart`, suprimida en déficit con el motivo explícito (FR-037)
+- [X] T094 [US5] Escribir `test/ui/pantalla_ahorro_test.dart`: aporte mayor que el disponible se acepta e informa; un mes sin meta figura sin veredicto; la meta propuesta no queda guardada hasta confirmarla; un mes cerrado no admite nuevos aportes
 
 **Checkpoint**: el objetivo declarado de la app queda cubierto.
 

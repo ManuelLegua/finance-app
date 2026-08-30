@@ -6,6 +6,7 @@ import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../builders/transaccion_builder.dart';
 import 'helper_bd.dart';
 
 void main() {
@@ -24,6 +25,8 @@ void main() {
 
   tearDown(() async => baseDatos.cerrar());
 
+  // Atajo con mes y día sueltos sobre el builder compartido: se usa más de
+  // quince veces en este archivo para reubicar el gasto de mes (FR-008).
   Transaccion gasto({
     int dia = 15,
     int mes = 8,
@@ -31,13 +34,13 @@ void main() {
     Categoria categoria = Categoria.comida,
     String descripcion = 'Almuerzo',
     int? id,
-  }) => Transaccion(
+  }) => TransaccionBuilder(
     id: id,
     fecha: DateTime(2026, mes, dia),
     categoria: categoria,
-    monto: Dinero.deCentavos(centavos),
+    centavos: centavos,
     descripcion: descripcion,
-  );
+  ).build();
 
   group('insertar y leer', () {
     test('devuelve el id asignado', () async {

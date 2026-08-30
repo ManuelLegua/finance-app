@@ -1,13 +1,14 @@
 import 'package:finanzas/dominio/modelos/obligacion.dart';
-import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
+import 'package:finanzas/ui/estado/estado_ahorro.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/pantallas/resumen_mes/pantalla_resumen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import '../builders/obligacion_builder.dart';
 import '../dobles/repositorios_en_memoria.dart';
 
 /// Reglas de presentación del resumen del mes (HU2).
@@ -15,6 +16,7 @@ void main() {
   late RepositorioIngresoEnMemoria repoIngreso;
   late RepositorioObligacionesEnMemoria repoObligaciones;
   late EstadoMes estado;
+  late EstadoAhorro estadoAhorro;
 
   const agosto = Mes(2026, 8);
   final quinceDeAgosto = DateTime(2026, 8, 15);
@@ -29,21 +31,18 @@ void main() {
     mesInicial: mes,
   );
 
-  Obligacion obligacionDe(int centavos, {Mes mes = agosto}) => Obligacion(
-    id: null,
-    mes: mes,
-    nombre: 'Alquiler',
-    categoria: Categoria.departamento,
-    monto: Dinero.deCentavos(centavos),
-    tipo: TipoObligacion.fija,
-  );
+  Obligacion obligacionDe(int centavos, {Mes mes = agosto}) =>
+      ObligacionBuilder(mes: mes, centavos: centavos).build();
 
   Future<void> montar(WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: ChangeNotifierProvider<EstadoMes>.value(
-            value: estado,
+          body: MultiProvider(
+            providers: [
+              ChangeNotifierProvider<EstadoMes>.value(value: estado),
+              ChangeNotifierProvider<EstadoAhorro>.value(value: estadoAhorro),
+            ],
             child: const PantallaResumen(),
           ),
         ),
@@ -55,6 +54,11 @@ void main() {
   setUp(() {
     repoIngreso = RepositorioIngresoEnMemoria();
     repoObligaciones = RepositorioObligacionesEnMemoria();
+    estadoAhorro = EstadoAhorro(
+      repoAhorro: RepositorioAhorroEnMemoria(),
+      repoConfiguracion: RepositorioConfiguracionEnMemoria(),
+      ahora: () => quinceDeAgosto,
+    );
   });
 
   group('caso normal', () {

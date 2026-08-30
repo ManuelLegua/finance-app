@@ -1,4 +1,3 @@
-import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/dominio/modelos/transaccion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
@@ -9,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import '../builders/obligacion_builder.dart';
+import '../builders/transaccion_builder.dart';
 import '../dobles/repositorios_en_memoria.dart';
 
 /// Reglas de presentación del registro de gastos (HU3).
@@ -26,13 +27,12 @@ void main() {
     int centavos = 4500,
     Categoria categoria = Categoria.comida,
     String descripcion = 'Almuerzo',
-  }) => Transaccion(
-    id: null,
+  }) => TransaccionBuilder(
     fecha: DateTime(2026, mes, dia),
     categoria: categoria,
-    monto: Dinero.deCentavos(centavos),
+    centavos: centavos,
     descripcion: descripcion,
-  );
+  ).build();
 
   Future<void> montar(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 2400);
@@ -118,14 +118,12 @@ void main() {
     ) async {
       // La app informa, no bloquea: no le impide al usuario gastar.
       await repoObligaciones.insertar(
-        const Obligacion(
-          id: null,
-          mes: agosto,
+        ObligacionBuilder(
           nombre: 'Pasajes',
           categoria: Categoria.pasajes,
-          monto: Dinero.deCentavos(20000),
+          centavos: 20000,
           tipo: TipoObligacion.variable,
-        ),
+        ).build(),
       );
       await estado.cargar();
 

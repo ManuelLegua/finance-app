@@ -2,24 +2,20 @@ import 'package:finanzas/dominio/calculos/resumen_mes.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
-import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../builders/obligacion_builder.dart';
 
 /// FR-025 a FR-030: totales del mes, disponible y estado de déficit.
 ///
 /// Los tres casos que exige la constitución están cubiertos: el normal, el
 /// límite (disponible exactamente cero) y el adverso (déficit).
 void main() {
-  const agosto = Mes(2026, 8);
-
-  Obligacion obligacionDe(int centavos) => Obligacion(
-    id: null,
-    mes: agosto,
+  Obligacion obligacionDe(int centavos) => ObligacionBuilder(
     nombre: 'x',
     categoria: Categoria.servicios,
-    monto: Dinero.deCentavos(centavos),
-    tipo: TipoObligacion.fija,
-  );
+    centavos: centavos,
+  ).build();
 
   group('caso normal', () {
     test('ingreso 3,000 y presupuesto 1,800 dejan 1,200 disponibles', () {

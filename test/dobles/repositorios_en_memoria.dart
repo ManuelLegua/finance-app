@@ -1,9 +1,11 @@
 import 'package:finanzas/datos/error_persistencia.dart';
+import 'package:finanzas/dominio/modelos/aporte_ahorro.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/dominio/modelos/deuda.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/dominio/modelos/tarjeta.dart';
 import 'package:finanzas/dominio/modelos/transaccion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_ahorro.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
@@ -249,6 +251,104 @@ final class RepositorioTarjetasEnMemoria implements RepositorioTarjetas {
       );
     }
     _guardadas.removeWhere((tarjeta) => tarjeta.id == id);
+  }
+}
+
+/// Metas y aportes de ahorro en memoria.
+final class RepositorioAhorroEnMemoria implements RepositorioAhorro {
+  final Map<int, Dinero> _metasPorMesOrdinal = <int, Dinero>{};
+  final List<AporteAhorro> _aportes = <AporteAhorro>[];
+  int _proximoId = 1;
+
+  Object? errorEnLaProximaEscritura;
+
+  @override
+  Future<Dinero?> metaDeMes(Mes mes) async => _metasPorMesOrdinal[mes.ordinal];
+
+  @override
+  Future<void> guardarMeta(Mes mes, Dinero monto) async {
+    _metasPorMesOrdinal[mes.ordinal] = monto;
+  }
+
+  @override
+  Future<void> eliminarMeta(Mes mes) async {
+    _metasPorMesOrdinal.remove(mes.ordinal);
+  }
+
+  @override
+  Future<List<(Mes, Dinero)>> metasHasta(Mes mes) async {
+    final ordinales =
+        _metasPorMesOrdinal.keys
+            .where((ordinal) => ordinal <= mes.ordinal)
+            .toList()
+          ..sort();
+    return [
+      for (final ordinal in ordinales)
+        (Mes.deOrdinal(ordinal), _metasPorMesOrdinal[ordinal]!),
+    ];
+  }
+
+  @override
+  Future<List<AporteAhorro>> aportesPorMes(Mes mes) async =>
+      _aportes.where((aporte) => aporte.mes == mes).toList();
+
+  @override
+  Future<Dinero> acumuladoHistorico() async {
+    return _aportes.fold<Dinero>(
+      Dinero.cero,
+      (acumulado, aporte) => acumulado + aporte.monto,
+    );
+  }
+
+  @override
+  Future<List<(Mes, Dinero)>> historialPorMes(Mes desde, Mes hasta) async {
+    final porMes = <int, Dinero>{};
+    for (final aporte in _aportes) {
+      final ordinal = aporte.mes.ordinal;
+      if (ordinal < desde.ordinal || ordinal > hasta.ordinal) continue;
+      porMes[ordinal] = (porMes[ordinal] ?? Dinero.cero) + aporte.monto;
+    }
+    final ordinales = porMes.keys.toList()..sort();
+    return [
+      for (final ordinal in ordinales)
+        (Mes.deOrdinal(ordinal), porMes[ordinal]!),
+    ];
+  }
+
+  @override
+  Future<int> insertarAporte(AporteAhorro aporte) async {
+    _fallarSiCorresponde();
+    final id = _proximoId++;
+    _aportes.add(aporte.copiarCon(id: id));
+    return id;
+  }
+
+  @override
+  Future<void> actualizarAporte(AporteAhorro aporte) async {
+    final id = aporte.id;
+    if (id == null) {
+      throw ArgumentError.value(
+        aporte,
+        'aporte',
+        'No se puede actualizar un aporte sin id; usá insertarAporte()',
+      );
+    }
+    _fallarSiCorresponde();
+    final indice = _aportes.indexWhere((guardado) => guardado.id == id);
+    if (indice != -1) _aportes[indice] = aporte;
+  }
+
+  @override
+  Future<void> eliminarAporte(int id) async {
+    _fallarSiCorresponde();
+    _aportes.removeWhere((aporte) => aporte.id == id);
+  }
+
+  void _fallarSiCorresponde() {
+    final error = errorEnLaProximaEscritura;
+    if (error == null) return;
+    errorEnLaProximaEscritura = null;
+    throw error;
   }
 }
 

@@ -5,6 +5,8 @@ import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../builders/obligacion_builder.dart';
+
 /// FR-005 (validación de montos) y FR-006 (precarga de obligaciones fijas).
 void main() {
   group('validarMonto', () {
@@ -91,14 +93,13 @@ void main() {
     const julio = Mes(2026, 7);
 
     Obligacion crear(String nombre, int centavos, TipoObligacion tipo) =>
-        Obligacion(
-          id: null,
+        ObligacionBuilder(
           mes: julio,
           nombre: nombre,
           categoria: Categoria.servicios,
-          monto: Dinero.deCentavos(centavos),
+          centavos: centavos,
           tipo: tipo,
-        );
+        ).build();
 
     test('propone las fijas con el mismo monto', () {
       final propuestas = proponerFijasDelMesAnterior(
@@ -165,14 +166,7 @@ void main() {
       final propuestas = proponerFijasDelMesAnterior(
         mesDestino: agosto,
         obligacionesMesAnterior: [
-          const Obligacion(
-            id: 1,
-            mes: julio,
-            nombre: 'Alquiler',
-            categoria: Categoria.departamento,
-            monto: Dinero.deCentavos(90000),
-            tipo: TipoObligacion.fija,
-          ),
+          ObligacionBuilder(id: 1, mes: julio, nombre: 'Alquiler').build(),
         ],
       );
       expect(propuestas.single.categoria, Categoria.departamento);
@@ -182,14 +176,12 @@ void main() {
   group('totalComprometido', () {
     const agosto = Mes(2026, 8);
 
-    Obligacion crear(int centavos) => Obligacion(
-      id: null,
+    Obligacion crear(int centavos) => ObligacionBuilder(
       mes: agosto,
       nombre: 'x',
       categoria: Categoria.otros,
-      monto: Dinero.deCentavos(centavos),
-      tipo: TipoObligacion.fija,
-    );
+      centavos: centavos,
+    ).build();
 
     test('suma las obligaciones del mes', () {
       final total = totalObligaciones([
