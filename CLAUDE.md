@@ -87,7 +87,9 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/data-model.md` | Entidades, derivados y el esquema SQLite completo |
 | `specs/001-gestion-sueldo-ahorro/contracts/` | API de la capa de cálculo puro y de los repositorios |
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
-| `specs/002-captura-notificaciones-bancarias/` | Feature siguiente, aún sin plan |
+| `specs/002-captura-notificaciones-bancarias/` | Spec completa, aún sin plan |
+| `specs/003-cobros-parciales-ingreso/` | Ingreso en varios cobros por mes (quincena + fin de mes, etc.); spec completa, aún sin plan |
+| `specs/004-suscripcion-premium/` | Suscripción paga (Deudas + Ahorro + captura de notificaciones); spec completa, aún sin plan |
 
 Antes de proponer un cambio de diseño, leer `research.md`: es probable que la alternativa ya se haya evaluado y rechazado por escrito.
 
@@ -163,7 +165,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 
 ## Estado actual
 
-**82 de 108 tareas.** US1 a US4 completas y validadas en emulador; 280 pruebas en verde y `flutter analyze` sin issues.
+**94 de 108 tareas.** US1 a US5 completas y validadas en emulador; 316 pruebas en verde y `flutter analyze` sin issues.
 
 | Historia | Estado |
 |---|---|
@@ -171,7 +173,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 | US2 · resumen y déficit | ✅ |
 | US3 · gastos reales | ✅ |
 | US4 · deudas en cuotas | ✅ |
-| US5 · ahorro (T083–T094) | pendiente |
+| US5 · ahorro (T083–T094) | ✅ |
 | US6 · desglose por categoría (T095–T099) | pendiente |
 | Polish (T100–T108) | pendiente |
 

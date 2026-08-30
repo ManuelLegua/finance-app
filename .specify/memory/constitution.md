@@ -6,17 +6,29 @@ decidir cuánto ahorrar cada mes.
 
 ## Core Principles
 
-### I. Datos locales y privados
+### I. Datos locales y privados (enmendado en v2.0.0)
 
-Toda la información financiera vive exclusivamente en el dispositivo. La app no
-envía datos a servidores, no requiere cuenta ni conexión, y funciona completa
-sin internet. Ninguna dependencia puede introducir telemetría, analítica ni
-sincronización remota. Cualquier funcionalidad futura que implique salida de
-datos del dispositivo exige una enmienda explícita a esta constitución.
+Toda la información financiera (sueldo, gastos, deudas, ahorro) vive
+exclusivamente en el dispositivo y nunca se transmite a ningún servidor,
+propio o de terceros. La app no requiere cuenta de usuario. Ninguna
+dependencia puede introducir telemetría, analítica ni sincronización remota
+de esos datos. Cualquier funcionalidad futura que implique salida de datos
+del dispositivo exige una enmienda explícita a esta constitución.
+
+**Excepción explícita y acotada**: la verificación de compras dentro de la
+app (Google Play Billing) puede conectarse con los servidores de Google
+exclusivamente para procesar o restaurar una compra. Esa conexión no
+transmite ni puede transmitir ningún dato financiero del usuario: solo el
+identificador del producto comprado y el estado de la licencia, que maneja la
+propia biblioteca de Google Play Billing. Fuera de esa función puntual, la
+app sigue funcionando 100% sin internet.
 
 **Razón**: son datos de sueldo, deudas y gastos de una persona concreta; el
 riesgo de una filtración supera cualquier beneficio de una funcionalidad en la
-nube.
+nube. La app admite ahora un modelo de monetización con funciones pagas, pero
+el compromiso de privacidad sobre los datos financieros se mantiene intacto:
+lo único que sale del dispositivo es la transacción de compra gestionada por
+Google, nunca el contenido de la app.
 
 ### II. Exactitud monetaria (NO NEGOCIABLE)
 
@@ -93,4 +105,4 @@ añadir uno nuevo, PATCH para aclaraciones que no cambian el fondo.
 Cualquier desviación de un principio debe justificarse por escrito en el plan de
 la funcionalidad afectada, no resolverse en silencio durante la implementación.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-26
+**Version**: 2.0.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-29
