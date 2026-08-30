@@ -1,4 +1,5 @@
 import 'package:finanzas/dominio/modelos/linea_categoria.dart';
+import 'package:finanzas/shared/componentes/marca_estado.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_soles.dart';
 import 'package:flutter/material.dart';
@@ -34,33 +35,45 @@ class FichaCategoria extends StatelessWidget {
                   style: tipografia.bodyLarge,
                 ),
               ),
-              Text(
-                FormatoSoles.formatear(linea.gastado),
-                style: tipografia.monto,
-              ),
-              if (linea.presupuestado.esPositivo)
-                Text(
-                  ' de ${FormatoSoles.formatear(linea.presupuestado)}',
-                  style: tipografia.montoSecundario?.copyWith(
-                    color: esquema.onSurfaceVariant,
-                  ),
+              // `Flexible` + `Wrap`, no un `Row` a secas: con los siete
+              // dígitos que la app admite como máximo, gastado y
+              // presupuestado juntos pueden no entrar en una sola línea. Que
+              // se envuelvan a la siguiente, nunca que se corten.
+              Flexible(
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      FormatoSoles.formatear(linea.gastado),
+                      style: tipografia.monto,
+                    ),
+                    if (linea.presupuestado.esPositivo)
+                      Text(
+                        ' de ${FormatoSoles.formatear(linea.presupuestado)}',
+                        style: tipografia.montoSecundario?.copyWith(
+                          color: esquema.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
+              ),
             ],
           ),
           if (linea.sobregirada)
-            _Marca(
+            MarcaEstado(
               icono: Icons.trending_up,
               texto: 'Te pasaste por ${FormatoSoles.formatear(linea.exceso)}',
               color: esquema.error,
             )
           else if (linea.noPresupuestada)
-            _Marca(
+            MarcaEstado(
               icono: Icons.help_outline,
               texto: 'No estaba presupuestada',
               color: esquema.onSurfaceVariant,
             )
           else if (linea.presupuestado.esPositivo)
-            _Marca(
+            MarcaEstado(
               icono: Icons.check_circle_outline,
               texto: 'Quedan ${FormatoSoles.formatear(linea.diferencia)}',
               color: esquema.onSurfaceVariant,
@@ -69,27 +82,4 @@ class FichaCategoria extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Marca extends StatelessWidget {
-  const _Marca({required this.icono, required this.texto, required this.color});
-
-  final IconData icono;
-  final String texto;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: Espaciado.minimo),
-    child: Row(
-      children: [
-        Icon(icono, size: 16, color: color),
-        const SizedBox(width: Espaciado.chico),
-        Text(
-          texto,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: color),
-        ),
-      ],
-    ),
-  );
 }

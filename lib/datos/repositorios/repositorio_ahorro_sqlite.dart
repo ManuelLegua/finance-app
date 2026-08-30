@@ -58,7 +58,10 @@ final class RepositorioAhorroSqlite implements RepositorioAhorro {
         whereArgs: [mes.ordinal],
       );
     } on Object catch (causa) {
-      throw ErrorPersistencia.alGuardar('el cambio en la meta de ahorro', causa);
+      throw ErrorPersistencia.alGuardar(
+        'el cambio en la meta de ahorro',
+        causa,
+      );
     }
   }
 

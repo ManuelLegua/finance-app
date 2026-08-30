@@ -90,9 +90,10 @@ ProgresoAhorro calcularProgreso({
   final metaPorMes = <Mes, Dinero>{
     for (final (unMes, monto) in metas) unMes: monto,
   };
-  final mesesConDatos = <Mes>{...ahorradoPorMes.keys, ...metaPorMes.keys}
-      .toList()
-    ..sort();
+  final mesesConDatos = <Mes>{
+    ...ahorradoPorMes.keys,
+    ...metaPorMes.keys,
+  }.toList()..sort();
 
   return ProgresoAhorro(
     ahorradoMes: ahorradoMes,

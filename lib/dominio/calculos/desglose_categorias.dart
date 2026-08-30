@@ -14,13 +14,13 @@ export 'package:finanzas/dominio/modelos/linea_categoria.dart';
 /// no tienen ninguno se omiten en vez de mostrarse en cero (FR-047), porque
 /// una fila en `S/ 0.00` ocupa lugar y no dice nada.
 ///
-/// El orden por gasto descendente y el peso porcentual sobre el ingreso
-/// llegan en US6; acá el orden es el del enum, estable y suficiente para las
-/// fichas del resumen.
+/// Las líneas quedan ordenadas de mayor a menor `gastado` (FR-044), y cada
+/// una lleva su peso sobre [ingreso] en puntos base (FR-045).
 List<LineaCategoria> calcularDesglose({
   required List<Obligacion> obligaciones,
   required List<Transaccion> transacciones,
   Dinero cuotasVigentes = Dinero.cero,
+  Dinero? ingreso,
 }) {
   final presupuestadoPorCategoria = totalPorCategoria(obligaciones);
   if (cuotasVigentes.esPositivo) {
@@ -40,15 +40,33 @@ List<LineaCategoria> calcularDesglose({
     ...gastadoPorCategoria.keys,
   };
 
-  return [
+  final lineas = [
     for (final categoria in Categoria.values)
       if (conActividad.contains(categoria))
         LineaCategoria(
           categoria: categoria,
           presupuestado: presupuestadoPorCategoria[categoria] ?? Dinero.cero,
           gastado: gastadoPorCategoria[categoria] ?? Dinero.cero,
+          pesoIngresoBp: _pesoIngresoBp(
+            gastado: gastadoPorCategoria[categoria] ?? Dinero.cero,
+            ingreso: ingreso,
+          ),
         ),
   ];
+
+  lineas.sort((a, b) => b.gastado.compareTo(a.gastado));
+  return lineas;
+}
+
+/// Puntos base de [gastado] sobre [ingreso], redondeados al más cercano
+/// (medio hacia arriba). Cero si no hay ingreso o es cero: no hay división
+/// por cero, solo un peso que aún no se puede calcular.
+int _pesoIngresoBp({required Dinero gastado, required Dinero? ingreso}) {
+  if (ingreso == null || !ingreso.esPositivo) {
+    return 0;
+  }
+  final producto = gastado.centavos * 10000;
+  return (producto + ingreso.centavos ~/ 2) ~/ ingreso.centavos;
 }
 
 /// Gasto real del mes (FR-009).

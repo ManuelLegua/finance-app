@@ -179,15 +179,19 @@ class _TarjetaIngreso extends StatelessWidget {
                     label: Text(ingreso == null ? 'Registrar' : 'Corregir'),
                   ),
                 const Spacer(),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('Comprometido', style: tipografia.labelSmall),
-                    Text(
-                      FormatoSoles.formatear(estado.totalComprometido),
-                      style: tipografia.monto,
-                    ),
-                  ],
+                // `Flexible`, no un tamaño fijo: con siete dígitos el botón
+                // y este bloque juntos pueden no entrar en una sola fila.
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('Comprometido', style: tipografia.labelSmall),
+                      Text(
+                        FormatoSoles.formatear(estado.totalComprometido),
+                        style: tipografia.monto,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -372,6 +376,7 @@ class _DialogoPrecargaState extends State<_DialogoPrecarga> {
                 title: Text(widget.propuestas[i].nombre),
                 subtitle: Text(
                   FormatoSoles.formatear(widget.propuestas[i].monto),
+                  style: Theme.of(context).textTheme.montoSecundario,
                 ),
                 contentPadding: EdgeInsets.zero,
               ),

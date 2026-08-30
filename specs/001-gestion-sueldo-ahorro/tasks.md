@@ -245,14 +245,14 @@ enchufa su pantalla donde corresponde.
 
 ### Tests para US6 ⚠️ (escribir primero, deben fallar)
 
-- [ ] T095 [P] [US6] Ampliar `test/dominio/desglose_test.dart` con el orden descendente por gasto, la omisión de categorías sin presupuesto ni gasto, `pesoIngresoBp` sin dividir entre cero cuando no hay ingreso, y la suma exacta de subtotales
+- [X] T095 [P] [US6] Ampliar `test/dominio/desglose_test.dart` con el orden descendente por gasto, la omisión de categorías sin presupuesto ni gasto, `pesoIngresoBp` sin dividir entre cero cuando no hay ingreso, y la suma exacta de subtotales
 
 ### Implementación para US6
 
-- [ ] T096 [US6] Completar `pesoIngresoBp` y el orden descendente en `lib/dominio/calculos/desglose_categorias.dart`
-- [ ] T097 [US6] Construir `lib/ui/pantallas/categorias/pantalla_desglose.dart`: una fila por categoría con presupuestado, gastado, diferencia y peso sobre el ingreso
-- [ ] T098 [US6] Señalar las categorías sobregiradas con ícono y texto además del color en `lib/ui/pantallas/categorias/pantalla_desglose.dart` (FR-029)
-- [ ] T099 [US6] Escribir `test/ui/pantalla_desglose_test.dart`: orden de las filas y ausencia de categorías vacías
+- [X] T096 [US6] Completar `pesoIngresoBp` y el orden descendente en `lib/dominio/calculos/desglose_categorias.dart`
+- [X] T097 [US6] Construir `lib/ui/pantallas/categorias/pantalla_desglose.dart`: una fila por categoría con presupuestado, gastado, diferencia y peso sobre el ingreso
+- [X] T098 [US6] Señalar las categorías sobregiradas con ícono y texto además del color en `lib/ui/pantallas/categorias/pantalla_desglose.dart` (FR-029)
+- [X] T099 [US6] Escribir `test/ui/pantalla_desglose_test.dart`: orden de las filas y ausencia de categorías vacías
 
 **Checkpoint**: las seis historias funcionan de forma independiente.
 
@@ -260,15 +260,15 @@ enchufa su pantalla donde corresponde.
 
 ## Phase 9: Polish & Cross-Cutting Concerns
 
-- [ ] T100 [P] Verificar que `test/pureza_test.dart` sigue pasando con `lib/dominio/` ya completo (Principio III)
-- [ ] T101 [P] Añadir a `test/dominio/formato_soles_test.dart` y `test/ui/` los casos de siete cifras `S/ 9,999,999.99`, comprobando que no desbordan la interfaz
-- [ ] T102 [P] Medir el resumen del mes con un dataset sintético de tres años en `test/datos/rendimiento_test.dart` y confirmar que los índices por `mes_ordinal` se usan
-- [ ] T103 [P] Dejar `flutter analyze` sin issues y `dart format` aplicado a todo el proyecto
-- [ ] T104 [P] Revisar en todas las pantallas de `lib/ui/pantallas/` que ningún estado (déficit, sobregiro, no presupuestado, meta incumplida, mes cerrado) se comunique solo por color, y que todo monto use las cifras tabulares de `lib/ui/tema.dart`
-- [ ] T105 Ejecutar `flutter pub deps` y confirmar que ninguna dependencia transitiva abre red ni recoge telemetría (Principio I)
-- [ ] T106 [P] Con las pantallas ya construidas, evaluar si `flex_color_scheme` mejora el tema de `lib/ui/tema.dart` lo suficiente para justificar la dependencia (D11); si no, dejarlo fuera y anotar la decisión
-- [ ] T107 Recorrer entero [quickstart.md](./quickstart.md) en un dispositivo Android real, incluidas las comprobaciones de modo avión y reinicio del dispositivo
-- [ ] T108 [P] Actualizar `README.md` con la puesta en marcha, el `PATH` del SDK y cómo correr la suite
+- [X] T100 [P] Verificar que `test/pureza_test.dart` sigue pasando con `lib/dominio/` ya completo (Principio III)
+- [X] T101 [P] Añadir a `test/dominio/formato_soles_test.dart` y `test/ui/` los casos de siete cifras `S/ 9,999,999.99`, comprobando que no desbordan la interfaz
+- [X] T102 [P] Medir el resumen del mes con un dataset sintético de tres años en `test/datos/rendimiento_test.dart` y confirmar que los índices por `mes_ordinal` se usan
+- [X] T103 [P] Dejar `flutter analyze` sin issues y `dart format` aplicado a todo el proyecto
+- [X] T104 [P] Revisar en todas las pantallas de `lib/ui/pantallas/` que ningún estado (déficit, sobregiro, no presupuestado, meta incumplida, mes cerrado) se comunique solo por color, y que todo monto use las cifras tabulares de `lib/ui/tema.dart`
+- [X] T105 Ejecutar `flutter pub deps` y confirmar que ninguna dependencia transitiva abre red ni recoge telemetría (Principio I)
+- [X] T106 [P] Con las pantallas ya construidas, evaluar si `flex_color_scheme` mejora el tema de `lib/ui/tema.dart` lo suficiente para justificar la dependencia (D11); si no, dejarlo fuera y anotar la decisión
+- [X] T107 Recorrer entero [quickstart.md](./quickstart.md) en un dispositivo Android real, incluidas las comprobaciones de modo avión y reinicio del dispositivo
+- [X] T108 [P] Actualizar `README.md` con la puesta en marcha, el `PATH` del SDK y cómo correr la suite
 
 ---
 

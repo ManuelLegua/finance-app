@@ -4,6 +4,7 @@ import 'package:finanzas/dominio/modelos/resumen_mes.dart';
 import 'package:finanzas/shared/componentes/aviso_deficit.dart';
 import 'package:finanzas/shared/componentes/aviso_mes_cerrado.dart';
 import 'package:finanzas/shared/componentes/ficha_categoria.dart';
+import 'package:finanzas/shared/componentes/fila_monto.dart';
 import 'package:finanzas/shared/componentes/selector_mes.dart';
 import 'package:finanzas/shared/componentes/tarjeta_sugerencia_ahorro.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
@@ -65,10 +66,7 @@ class PantallaResumen extends StatelessWidget {
             for (final linea in estado.desglose)
               if (linea.categoria == Categoria.tarjetaCredito &&
                   estado.deudasDelMes.isNotEmpty)
-                _TarjetaDesplegable(
-                  linea: linea,
-                  deudas: estado.deudasDelMes,
-                )
+                _TarjetaDesplegable(linea: linea, deudas: estado.deudasDelMes)
               else
                 FichaCategoria(linea: linea),
           ],
@@ -311,15 +309,11 @@ class _FilaDeTotal extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Espaciado.minimo),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(etiqueta, style: tipografia.bodyMedium),
-          Text(
-            valor == null ? ausente : FormatoSoles.formatear(valor),
-            style: tipografia.monto,
-          ),
-        ],
+      child: FilaMonto(
+        etiqueta: etiqueta,
+        valor: valor == null ? ausente : FormatoSoles.formatear(valor),
+        estiloEtiqueta: tipografia.bodyMedium,
+        estiloValor: tipografia.monto,
       ),
     );
   }

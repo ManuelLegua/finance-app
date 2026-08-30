@@ -1,17 +1,44 @@
 # finanzas
 
-A new Flutter project.
+App Flutter de finanzas personales, individual y sin conexión, para administrar un
+sueldo mensual en soles peruanos: presupuesto, gastos reales, deudas de tarjeta en
+cuotas y ahorro.
 
-## Getting Started
+## Puesta en marcha
 
-This project is a starting point for a Flutter application.
+Requiere el SDK de Flutter 3.47.1 (Dart 3.13.1). Si no está en el `PATH` de la sesión:
 
-A few resources to get you started if this is your first Flutter project:
+```powershell
+$env:PATH = "C:\Users\manue\dev\flutter\bin;$env:PATH"
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+flutter pub get      # instala las dependencias
+flutter analyze      # análisis estático — debe quedar sin issues
+flutter test         # 335 pruebas, corren en Windows sin emulador
+flutter run          # levanta la app en un dispositivo o emulador conectado
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Las pruebas usan `sqflite_common_ffi` para correr contra SQLite real sin necesitar un
+emulador Android. Solo la validación manual del recorrido completo (ver más abajo)
+necesita un dispositivo o emulador de verdad.
+
+## Montar el emulador desde cero
+
+En una máquina nueva hay que instalar el SDK de Android y el emulador (~2 GB). Los
+pasos completos — incluida la aceleración por hardware en CPU AMD e Intel y los
+tropiezos conocidos del emulador — están documentados en
+[`CLAUDE.md`](./CLAUDE.md#correr-la-app-en-un-emulador).
+
+## Recorrido de prueba manual
+
+Lo que la suite automática no puede verificar es si la pantalla se entiende de un
+vistazo. El recorrido paso a paso — presupuesto, resumen, gastos, tarjetas, deudas,
+ahorro y ajustes — está en [`CLAUDE.md`](./CLAUDE.md#recorrido-de-prueba-manual).
+
+## Cómo se trabaja acá
+
+Desarrollo dirigido por especificación con Spec Kit: ninguna funcionalidad se
+implementa antes de estar descrita en `specs/` y aprobada. El estado del proyecto, los
+principios de la constitución y las convenciones de código están documentados en
+[`CLAUDE.md`](./CLAUDE.md).

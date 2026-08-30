@@ -34,9 +34,9 @@ class _ConfiguracionAhorroState extends State<ConfiguracionAhorro> {
   void initState() {
     super.initState();
     final estadoAhorro = context.read<EstadoAhorro>();
-    final metaActual = estadoAhorro.progresoCon(
-      disponibleProyectado: Dinero.cero,
-    ).metaDelMes;
+    final metaActual = estadoAhorro
+        .progresoCon(disponibleProyectado: Dinero.cero)
+        .metaDelMes;
     final propuesta = estadoAhorro.propuesta.montoPropuesto;
     _meta = TextEditingController(
       text: FormatoSoles.paraEditar(metaActual ?? propuesta ?? Dinero.cero),
@@ -81,9 +81,8 @@ class _ConfiguracionAhorroState extends State<ConfiguracionAhorro> {
 
     final guardo = await context.read<EstadoAhorro>().fijarMeta(monto);
     if (guardo && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Meta del mes guardada')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Meta del mes guardada')));
     }
   }
 
@@ -103,16 +102,14 @@ class _ConfiguracionAhorroState extends State<ConfiguracionAhorro> {
                 const _Seccion(titulo: 'Cómo se calcula la sugerencia'),
                 _CardRegla(
                   config: config,
-                  onCambiar: (regla) => _cambiarConfig(
-                    config.copiarCon(regla: regla),
-                  ),
+                  onCambiar: (regla) =>
+                      _cambiarConfig(config.copiarCon(regla: regla)),
                 ),
                 if (config.regla == ReglaAhorro.porcentajeIngreso)
                   _CardPorcentaje(
                     porcentajeBp: config.porcentajeBp,
-                    onCambiar: (bp) => _cambiarConfig(
-                      config.copiarCon(porcentajeBp: bp),
-                    ),
+                    onCambiar: (bp) =>
+                        _cambiarConfig(config.copiarCon(porcentajeBp: bp)),
                   ),
                 const _Seccion(titulo: 'Meta de este mes'),
                 _CardMeta(

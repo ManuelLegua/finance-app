@@ -43,6 +43,22 @@ abstract final class Tema {
       listTileTheme: const ListTileThemeData(
         contentPadding: EdgeInsets.symmetric(horizontal: 16),
       ),
+      // `NavigationBar` no trunca ni limita a una línea la etiqueta (no hay
+      // `maxLines` ni `overflow` en su código fuente): si no entra, la
+      // envuelve en dos líneas. El tamaño por defecto (`labelMedium`, 12) le
+      // queda justo a "Presupuesto" en un teléfono real de ancho angosto.
+      // Los colores replican los que trae `NavigationBar` por defecto.
+      navigationBarTheme: NavigationBarThemeData(
+        labelTextStyle: WidgetStateProperty.resolveWith((estados) {
+          final seleccionado = estados.contains(WidgetState.selected);
+          return TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.2,
+            color: seleccionado ? esquema.onSurface : esquema.onSurfaceVariant,
+          );
+        }),
+      ),
     );
   }
 }

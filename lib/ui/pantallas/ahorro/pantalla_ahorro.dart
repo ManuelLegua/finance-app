@@ -1,6 +1,7 @@
 import 'package:finanzas/dominio/modelos/aporte_ahorro.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/shared/componentes/aviso_mes_cerrado.dart';
+import 'package:finanzas/shared/componentes/fila_monto.dart';
 import 'package:finanzas/shared/componentes/tarjeta_sugerencia_ahorro.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_fecha.dart';
@@ -282,12 +283,11 @@ class _TarjetaAcumulado extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(Espaciado.normal),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Ahorrado en total', style: tipografia.labelLarge),
-            Text(FormatoSoles.formatear(acumulado), style: tipografia.monto),
-          ],
+        child: FilaMonto(
+          etiqueta: 'Ahorrado en total',
+          valor: FormatoSoles.formatear(acumulado),
+          estiloEtiqueta: tipografia.labelLarge,
+          estiloValor: tipografia.monto,
         ),
       ),
     );
@@ -354,7 +354,10 @@ class _FilaAporte extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      title: Text(FormatoSoles.formatear(aporte.monto)),
+      title: Text(
+        FormatoSoles.formatear(aporte.monto),
+        style: Theme.of(context).textTheme.monto,
+      ),
       subtitle: Text(FormatoFecha.corta(aporte.fecha)),
       trailing: puedeEditar
           ? PopupMenuButton<AccionSobreAporte>(

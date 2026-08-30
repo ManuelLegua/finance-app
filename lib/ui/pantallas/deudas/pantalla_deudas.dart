@@ -1,6 +1,7 @@
 import 'package:finanzas/dominio/calculos/deudas.dart';
 import 'package:finanzas/dominio/modelos/deuda.dart';
 import 'package:finanzas/dominio/modelos/tarjeta.dart';
+import 'package:finanzas/shared/componentes/fila_monto.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_fecha.dart';
 import 'package:finanzas/shared/formato/formato_soles.dart';
@@ -204,15 +205,11 @@ class _Panorama extends StatelessWidget {
               style: tipografia.montoDestacado,
             ),
             const Divider(height: Espaciado.grande),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Cuotas de este mes', style: tipografia.bodyMedium),
-                Text(
-                  FormatoSoles.formatear(panorama.compromisoMensual),
-                  style: tipografia.monto,
-                ),
-              ],
+            FilaMonto(
+              etiqueta: 'Cuotas de este mes',
+              valor: FormatoSoles.formatear(panorama.compromisoMensual),
+              estiloEtiqueta: tipografia.bodyMedium,
+              estiloValor: tipografia.monto,
             ),
             if (mesLibre != null) ...[
               const SizedBox(height: Espaciado.chico),
@@ -308,15 +305,11 @@ class _FilaDeuda extends StatelessWidget {
               ],
             ),
             const SizedBox(height: Espaciado.chico),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Saldo pendiente', style: tipografia.bodyMedium),
-                Text(
-                  FormatoSoles.formatear(estadoDeuda.saldoPendiente),
-                  style: tipografia.monto,
-                ),
-              ],
+            FilaMonto(
+              etiqueta: 'Saldo pendiente',
+              valor: FormatoSoles.formatear(estadoDeuda.saldoPendiente),
+              estiloEtiqueta: tipografia.bodyMedium,
+              estiloValor: tipografia.monto,
             ),
             const SizedBox(height: Espaciado.minimo),
             Text(

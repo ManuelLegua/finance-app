@@ -17,10 +17,17 @@ final class LineaCategoria {
   /// Suma de las transacciones reales de la categoría en el mes.
   final Dinero gastado;
 
+  /// Peso de `gastado` sobre el ingreso del mes, en puntos base (FR-045).
+  ///
+  /// Cero cuando no hay ingreso registrado o es cero: no hay división por
+  /// cero, solo un peso que no se puede calcular todavía.
+  final int pesoIngresoBp;
+
   const LineaCategoria({
     required this.categoria,
     required this.presupuestado,
     required this.gastado,
+    this.pesoIngresoBp = 0,
   });
 
   /// Lo que queda. Negativa cuando hay sobregiro.
@@ -46,13 +53,16 @@ final class LineaCategoria {
       other is LineaCategoria &&
       other.categoria == categoria &&
       other.presupuestado == presupuestado &&
-      other.gastado == gastado;
+      other.gastado == gastado &&
+      other.pesoIngresoBp == pesoIngresoBp;
 
   @override
-  int get hashCode => Object.hash(categoria, presupuestado, gastado);
+  int get hashCode =>
+      Object.hash(categoria, presupuestado, gastado, pesoIngresoBp);
 
   @override
   String toString() =>
       'LineaCategoria(${categoria.slug}, presupuestado: '
-      '${presupuestado.centavos} c, gastado: ${gastado.centavos} c)';
+      '${presupuestado.centavos} c, gastado: ${gastado.centavos} c, '
+      'pesoIngresoBp: $pesoIngresoBp)';
 }

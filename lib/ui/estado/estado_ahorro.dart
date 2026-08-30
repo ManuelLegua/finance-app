@@ -102,8 +102,11 @@ class EstadoAhorro extends ChangeNotifier {
   /// todavía (FR-053).
   PropuestaMeta get propuesta => proponerMetaDelMes(_mes, _metasHastaElMes);
 
-  EstadoCierre get estadoCierre =>
-      estadoDe(_mes, hoy: _ahora(), diasGraciaCierre: _configuracion.diasGraciaCierre);
+  EstadoCierre get estadoCierre => estadoDe(
+    _mes,
+    hoy: _ahora(),
+    diasGraciaCierre: _configuracion.diasGraciaCierre,
+  );
 
   bool get admiteRegistrar => estadoCierre.admiteRegistrar;
 
@@ -210,8 +213,10 @@ class EstadoAhorro extends ChangeNotifier {
     }
   }
 
-  static Dinero _sumaDe(List<AporteAhorro> aportes) =>
-      aportes.fold(Dinero.cero, (acumulado, aporte) => acumulado + aporte.monto);
+  static Dinero _sumaDe(List<AporteAhorro> aportes) => aportes.fold(
+    Dinero.cero,
+    (acumulado, aporte) => acumulado + aporte.monto,
+  );
 
   static String _mensajeDe(Object error) => error is ErrorPersistencia
       ? error.mensaje

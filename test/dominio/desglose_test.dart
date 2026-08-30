@@ -234,4 +234,69 @@ void main() {
       expect(totalGastado(const []), Dinero.cero);
     });
   });
+
+  group('orden por gasto descendente (FR-044)', () {
+    test('las líneas quedan ordenadas de mayor a menor gastado', () {
+      final lineas = calcularDesglose(
+        obligaciones: [presupuesto(Categoria.otros, 1000)],
+        transacciones: [
+          gasto(Categoria.servicios, 10000),
+          gasto(Categoria.comida, 50000),
+          gasto(Categoria.pasajes, 30000),
+        ],
+      );
+
+      expect(lineas.map((linea) => linea.categoria), [
+        Categoria.comida,
+        Categoria.pasajes,
+        Categoria.servicios,
+        Categoria.otros,
+      ]);
+    });
+  });
+
+  group('peso porcentual sobre el ingreso (FR-045)', () {
+    test(
+      'sin ingreso registrado el peso es cero, no una división por cero',
+      () {
+        final lineas = calcularDesglose(
+          obligaciones: const [],
+          transacciones: [gasto(Categoria.comida, 4500)],
+        );
+
+        expect(lineaDe(lineas, Categoria.comida).pesoIngresoBp, 0);
+      },
+    );
+
+    test('con ingreso en cero el peso es cero', () {
+      final lineas = calcularDesglose(
+        obligaciones: const [],
+        transacciones: [gasto(Categoria.comida, 4500)],
+        ingreso: Dinero.cero,
+      );
+
+      expect(lineaDe(lineas, Categoria.comida).pesoIngresoBp, 0);
+    });
+
+    test('un cuarto del ingreso son 2500 puntos base exactos', () {
+      final lineas = calcularDesglose(
+        obligaciones: const [],
+        transacciones: [gasto(Categoria.comida, 25000)],
+        ingreso: const Dinero.deCentavos(100000),
+      );
+
+      expect(lineaDe(lineas, Categoria.comida).pesoIngresoBp, 2500);
+    });
+
+    test('redondea al punto base más cercano, medio hacia arriba', () {
+      final lineas = calcularDesglose(
+        obligaciones: const [],
+        transacciones: [gasto(Categoria.comida, 200)],
+        ingreso: const Dinero.deCentavos(300),
+      );
+
+      // 200 / 300 = 66.666...% → 6666.67 puntos base → redondea a 6667.
+      expect(lineaDe(lineas, Categoria.comida).pesoIngresoBp, 6667);
+    });
+  });
 }

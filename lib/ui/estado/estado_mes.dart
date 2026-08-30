@@ -126,6 +126,7 @@ class EstadoMes extends ChangeNotifier {
     obligaciones: _obligaciones,
     transacciones: _transacciones,
     cuotasVigentes: cuotasVigentes,
+    ingreso: _ingreso,
   );
 
   /// Meses con datos, para el selector. Vacío si no se inyectó el repositorio.
