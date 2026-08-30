@@ -19,28 +19,39 @@ final class Configuracion {
   /// un pago con fecha del mes anterior (FR-055).
   final int diasGraciaCierre;
 
+  /// Interruptor de la captura de notificaciones bancarias (spec 002,
+  /// FR-005), independiente del permiso del sistema: apagarlo no revoca el
+  /// permiso de Android, solo hace que la app descarte lo que reciba.
+  final bool capturaNotificacionesActiva;
+
   const Configuracion({
     required this.regla,
     required this.porcentajeBp,
     required this.diasGraciaCierre,
+    this.capturaNotificacionesActiva = false,
   });
 
   /// Lo que ve un usuario que abre la app por primera vez: sin obligarlo a
-  /// configurar nada antes de poder usarla.
+  /// configurar nada antes de poder usarla. La captura empieza inactiva
+  /// hasta que el usuario la active a propósito (HU1 de la spec 002).
   static const Configuracion porDefecto = Configuracion(
     regla: ReglaAhorro.porcentajeIngreso,
     porcentajeBp: 2000,
     diasGraciaCierre: 5,
+    capturaNotificacionesActiva: false,
   );
 
   Configuracion copiarCon({
     ReglaAhorro? regla,
     int? porcentajeBp,
     int? diasGraciaCierre,
+    bool? capturaNotificacionesActiva,
   }) => Configuracion(
     regla: regla ?? this.regla,
     porcentajeBp: porcentajeBp ?? this.porcentajeBp,
     diasGraciaCierre: diasGraciaCierre ?? this.diasGraciaCierre,
+    capturaNotificacionesActiva:
+        capturaNotificacionesActiva ?? this.capturaNotificacionesActiva,
   );
 
   @override
@@ -48,13 +59,20 @@ final class Configuracion {
       other is Configuracion &&
       other.regla == regla &&
       other.porcentajeBp == porcentajeBp &&
-      other.diasGraciaCierre == diasGraciaCierre;
+      other.diasGraciaCierre == diasGraciaCierre &&
+      other.capturaNotificacionesActiva == capturaNotificacionesActiva;
 
   @override
-  int get hashCode => Object.hash(regla, porcentajeBp, diasGraciaCierre);
+  int get hashCode => Object.hash(
+    regla,
+    porcentajeBp,
+    diasGraciaCierre,
+    capturaNotificacionesActiva,
+  );
 
   @override
   String toString() =>
       'Configuracion(${regla.slug}, ${porcentajeBp}bp, '
-      '$diasGraciaCierre días de gracia)';
+      '$diasGraciaCierre días de gracia, '
+      'captura: $capturaNotificacionesActiva)';
 }

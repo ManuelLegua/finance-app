@@ -45,6 +45,10 @@ void main() {
           'aporte_ahorro',
           'meta_ahorro',
           'configuracion',
+          // Spec 002: captura de notificaciones bancarias.
+          'consumo_pendiente',
+          'comercio_categoria',
+          'notificacion_diagnostico',
         ]),
       );
     });
@@ -64,13 +68,15 @@ void main() {
           'idx_transaccion_mes',
           'idx_deuda_tarjeta',
           'idx_aporte_mes',
+          'idx_pendiente_notificacion',
+          'idx_pendiente_fecha',
+          'idx_diagnostico_fecha',
         ]),
       );
     });
 
-    test('la versión del esquema queda en 1', () async {
+    test('la versión del esquema queda en la actual', () async {
       final version = await conexion.getVersion();
-      expect(version, 1);
       expect(version, Esquema.version);
     });
   });
@@ -181,6 +187,28 @@ void main() {
       expect(config, Configuracion.porDefecto);
     });
 
+    test(
+      // Spec 002: la captura de notificaciones empieza inactiva hasta que el
+      // usuario la active a propósito (HU1) — nunca activada por sorpresa.
+      'la captura de notificaciones empieza inactiva',
+      () async {
+        final repo = RepositorioConfiguracionSqlite(conexion);
+        final config = await repo.obtener();
+
+        expect(config.capturaNotificacionesActiva, isFalse);
+      },
+    );
+
+    test('activar la captura se guarda y persiste', () async {
+      final repo = RepositorioConfiguracionSqlite(conexion);
+      await repo.guardar(
+        Configuracion.porDefecto.copiarCon(capturaNotificacionesActiva: true),
+      );
+
+      final releida = await repo.obtener();
+      expect(releida.capturaNotificacionesActiva, isTrue);
+    });
+
     test('lo guardado se relee igual', () async {
       final repo = RepositorioConfiguracionSqlite(conexion);
       await repo.guardar(
@@ -197,8 +225,14 @@ void main() {
   });
 
   group('migraciones', () {
-    test('no hay pasos pendientes en la versión 1', () {
-      expect(Migraciones.pasos, isEmpty);
+    test('hay un paso definido por cada versión hasta la actual', () {
+      for (var version = 2; version <= Esquema.version; version++) {
+        expect(
+          Migraciones.pasos.containsKey(version),
+          isTrue,
+          reason: 'Falta el paso de migración a la versión $version',
+        );
+      }
     });
 
     test('preservan los datos existentes', () async {
@@ -220,8 +254,13 @@ void main() {
     test(
       'una versión sin migración definida falla en vez de romper datos',
       () async {
+        const sinDefinir = Esquema.version + 1;
         await expectLater(
-          Migraciones.aplicar(conexion, desde: 1, hasta: 2),
+          Migraciones.aplicar(
+            conexion,
+            desde: Esquema.version,
+            hasta: sinDefinir,
+          ),
           throwsA(isA<StateError>()),
         );
       },

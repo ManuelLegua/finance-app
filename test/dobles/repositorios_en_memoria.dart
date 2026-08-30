@@ -1,17 +1,23 @@
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/modelos/aporte_ahorro.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
+import 'package:finanzas/dominio/modelos/consumo_pendiente.dart';
 import 'package:finanzas/dominio/modelos/deuda.dart';
+import 'package:finanzas/dominio/modelos/notificacion_diagnostico.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/dominio/modelos/resumen_pendientes.dart';
 import 'package:finanzas/dominio/modelos/tarjeta.dart';
 import 'package:finanzas/dominio/modelos/transaccion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ahorro.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_diagnostico.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_pendientes.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
+import 'package:finanzas/dominio/repositorios/servicio_escucha_notificaciones.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 
@@ -408,4 +414,146 @@ final class RepositorioDeudasEnMemoria implements RepositorioDeudas {
     errorEnLaProximaEscritura = null;
     throw error;
   }
+}
+
+/// Escucha de notificaciones en memoria (spec 002).
+///
+/// [permiso] lo controla la prueba directamente, simulando concederlo,
+/// denegarlo o revocarlo — no hay plugin real de por medio. `activar()` y
+/// `desactivar()` sí delegan en un [RepositorioConfiguracion] de verdad (o
+/// su doble), igual que la implementación de Android: es la forma de que una
+/// prueba de `EstadoCaptura` (el `ChangeNotifier`) vea el mismo efecto que
+/// vería en el dispositivo.
+final class ServicioEscuchaNotificacionesEnMemoria
+    implements ServicioEscuchaNotificaciones {
+  ServicioEscuchaNotificacionesEnMemoria(this._repoConfiguracion);
+
+  final RepositorioConfiguracion _repoConfiguracion;
+
+  /// Ajustable desde la prueba.
+  bool permiso = false;
+
+  int vecesQueAbrioAjustes = 0;
+
+  @override
+  Future<bool> permisoConcedido() async => permiso;
+
+  @override
+  Future<void> abrirAjustesDePermiso() async {
+    vecesQueAbrioAjustes++;
+  }
+
+  @override
+  Future<void> activar() => _guardarInterruptor(activa: true);
+
+  @override
+  Future<void> desactivar() => _guardarInterruptor(activa: false);
+
+  Future<void> _guardarInterruptor({required bool activa}) async {
+    final config = await _repoConfiguracion.obtener();
+    await _repoConfiguracion.guardar(
+      config.copiarCon(capturaNotificacionesActiva: activa),
+    );
+  }
+}
+
+/// Consumos pendientes en memoria (spec 002).
+///
+/// Replica la deduplicación por `(origenPaquete, notificacionId)` (D-N5): es
+/// la parte del repositorio real que de verdad vale la pena probar en un
+/// doble, porque una prueba de UI que confía en que no se duplican
+/// pendientes necesita que el doble se comporte igual que SQLite en eso.
+final class RepositorioPendientesEnMemoria implements RepositorioPendientes {
+  final List<ConsumoPendiente> _guardados = <ConsumoPendiente>[];
+  int _proximoId = 1;
+
+  Object? errorEnLaProximaEscritura;
+
+  @override
+  Future<List<ConsumoPendiente>> todos() async {
+    final ordenados = List<ConsumoPendiente>.of(_guardados);
+    ordenados.sort((primero, segundo) {
+      final porFecha = segundo.fecha.compareTo(primero.fecha);
+      if (porFecha != 0) return porFecha;
+      return (segundo.id ?? 0).compareTo(primero.id ?? 0);
+    });
+    return ordenados;
+  }
+
+  @override
+  Future<ResumenPendientes> resumen() async => ResumenPendientes(
+    cantidad: _guardados.length,
+    montoTotal: _guardados.fold(
+      Dinero.cero,
+      (acumulado, pendiente) => acumulado + pendiente.monto,
+    ),
+  );
+
+  @override
+  Future<int> insertar(ConsumoPendiente pendiente) async {
+    _fallarSiCorresponde();
+    final existente = _guardados.where(
+      (guardado) =>
+          guardado.origenPaquete == pendiente.origenPaquete &&
+          guardado.notificacionId == pendiente.notificacionId,
+    );
+    if (existente.isNotEmpty) return existente.first.id!;
+
+    final id = _proximoId++;
+    _guardados.add(pendiente.copiarCon(id: id));
+    return id;
+  }
+
+  @override
+  Future<void> eliminar(int id) async {
+    _fallarSiCorresponde();
+    _guardados.removeWhere((pendiente) => pendiente.id == id);
+  }
+
+  void _fallarSiCorresponde() {
+    final error = errorEnLaProximaEscritura;
+    if (error == null) return;
+    errorEnLaProximaEscritura = null;
+    throw error;
+  }
+}
+
+/// Registro de diagnóstico en memoria (spec 002).
+final class RepositorioDiagnosticoEnMemoria implements RepositorioDiagnostico {
+  final List<NotificacionDiagnostico> _guardadas = <NotificacionDiagnostico>[];
+  int _proximoId = 1;
+
+  @override
+  Future<List<NotificacionDiagnostico>> todos() async {
+    final ordenadas = List<NotificacionDiagnostico>.of(_guardadas);
+    ordenadas.sort((primera, segunda) {
+      final porFecha = segunda.fecha.compareTo(primera.fecha);
+      if (porFecha != 0) return porFecha;
+      return (segunda.id ?? 0).compareTo(primera.id ?? 0);
+    });
+    return ordenadas;
+  }
+
+  @override
+  Future<int> insertar(NotificacionDiagnostico entrada) async {
+    final id = _proximoId++;
+    _guardadas.add(
+      NotificacionDiagnostico(
+        id: id,
+        origenPaquete: entrada.origenPaquete,
+        motivo: entrada.motivo,
+        textoCrudo: entrada.textoCrudo,
+        fecha: entrada.fecha,
+      ),
+    );
+    return id;
+  }
+
+  @override
+  Future<void> eliminar(int id) async {
+    _guardadas.removeWhere((entrada) => entrada.id == id);
+  }
+
+  @override
+  Future<void> vaciar() async => _guardadas.clear();
 }

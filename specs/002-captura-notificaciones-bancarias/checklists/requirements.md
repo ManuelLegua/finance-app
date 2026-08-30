@@ -42,8 +42,7 @@
 
 ## Decisiones resueltas antes de redactar
 
-1. **Orígenes soportados**: BCP, Yape, Plin y SIP (antigua tarjeta Oh!). La lista
-   define el alcance porque cada origen requiere su propio intérprete.
+1. **Orígenes soportados** *(revisado 2026-08-30)*: cualquier banco o billetera peruana en una lista de orígenes reconocidos, sembrada con los 15 emisores de `EntidadesPeru` (001), que ya incluye Yape y Plin, ampliable sin escribir un intérprete nuevo por banco (FR-008, FR-008a). Reemplaza la decisión original de una lista fija de cuatro.
 2. **Confirmación obligatoria**: se descartó el registro automático y el modo
    híbrido por confianza. Un error de interpretación no debe poder entrar a los
    datos sin que el usuario lo vea (FR-020, SC-001).
@@ -52,13 +51,15 @@
 
 ## Riesgos abiertos
 
-**Los intérpretes no se pueden escribir a ciegas.** No existe documentación
-pública del formato de las notificaciones de estos bancos. Hay que observar
-notificaciones reales de cada origen para construir el reconocimiento. Esto tiene
-una consecuencia práctica en la planificación: la historia 2 no puede
-completarse sin muestras reales, y las muestras solo se obtienen con la app ya
-instalada y capturando. El registro de diagnóstico (FR-018) es el mecanismo
-previsto para recogerlas.
+**El reconocimiento no se puede escribir a ciegas** *(revisado 2026-08-30)*. No
+existe documentación pública del formato de las notificaciones de ningún banco.
+Con el reconocimiento genérico esto pesa menos que con un intérprete por banco:
+alcanza con observar notificaciones reales de una muestra representativa de
+orígenes (no de los 16 sembrados uno por uno) para construir y validar el
+parser compartido. La historia 2 no puede completarse sin esa muestra inicial,
+pero cubrir un origen adicional después ya no depende de conseguir muestras
+suyas. El registro de diagnóstico (FR-018) sigue siendo el mecanismo para
+detectar y corregir los casos que el parser genérico no reconozca bien.
 
 **Los formatos cambiarán.** Un cambio de redacción del banco rompe el
 reconocimiento en silencio. Mitigación: FR-017 impide generar datos erróneos, y
@@ -80,4 +81,4 @@ revisarse.
 - Conciliación contra el estado de cuenta del banco
 - Recuperación de notificaciones anteriores a la activación
 - Detección automática de que un banco cambió su formato
-- Bancos distintos a los cuatro orígenes declarados
+- Edición de la lista de orígenes reconocidos desde la propia UI (D-N10 la deja como posible mejora futura, no un requisito de esta revisión)

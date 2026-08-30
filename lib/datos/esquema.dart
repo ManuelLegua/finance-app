@@ -13,7 +13,7 @@
 abstract final class Esquema {
   /// Versión actual. Cada cambio incrementa esto y agrega un paso en
   /// `migraciones.dart`.
-  static const int version = 1;
+  static const int version = 2;
 
   static const List<String> creacion = <String>[
     _ingreso,
@@ -28,6 +28,12 @@ abstract final class Esquema {
     _indiceAporteMes,
     _metaAhorro,
     _configuracion,
+    consumoPendiente,
+    indicePendienteNotificacion,
+    indicePendienteFecha,
+    comercioCategoria,
+    notificacionDiagnostico,
+    indiceDiagnosticoFecha,
   ];
 
   static const String _ingreso = '''
@@ -117,12 +123,75 @@ abstract final class Esquema {
 
   static const String _configuracion = '''
     CREATE TABLE configuracion (
-      id                  INTEGER PRIMARY KEY CHECK (id = 1),
-      regla               TEXT    NOT NULL CHECK (regla IN ('porcentaje','remanente')),
-      porcentaje_bp       INTEGER NOT NULL DEFAULT 2000
-                            CHECK (porcentaje_bp BETWEEN 0 AND 10000),
-      dias_gracia_cierre  INTEGER NOT NULL DEFAULT 5
-                            CHECK (dias_gracia_cierre BETWEEN 0 AND 28)
+      id                              INTEGER PRIMARY KEY CHECK (id = 1),
+      regla                           TEXT    NOT NULL CHECK (regla IN ('porcentaje','remanente')),
+      porcentaje_bp                   INTEGER NOT NULL DEFAULT 2000
+                                        CHECK (porcentaje_bp BETWEEN 0 AND 10000),
+      dias_gracia_cierre              INTEGER NOT NULL DEFAULT 5
+                                        CHECK (dias_gracia_cierre BETWEEN 0 AND 28),
+      captura_notificaciones_activa   INTEGER NOT NULL DEFAULT 0
+                                        CHECK (captura_notificaciones_activa IN (0, 1))
     )
   ''';
+
+  // --- Spec 002: captura de notificaciones bancarias. Ver data-model.md §4. ---
+
+  /// `origen_paquete` no lleva `CHECK ... IN (...)`: la lista de orígenes
+  /// reconocidos es datos, no un enum cerrado (D-N10) — un `CHECK` fijo
+  /// forzaría una migración cada vez que se agregue un banco, justo lo que
+  /// ese diseño busca evitar.
+  ///
+  /// Público (sin `_`), a diferencia del resto del esquema: `Migraciones` lo
+  /// reutiliza para el paso que sube una base ya existente de la versión 1
+  /// a la 2, y duplicar el DDL a mano en dos archivos es exactamente el tipo
+  /// de cosa que se desincroniza sin que nadie lo note.
+  static const String consumoPendiente = '''
+    CREATE TABLE consumo_pendiente (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      origen_paquete      TEXT    NOT NULL CHECK (length(trim(origen_paquete)) > 0),
+      notificacion_id     TEXT    NOT NULL,
+      monto_centavos      INTEGER NOT NULL CHECK (monto_centavos > 0),
+      comercio            TEXT    NOT NULL,
+      fecha               TEXT    NOT NULL,
+      categoria_propuesta TEXT,
+      capturado_en        TEXT    NOT NULL
+    )
+  ''';
+
+  /// Sostiene la deduplicación (D-N5): un mismo origen + notificación nunca
+  /// produce una segunda fila.
+  static const String indicePendienteNotificacion =
+      'CREATE UNIQUE INDEX idx_pendiente_notificacion '
+      'ON consumo_pendiente(origen_paquete, notificacion_id)';
+
+  static const String indicePendienteFecha =
+      'CREATE INDEX idx_pendiente_fecha ON consumo_pendiente(fecha DESC)';
+
+  static const String comercioCategoria = '''
+    CREATE TABLE comercio_categoria (
+      comercio_normalizado TEXT PRIMARY KEY,
+      categoria             TEXT NOT NULL,
+      actualizado_en        TEXT NOT NULL
+    )
+  ''';
+
+  static const String notificacionDiagnostico = '''
+    CREATE TABLE notificacion_diagnostico (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      origen_paquete TEXT NOT NULL CHECK (length(trim(origen_paquete)) > 0),
+      motivo         TEXT NOT NULL CHECK (motivo IN ('formato_no_reconocido','monto_ilegible','moneda_extranjera')),
+      texto_crudo    TEXT NOT NULL,
+      fecha          TEXT NOT NULL
+    )
+  ''';
+
+  static const String indiceDiagnosticoFecha =
+      'CREATE INDEX idx_diagnostico_fecha ON notificacion_diagnostico(fecha DESC)';
+
+  /// Solo para el paso de migración v1→v2 (`migraciones.dart`): una base
+  /// nueva ya crea `configuracion` con la columna incluida (arriba).
+  static const String alterConfiguracionCaptura =
+      'ALTER TABLE configuracion '
+      'ADD COLUMN captura_notificaciones_activa INTEGER NOT NULL DEFAULT 0 '
+      'CHECK (captura_notificaciones_activa IN (0, 1))';
 }

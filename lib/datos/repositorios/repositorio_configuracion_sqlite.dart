@@ -39,6 +39,9 @@ final class RepositorioConfiguracionSqlite implements RepositorioConfiguracion {
         'regla': config.regla.slug,
         'porcentaje_bp': config.porcentajeBp,
         'dias_gracia_cierre': config.diasGraciaCierre,
+        'captura_notificaciones_activa': config.capturaNotificacionesActiva
+            ? 1
+            : 0,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     } on Object catch (causa) {
       throw ErrorPersistencia.alGuardar('los ajustes', causa);
@@ -49,5 +52,7 @@ final class RepositorioConfiguracionSqlite implements RepositorioConfiguracion {
     regla: ReglaAhorro.desdeSlug(fila['regla']! as String),
     porcentajeBp: fila['porcentaje_bp']! as int,
     diasGraciaCierre: fila['dias_gracia_cierre']! as int,
+    capturaNotificacionesActiva:
+        (fila['captura_notificaciones_activa']! as int) == 1,
   );
 }

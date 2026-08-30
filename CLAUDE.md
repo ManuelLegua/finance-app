@@ -63,7 +63,7 @@ flutter run    # r = hot reload · R = hot restart · q = salir
 
 ## Recorrido de prueba manual
 
-Lo que la suite no puede verificar: si la pantalla se entiende de un vistazo (Principio IV). Los dos defectos de layout que aparecieron hasta ahora — etiquetas más largas que su contenedor — salieron de acá, no de las pruebas.
+Lo que la suite no puede verificar: si la pantalla se entiende de un vistazo (Principio IV). Los tres defectos de layout que aparecieron hasta ahora — etiquetas más largas que su contenedor, la última vez "Presupuesto" partido en dos líneas en un teléfono real — salieron de acá, no de las pruebas: `flutter test` no carga tipografía real ni mide en anchos de pantalla reales, así que este tipo de desborde no es reproducible en la suite (ver `lib/shared/estilos/tema.dart`).
 
 1. **Presupuesto** → registrar el sueldo y dos o tres obligaciones.
 2. **Resumen** → el disponible tiene que leerse sin hacer cuentas. Subí las obligaciones por encima del ingreso: el déficit se comunica con ícono y texto, no solo con color.
@@ -87,9 +87,9 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/data-model.md` | Entidades, derivados y el esquema SQLite completo |
 | `specs/001-gestion-sueldo-ahorro/contracts/` | API de la capa de cálculo puro y de los repositorios |
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
-| `specs/002-captura-notificaciones-bancarias/` | Spec completa, aún sin plan |
+| `specs/002-captura-notificaciones-bancarias/` | **En curso: 34 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
 | `specs/003-cobros-parciales-ingreso/` | Ingreso en varios cobros por mes (quincena + fin de mes, etc.); spec completa, aún sin plan |
-| `specs/004-suscripcion-premium/` | Suscripción paga (Deudas + Ahorro + captura de notificaciones); spec completa, aún sin plan |
+| `specs/004-suscripcion-premium/` | Suscripción paga (Deudas + Ahorro + captura de notificaciones) vía Google Play Billing (Principio I enmendado a v2.0.0); plan completo, sin tareas todavía |
 
 Antes de proponer un cambio de diseño, leer `research.md`: es probable que la alternativa ya se haya evaluado y rechazado por escrito.
 
@@ -165,16 +165,48 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 
 ## Estado actual
 
-**94 de 108 tareas.** US1 a US5 completas y validadas en emulador; 316 pruebas en verde y `flutter analyze` sin issues.
+**Spec 001 completa (108/108)**, validada en emulador y en un Android real (T107).
+**Spec 002 en curso (34/62).** 383 pruebas en verde, `flutter analyze` sin issues.
 
-| Historia | Estado |
+| Spec 001 · Historia | Estado |
 |---|---|
 | US1 · ingreso y presupuesto | ✅ |
 | US2 · resumen y déficit | ✅ |
 | US3 · gastos reales | ✅ |
 | US4 · deudas en cuotas | ✅ |
 | US5 · ahorro (T083–T094) | ✅ |
-| US6 · desglose por categoría (T095–T099) | pendiente |
-| Polish (T100–T108) | pendiente |
+| US6 · desglose por categoría (T095–T099) | ✅ |
+| Polish (T100–T108) | ✅ |
 
-Sigue pendiente, fuera de la spec: **no hay respaldo ni exportación**. Con un solo usuario es asumible; antes de repartir la app a probadores conviene que sea una feature propia.
+### Dónde retomar la spec 002
+
+| Spec 002 · Fase | Estado |
+|---|---|
+| Setup + Foundational (T001–T010) | ✅ esquema v2, migración probada, `OrigenReconocido` |
+| US1 · activar la captura (T011–T019) | ✅ permiso, 4 estados, servicio en foreground |
+| US2 · bandeja de pendientes (T020–T033) | ✅ confirmar/corregir/descartar, deduplicación, diagnóstico |
+| US2 · parser genérico (T034–T043) | ⛔ **bloqueado por insumo manual** |
+| US3 · categorización aprendida (T044–T051) | pendiente, **sin bloqueo** |
+| US4 · consumos en cuotas (T052–T055) | pendiente, sin bloqueo |
+| Polish (T056–T062) | pendiente |
+
+**El bloqueo (D-N9 de research.md):** no existe documentación pública del formato
+de las notificaciones de ningún banco peruano, así que el parser genérico no se
+puede escribir ni probar contra texto inventado. Faltan dos insumos que solo se
+consiguen con el teléfono en la mano:
+
+- **T034** — el texto de notificaciones reales (título y cuerpo tal como aparecen
+  en la barra de notificaciones, **no** el correo del banco, que usa otra
+  plantilla), de al menos 3 orígenes variados. Documentar en
+  `test/dominio/interpretes/fixtures/`.
+- **T041** — el `packageName` Android de cada app bancaria instalada, para
+  completar `lib/shared/constantes/origenes_reconocidos.dart`, que hoy tiene los
+  15 nombres pero todos con `paquete: ''` (un origen sin paquete no se escucha,
+  y eso no rompe nada).
+
+Hasta entonces la captura está construida de punta a punta salvo el tramo
+notificación → pendiente: el callback headless
+(`lib/datos/notificaciones/callback_headless.dart`) existe y está registrado,
+pero su cuerpo está vacío a propósito hasta T042.
+
+Sigue pendiente, fuera de toda spec: **no hay respaldo ni exportación**. Con un solo usuario es asumible; antes de repartir la app a probadores conviene que sea una feature propia.

@@ -1,8 +1,15 @@
+import 'dart:io' show Platform;
+
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_fecha.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
+import 'package:finanzas/ui/estado/estado_pendientes.dart';
 import 'package:finanzas/ui/pantallas/ahorro/pantalla_ahorro.dart';
 import 'package:finanzas/ui/pantallas/ajustes/pantalla_ajustes.dart';
+import 'package:finanzas/ui/pantallas/captura/pantalla_activacion.dart';
+import 'package:finanzas/ui/pantallas/captura/pantalla_diagnostico.dart';
+import 'package:finanzas/ui/pantallas/captura/pantalla_pendientes.dart';
+import 'package:finanzas/ui/pantallas/categorias/pantalla_desglose.dart';
 import 'package:finanzas/ui/pantallas/deudas/pantalla_deudas.dart';
 import 'package:finanzas/ui/pantallas/deudas/pantalla_tarjetas.dart';
 import 'package:finanzas/ui/pantallas/presupuesto/pantalla_presupuesto.dart';
@@ -22,9 +29,6 @@ import 'package:provider/provider.dart';
 /// y hay dos criterios de éxito que lo penalizan: SC-002 pide menos de 15
 /// segundos para anotar un gasto y SC-001 un máximo de dos interacciones para
 /// conocer el saldo.
-///
-/// Los destinos sin pantalla muestran un marcador que dice a qué historia
-/// corresponden, en vez de una pantalla en blanco.
 class Cascaron extends StatefulWidget {
   const Cascaron({super.key});
 
@@ -75,23 +79,46 @@ class _CascaronState extends State<Cascaron> {
 
   /// Consultas ocasionales y ajustes. Acá crecen las features siguientes sin
   /// volver a romper la barra.
-  static const List<_Destino> _ocasionales = <_Destino>[
-    _Destino(
+  ///
+  /// No es `const`: "Captura" solo se agrega en Android (D-N8, FR-007), y esa
+  /// condición no se puede evaluar en un literal constante.
+  static final List<_Destino> _ocasionales = <_Destino>[
+    const _Destino(
       // "Desglose por categoría" desbordaba los 280 px del drawer. Mismo tipo
       // de defecto que "Presupuesto" en la barra inferior: etiqueta más larga
       // que su contenedor.
       etiqueta: 'Categorías',
       icono: Icons.pie_chart_outline,
       iconoActivo: Icons.pie_chart,
-      pendiente: 'US6 · en qué se va el dinero',
+      pantalla: PantallaDesglose(),
     ),
-    _Destino(
+    const _Destino(
       etiqueta: 'Tarjetas',
       icono: Icons.credit_score_outlined,
       iconoActivo: Icons.credit_score,
       pantalla: PantallaTarjetas(),
     ),
-    _Destino(
+    if (Platform.isAndroid) ...[
+      const _Destino(
+        etiqueta: 'Pendientes',
+        icono: Icons.mark_email_unread_outlined,
+        iconoActivo: Icons.mark_email_unread,
+        pantalla: PantallaPendientes(),
+      ),
+      const _Destino(
+        etiqueta: 'Captura',
+        icono: Icons.settings_input_antenna_outlined,
+        iconoActivo: Icons.settings_input_antenna,
+        pantalla: PantallaActivacion(),
+      ),
+      const _Destino(
+        etiqueta: 'Diagnóstico',
+        icono: Icons.rule_outlined,
+        iconoActivo: Icons.rule,
+        pantalla: PantallaDiagnostico(),
+      ),
+    ],
+    const _Destino(
       etiqueta: 'Ajustes',
       icono: Icons.settings_outlined,
       iconoActivo: Icons.settings,
@@ -121,8 +148,7 @@ class _CascaronState extends State<Cascaron> {
         ocasionales: _ocasionales,
         onElegir: _irAOcasional,
       ),
-      body:
-          actual.pantalla ?? _EnConstruccion(pendiente: actual.pendiente ?? ''),
+      body: actual.pantalla,
       bottomNavigationBar: NavigationBar(
         // Con un destino del drawer en pantalla ninguno de la barra está
         // activo, pero NavigationBar exige un índice: se conserva el último
@@ -191,12 +217,37 @@ class _MenuLateral extends StatelessWidget {
         const Divider(),
         for (final destino in ocasionales)
           NavigationDrawerDestination(
-            icon: Icon(destino.icono),
-            selectedIcon: Icon(destino.iconoActivo),
+            icon: _IconoDeDestino(destino: destino, activo: false),
+            selectedIcon: _IconoDeDestino(destino: destino, activo: true),
             label: Text(destino.etiqueta),
           ),
       ],
     );
+  }
+}
+
+/// El ícono de un destino del drawer, con la cantidad de pendientes como
+/// distintivo cuando el destino es "Pendientes" (spec 002, FR-022).
+///
+/// Es la única razón por la que `_ocasionales` no puede seguir siendo una
+/// lista de datos puros consumida sin mirar: este destino en particular
+/// necesita leer `EstadoPendientes`, que solo existe cuando la captura está
+/// disponible (Android).
+class _IconoDeDestino extends StatelessWidget {
+  const _IconoDeDestino({required this.destino, required this.activo});
+
+  final _Destino destino;
+  final bool activo;
+
+  @override
+  Widget build(BuildContext context) {
+    final icono = Icon(activo ? destino.iconoActivo : destino.icono);
+    if (destino.etiqueta != 'Pendientes') return icono;
+
+    final cantidad = context.watch<EstadoPendientes>().resumen.cantidad;
+    if (cantidad == 0) return icono;
+
+    return Badge(label: Text('$cantidad'), child: icono);
   }
 }
 
@@ -205,52 +256,11 @@ class _Destino {
     required this.etiqueta,
     required this.icono,
     required this.iconoActivo,
-    this.pantalla,
-    this.pendiente,
+    required this.pantalla,
   });
 
   final String etiqueta;
   final IconData icono;
   final IconData iconoActivo;
-
-  /// La pantalla del destino, o `null` si su historia todavía no se construyó.
-  final Widget? pantalla;
-
-  /// Qué historia la construirá, para el marcador temporal.
-  final String? pendiente;
-}
-
-/// Marcador temporal. Cada historia lo reemplaza por su pantalla.
-class _EnConstruccion extends StatelessWidget {
-  const _EnConstruccion({required this.pendiente});
-
-  final String pendiente;
-
-  @override
-  Widget build(BuildContext context) {
-    final esquema = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(Espaciado.amplio),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.construction_outlined, size: 48, color: esquema.outline),
-            const SizedBox(height: Espaciado.normal),
-            Text(
-              'Todavía no construido',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: Espaciado.chico),
-            Text(
-              pendiente,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: esquema.onSurfaceVariant),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  final Widget pantalla;
 }

@@ -82,6 +82,31 @@ enum ReglaAhorro {
   );
 }
 
+/// Por qué una notificación de un origen reconocido no se pudo interpretar
+/// (FR-017, FR-018, spec 002).
+///
+/// No incluye "no es un consumo": eso se ignora sin dejar rastro (FR-012), no
+/// es un fallo de interpretación.
+enum MotivoDiagnostico {
+  formatoNoReconocido('formato_no_reconocido', 'Formato no reconocido'),
+  montoIlegible('monto_ilegible', 'Monto ilegible'),
+  monedaExtranjera('moneda_extranjera', 'Moneda extranjera');
+
+  const MotivoDiagnostico(this.slug, this.etiqueta);
+
+  final String slug;
+  final String etiqueta;
+
+  static MotivoDiagnostico desdeSlug(String slug) => values.firstWhere(
+    (motivo) => motivo.slug == slug,
+    orElse: () => throw ArgumentError.value(
+      slug,
+      'slug',
+      'Motivo de diagnóstico desconocido en la base de datos',
+    ),
+  );
+}
+
 /// Tipo de tarjeta (FR-059).
 ///
 /// Solo las de crédito admiten deudas en cuotas (FR-061).

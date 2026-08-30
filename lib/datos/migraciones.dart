@@ -1,3 +1,4 @@
+import 'package:finanzas/datos/esquema.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// Migraciones incrementales del esquema.
@@ -13,10 +14,18 @@ import 'package:sqflite/sqflite.dart';
 /// `test/datos/base_datos_test.dart`.
 abstract final class Migraciones {
   /// Clave: versión a la que se llega. Valor: los pasos para llegar.
-  ///
-  /// Vacío mientras el esquema esté en la versión 1: no hay nada instalado
-  /// desde lo cual migrar.
-  static const Map<int, List<String>> pasos = <int, List<String>>{};
+  static const Map<int, List<String>> pasos = <int, List<String>>{
+    // v1 → v2: spec 002, captura de notificaciones bancarias.
+    2: <String>[
+      Esquema.consumoPendiente,
+      Esquema.indicePendienteNotificacion,
+      Esquema.indicePendienteFecha,
+      Esquema.comercioCategoria,
+      Esquema.notificacionDiagnostico,
+      Esquema.indiceDiagnosticoFecha,
+      Esquema.alterConfiguracionCaptura,
+    ],
+  };
 
   /// Aplica los pasos necesarios para ir de [desde] a [hasta].
   static Future<void> aplicar(

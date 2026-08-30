@@ -8,7 +8,9 @@
 
 **Depends on**: [001-gestion-sueldo-ahorro](../001-gestion-sueldo-ahorro/spec.md) — define las transacciones, las categorías y las deudas en cuotas sobre las que esta funcionalidad opera.
 
-**Input**: User description: "Captura automática de consumos desde las notificaciones del banco en Android. La app lee las notificaciones de BCP, Yape/Plin y SIP (antigua tarjeta Oh!), extrae monto, comercio y fecha, y propone una transacción precargada que el usuario confirma o corrige de un toque, nunca la registra en silencio. Aprende la categoría por comercio. Todo el procesamiento ocurre en el dispositivo. Es exclusiva de Android."
+**Input**: User description: "Captura automática de consumos desde las notificaciones del banco en Android. La app lee las notificaciones de cualquier banco o billetera digital peruana reconocida — no un puñado fijo de bancos, sino cualquiera que el usuario tenga o llegue a tener —, extrae monto, comercio y fecha, y propone una transacción precargada que el usuario confirma o corrige de un toque, nunca la registra en silencio. Solo captura consumos (dinero que sale); nunca dinero recibido. Aprende la categoría por comercio. Todo el procesamiento ocurre en el dispositivo. Es exclusiva de Android."
+
+**Revisión** *(2026-08-30)*: el alcance de orígenes pasó de una lista fija de cuatro bancos a un reconocimiento genérico. Ver FR-008 a FR-011 y la sección "Sobre el reconocimiento" en Assumptions — es el cambio que más afecta el diseño técnico y anula la premisa original de "un intérprete por banco".
 
 ## Contexto y alcance
 
@@ -151,8 +153,9 @@ cuotas conforme a la especificación 001.
 
 **Interpretación de notificaciones**
 
-- **Formato desconocido o no reconocido**: no se genera ningún pendiente. El texto se conserva localmente en un registro de diagnóstico que el usuario puede revisar y borrar, para poder mejorar el reconocimiento después.
-- **Cambio de formato del banco**: los consumos dejan de reconocerse y pasan al registro de diagnóstico. La app no debe fallar ni generar pendientes con datos erróneos.
+- **App no reconocida en absoluto** (no está en la lista de orígenes reconocidos): la notificación ni se procesa ni se guarda en ningún lado — distinto del caso siguiente, donde la app sí es un banco/billetera conocido pero el texto puntual no se pudo leer.
+- **Formato no reconocido de un origen sí conocido**: no se genera ningún pendiente. El texto se conserva localmente en un registro de diagnóstico que el usuario puede revisar y borrar, para poder ajustar el reconocimiento genérico después.
+- **Cambio de formato de un banco**: esos consumos puntuales dejan de reconocerse y pasan al registro de diagnóstico; al ser un reconocimiento genérico y no un intérprete propio de ese banco, es menos frágil ante este cambio que si dependiera de un patrón exclusivo suyo, pero no es inmune. La app no debe fallar ni generar pendientes con datos erróneos.
 - **Notificación que no es un consumo** (promociones, avisos de saldo, inicio de sesión, recordatorios de pago): se ignora sin generar pendiente.
 - **Notificación duplicada o reeditada**: el mismo consumo notificado más de una vez genera un solo pendiente.
 - **Dos consumos idénticos y legítimos** (mismo monto, mismo comercio, en minutos): se conservan ambos como pendientes distintos; la app no los descarta como duplicados sin evidencia.
@@ -184,12 +187,14 @@ cuotas conforme a la especificación 001.
 
 **Captura e interpretación**
 
-- **FR-008**: El sistema MUST reconocer las notificaciones de consumo de BCP, Yape, Plin y SIP (antigua tarjeta Oh!).
+- **FR-008**: El sistema MUST reconocer notificaciones de consumo de cualquier banco o billetera digital peruana en una lista de orígenes reconocidos, mediante un reconocimiento genérico de patrones — no un intérprete escrito a mano por cada banco.
+- **FR-008a**: Agregar un banco o billetera nuevo a la lista de orígenes reconocidos MUST NOT requerir escribir lógica de interpretación nueva: alcanza con identificar la app (FR-010) para que el reconocimiento genérico ya vigente empiece a aplicarle.
+- **FR-008b**: El sistema MUST distinguir un consumo (dinero que sale) de un movimiento entrante (dinero que se recibe) por el contenido de la notificación, sin asumirlo por la app de origen — la misma app de billetera notifica ambos casos de forma parecida.
 - **FR-009**: El sistema MUST extraer de cada notificación reconocida el monto, el comercio y la fecha del consumo.
 - **FR-010**: El sistema MUST registrar de qué app u origen proviene cada consumo capturado.
 - **FR-011**: El sistema MUST capturar consumos aunque la app esté cerrada o en segundo plano.
 - **FR-012**: El sistema MUST ignorar las notificaciones que no correspondan a un consumo.
-- **FR-013**: El sistema MUST ignorar las notificaciones de dinero recibido, consumo rechazado y consumo extornado.
+- **FR-013**: El sistema MUST ignorar las notificaciones de dinero recibido (FR-008b), consumo rechazado y consumo extornado.
 - **FR-014**: El sistema MUST ignorar los consumos en moneda distinta al sol.
 - **FR-015**: El sistema MUST evitar generar más de un pendiente para una misma notificación repetida o reeditada.
 - **FR-016**: El sistema MUST conservar como pendientes distintos dos consumos legítimos de igual monto y comercio.
@@ -226,7 +231,7 @@ cuotas conforme a la especificación 001.
 
 ### Key Entities
 
-- **Origen de captura**: app bancaria o billetera cuyas notificaciones se interpretan (BCP, Yape, Plin, SIP). Cada origen tiene su propia forma de redactar las notificaciones.
+- **Origen de captura**: app bancaria o billetera identificada como reconocida (por su paquete de Android). No tiene lógica propia de interpretación — todas comparten el mismo reconocimiento genérico (FR-008). La lista de orígenes reconocidos es ampliable sin escribir código de interpretación nuevo (FR-008a).
 - **Consumo pendiente**: consumo detectado y aún no confirmado. Contiene monto, comercio, fecha, origen y categoría propuesta. Al confirmarse se convierte en una transacción de la especificación 001; al descartarse desaparece sin dejar registro contable.
 - **Asociación comercio-categoría**: vínculo aprendido entre el nombre de un comercio y la categoría que el usuario le asignó. Se crea y actualiza con cada confirmación.
 - **Registro de diagnóstico**: notificaciones de un origen soportado que no se pudieron interpretar, conservadas localmente para revisar por qué falló el reconocimiento. Consultable y borrable por el usuario.
@@ -246,6 +251,7 @@ cuotas conforme a la especificación 001.
 - **SC-008**: El usuario entiende qué está autorizando antes de conceder el permiso, sin consultar documentación externa.
 - **SC-009**: El tiempo dedicado a registrar gastos se reduce de forma apreciable frente al registro íntegramente manual de la especificación 001.
 - **SC-010**: Un consumo capturado con la app cerrada está disponible al abrirla, en el 100% de los casos.
+- **SC-011**: Agregar un banco o billetera nuevo a la lista de orígenes reconocidos no exige escribir ni desplegar código de interpretación nuevo, solo identificar la app.
 
 ## Assumptions
 
@@ -255,11 +261,12 @@ cuotas conforme a la especificación 001.
 - **Distribución en Play Store, viable con precauciones** *(revisado 2026-08-29)*: la suposición original era no publicar en tiendas por el riesgo de que Google rechazara el permiso de notificaciones en una app de finanzas. Investigando la política vigente, esa suposición era demasiado pesimista: hay apps de seguimiento de gastos publicadas y activas en Play Store que leen notificaciones bancarias para capturar transacciones (Expenzo, FinArt), con el mismo procesamiento local que exige esta especificación. El permiso de acceso a notificaciones (`NotificationListenerService`) no está entre los que exigen el Formulario de Declaración de Permisos con video de Google — ese trámite aplica sobre todo a SMS, registro de llamadas y accesibilidad — aunque Google Play Protect sí vigila su uso por riesgo de fraude financiero. Publicar exige cumplir sin excepción FR-001, FR-019 y FR-020 (explicar antes de pedir el permiso, nunca transmitir el contenido fuera del dispositivo, nunca registrar en silencio) y contar con una política de privacidad pública, que Google exige para publicar cualquier app.
 - **El usuario mantiene activas las notificaciones de sus bancos**: si las silencia en el sistema, no hay nada que capturar y la app no puede advertirlo.
 
-**Sobre el reconocimiento**
+**Sobre el reconocimiento** *(revisado 2026-08-30 — reemplaza la premisa original de "un intérprete por banco")*
 
-- **Un intérprete por origen**: cada banco redacta sus notificaciones a su manera. El reconocimiento se construye observando notificaciones reales de cada origen, no a partir de documentación pública, que no existe.
-- **Los formatos cambiarán**: cuando un banco cambie la redacción de sus avisos, esos consumos dejarán de reconocerse hasta que se ajuste el intérprete. El registro de diagnóstico existe precisamente para detectarlo y corregirlo.
-- **Cobertura parcial por diseño**: solo se capturan consumos que generan notificación. El efectivo, las domiciliaciones y cualquier gasto que el banco no avise se siguen registrando a mano. La captura reduce el registro manual, no lo elimina.
+- **Un reconocimiento genérico, compartido por todos los orígenes**: en vez de un intérprete de texto por banco, un único mecanismo reconoce patrones comunes a cualquier notificación de consumo (un monto en soles, palabras que indican que el dinero salió y no entró) y una lista de apps reconocidas que acota a cuáles notificaciones prestarle atención. Agregar un banco nuevo a esa lista no exige escribir ni probar un intérprete nuevo.
+- **Se valida contra notificaciones reales de varios bancos, no de todos**: el reconocimiento genérico igual se construye y ajusta observando notificaciones reales — no hay documentación pública del formato de ningún banco —, pero alcanza con una muestra representativa de distintos bancos y billeteras para validar que el patrón generaliza, no con una muestra de cada uno.
+- **Precisión más pareja, no perfecta por banco**: un intérprete a medida por banco reconoce mejor los casos particulares de ese banco; el reconocimiento genérico prioriza cubrir bancos nuevos sin trabajo adicional, a cambio de fallar con más frecuencia en textos atípicos de cualquiera de ellos — esos casos van al registro de diagnóstico, nunca se inventan (FR-017).
+- **Cobertura parcial por diseño**: solo se capturan consumos que generan notificación **de un origen reconocido**. El efectivo, las domiciliaciones y cualquier gasto que el banco no avise — o de una app que todavía no está en la lista de orígenes reconocidos — se siguen registrando a mano. La captura reduce el registro manual, no lo elimina.
 - **El comercio es el que informa el banco**: se usa el nombre tal como aparece en la notificación, que puede ser un identificador poco legible. El usuario puede corregirlo al confirmar.
 
 **Sobre el alcance**
