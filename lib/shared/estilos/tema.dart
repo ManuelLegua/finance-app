@@ -25,16 +25,29 @@ abstract final class Tema {
       colorScheme: esquema,
       useMaterial3: true,
       visualDensity: VisualDensity.adaptivePlatformDensity,
+      // Un tono más bajo que `surface`: el fondo de página queda
+      // levemente distinto del de las tarjetas, para que se despeguen sin
+      // necesitar un borde — antes eran casi el mismo tono y la tarjeta se
+      // perdía contra el fondo.
+      scaffoldBackgroundColor: esquema.surfaceContainerLowest,
       appBarTheme: AppBarTheme(
-        backgroundColor: esquema.surface,
+        backgroundColor: esquema.surfaceContainerLowest,
         foregroundColor: esquema.onSurface,
         centerTitle: false,
+        scrolledUnderElevation: 1,
+        surfaceTintColor: esquema.surfaceTint,
       ),
+      // Sombra suave en vez de solo borde: la tarjeta se despega del fondo
+      // sin necesitar una línea que la recorte — mismo espíritu de D11
+      // (jerarquía por tamaño, no solo por color), pero con más presencia.
+      // `surfaceContainerHigh` (no `Low`): con el fondo bajado un escalón
+      // (arriba), hace falta subir la tarjeta otro para que el salto se note.
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: 1,
+        color: esquema.surfaceContainerHigh,
+        shadowColor: esquema.shadow.withValues(alpha: 0.3),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: esquema.outlineVariant),
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
       inputDecorationTheme: const InputDecorationTheme(
