@@ -57,6 +57,12 @@ class EstadoDiagnostico extends ChangeNotifier {
     }
   }
 
+  void limpiarError() {
+    if (_error == null) return;
+    _error = null;
+    notifyListeners();
+  }
+
   static String _mensajeDe(Object error) => error is ErrorPersistencia
       ? error.mensaje
       : 'Ocurrió un problema inesperado. Volvé a intentarlo.';

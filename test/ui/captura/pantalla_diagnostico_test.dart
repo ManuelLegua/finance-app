@@ -96,4 +96,27 @@ void main() {
     expect(estado.entradas, isEmpty);
     expect(find.text('Nada sin interpretar'), findsOneWidget);
   });
+
+  testWidgets(
+    'un fallo al vaciar el registro se muestra, no se traga en silencio',
+    (tester) async {
+      await repoDiagnostico.insertar(entrada());
+      await estado.cargar();
+      await montar(tester);
+
+      repoDiagnostico.errorEnLaProximaEscritura = Exception('disco lleno');
+      await tester.tap(find.text('Borrar todo el registro'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Borrar'));
+      await tester.pumpAndSettle();
+
+      // Texto e ícono, no solo un color (mismo patrón que el resto de la
+      // feature): FR-057-style de la constitución sobre no comunicar solo
+      // con color.
+      expect(find.textContaining('Ocurrió un problema'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      // La entrada sigue ahí: el fallo no se tragó silenciosamente.
+      expect(estado.entradas, hasLength(1));
+    },
+  );
 }

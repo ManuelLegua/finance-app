@@ -1,6 +1,8 @@
+import 'package:finanzas/dominio/modelos/deuda.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
+import 'package:finanzas/ui/estado/estado_pendientes.dart';
 import 'package:finanzas/ui/estado/estado_tarjetas.dart';
 import 'package:finanzas/ui/pantallas/deudas/pantalla_deudas.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +45,7 @@ void main() {
     repoTarjetas = RepositorioTarjetasEnMemoria();
     await repoTarjetas.insertar(TarjetaBuilder().build());
     estado = EstadoMes(
-      repoIngreso: RepositorioIngresoEnMemoria(),
+      repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
       repoObligaciones: RepositorioObligacionesEnMemoria(),
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: RepositorioTransaccionesEnMemoria(),
@@ -200,5 +202,72 @@ void main() {
 
       expect(estado.cuotasVigentes, const Dinero.deCentavos(20000));
     });
+  });
+
+  group('creada desde un pendiente confirmado (spec 002, FR-036, FR-037)', () {
+    testWidgets(
+      'aparece en Deudas igual que una creada a mano, y el presupuesto '
+      'muestra solo la cuota, sin refrescar a mano',
+      (tester) async {
+        await estado.cargar();
+        await montar(tester);
+        expect(find.text('Tienda X'), findsNothing);
+
+        // Simula lo que hace EstadoPendientes.confirmar(comoDeuda: ...) al
+        // marcar un pendiente como compra en cuotas: usa el **mismo**
+        // EstadoMes que ya está en pantalla (como pasa en la app real, donde
+        // ambos son providers del mismo árbol) — no un repositorio aparte
+        // que dejaría a Deudas/Presupuesto sin enterarse.
+        final repoPendientes = RepositorioPendientesEnMemoria();
+        final estadoPendientes = EstadoPendientes(
+          repoPendientes: repoPendientes,
+          repoAsociaciones: RepositorioAsociacionesEnMemoria(),
+          estadoMes: estado,
+        );
+        await repoPendientes.insertar(
+          ConsumoPendiente(
+            id: null,
+            origenPaquete: 'com.ejemplo.banco',
+            notificacionId: 'notif-1',
+            monto: const Dinero.deCentavos(15000),
+            comercio: 'Tienda X',
+            fecha: quinceDeAgosto,
+            categoriaPropuesta: null,
+            capturadoEn: quinceDeAgosto,
+          ),
+        );
+        await estadoPendientes.cargar();
+
+        final confirmado = await estadoPendientes.confirmar(
+          estadoPendientes.pendientes.single,
+          comoDeuda: const Deuda(
+            id: null,
+            descripcion: 'Tienda X',
+            tarjetaId: 1,
+            cuotaMensual: Dinero.deCentavos(15000),
+            numCuotas: 12,
+            mesInicio: agosto,
+          ),
+        );
+        expect(confirmado, isTrue);
+
+        // Sin llamar a estado.cargar() a mano: confirmar() pasó por
+        // EstadoMes.agregarDeuda(), que ya recargó y notificó — la pantalla
+        // solo necesita un frame para pintarlo.
+        await tester.pump();
+
+        // Aparece en la pantalla de Deudas como cualquier otra (FR-036).
+        expect(find.text('Tienda X'), findsOneWidget);
+        expect(find.text('BCP Visa · BCP'), findsOneWidget);
+
+        // El presupuesto ve solo la cuota, no el total de la compra
+        // (FR-037): 12 x S/ 150.00, no S/ 1,800.00 de una sola vez.
+        expect(estado.cuotasVigentes, const Dinero.deCentavos(15000));
+        expect(
+          estado.resumen.totalComprometido,
+          const Dinero.deCentavos(15000),
+        );
+      },
+    );
   });
 }

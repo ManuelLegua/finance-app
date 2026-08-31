@@ -3,20 +3,22 @@ import 'dart:io' show Platform;
 import 'package:finanzas/datos/base_datos.dart';
 import 'package:finanzas/datos/notificaciones/servicio_escucha.dart';
 import 'package:finanzas/datos/repositorios/repositorio_ahorro_sqlite.dart';
+import 'package:finanzas/datos/repositorios/repositorio_asociaciones_sqlite.dart';
+import 'package:finanzas/datos/repositorios/repositorio_cobros_ingreso_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_configuracion_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_deudas_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_diagnostico_sqlite.dart';
-import 'package:finanzas/datos/repositorios/repositorio_ingreso_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_meses_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_pendientes_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_tarjetas_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_transacciones_sqlite.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ahorro.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_asociaciones.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_cobros_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_diagnostico.dart';
-import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_meses.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_pendientes.dart';
@@ -26,6 +28,7 @@ import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/cascaron.dart';
 import 'package:finanzas/ui/estado/estado_ahorro.dart';
+import 'package:finanzas/ui/estado/estado_asociaciones.dart';
 import 'package:finanzas/ui/estado/estado_captura.dart';
 import 'package:finanzas/ui/estado/estado_diagnostico.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
@@ -109,8 +112,8 @@ class _ArranqueState extends State<_Arranque> {
 
         return MultiProvider(
           providers: [
-            Provider<RepositorioIngreso>(
-              create: (_) => RepositorioIngresoSqlite(conexion),
+            Provider<RepositorioCobrosIngreso>(
+              create: (_) => RepositorioCobrosIngresoSqlite(conexion),
             ),
             Provider<RepositorioObligaciones>(
               create: (_) => RepositorioObligacionesSqlite(conexion),
@@ -135,7 +138,7 @@ class _ArranqueState extends State<_Arranque> {
             ),
             ChangeNotifierProvider<EstadoMes>(
               create: (contexto) => EstadoMes(
-                repoIngreso: contexto.read<RepositorioIngreso>(),
+                repoCobrosIngreso: contexto.read<RepositorioCobrosIngreso>(),
                 repoObligaciones: contexto.read<RepositorioObligaciones>(),
                 repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
                 repoTransacciones: contexto.read<RepositorioTransacciones>(),
@@ -168,6 +171,9 @@ class _ArranqueState extends State<_Arranque> {
               Provider<RepositorioDiagnostico>(
                 create: (_) => RepositorioDiagnosticoSqlite(conexion),
               ),
+              Provider<RepositorioAsociaciones>(
+                create: (_) => RepositorioAsociacionesSqlite(conexion),
+              ),
               ChangeNotifierProvider<EstadoCapturaNotificaciones>(
                 create: (contexto) => EstadoCapturaNotificaciones(
                   repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
@@ -179,12 +185,18 @@ class _ArranqueState extends State<_Arranque> {
               ChangeNotifierProvider<EstadoPendientes>(
                 create: (contexto) => EstadoPendientes(
                   repoPendientes: contexto.read<RepositorioPendientes>(),
-                  repoTransacciones: contexto.read<RepositorioTransacciones>(),
+                  repoAsociaciones: contexto.read<RepositorioAsociaciones>(),
+                  estadoMes: contexto.read<EstadoMes>(),
                 )..cargar(),
               ),
               ChangeNotifierProvider<EstadoDiagnostico>(
                 create: (contexto) => EstadoDiagnostico(
                   repoDiagnostico: contexto.read<RepositorioDiagnostico>(),
+                )..cargar(),
+              ),
+              ChangeNotifierProvider<EstadoAsociaciones>(
+                create: (contexto) => EstadoAsociaciones(
+                  repoAsociaciones: contexto.read<RepositorioAsociaciones>(),
                 )..cargar(),
               ),
             ],

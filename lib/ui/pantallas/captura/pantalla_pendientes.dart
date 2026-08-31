@@ -2,6 +2,7 @@ import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_fecha.dart';
 import 'package:finanzas/shared/formato/formato_soles.dart';
 import 'package:finanzas/ui/estado/estado_pendientes.dart';
+import 'package:finanzas/ui/estado/estado_tarjetas.dart';
 import 'package:finanzas/ui/pantallas/captura/formulario_confirmar_pendiente.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,9 +20,13 @@ class PantallaPendientes extends StatelessWidget {
     EstadoPendientes estado,
     ConsumoPendiente pendiente,
   ) async {
+    final tarjetasDeCredito = context.read<EstadoTarjetas>().deCredito;
     final datos = await showDialog<DatosConfirmacion>(
       context: context,
-      builder: (_) => FormularioConfirmarPendiente(pendiente: pendiente),
+      builder: (_) => FormularioConfirmarPendiente(
+        pendiente: pendiente,
+        tarjetasDeCredito: tarjetasDeCredito,
+      ),
     );
     if (datos == null) return;
 
@@ -31,6 +36,7 @@ class PantallaPendientes extends StatelessWidget {
       comercio: datos.comercio,
       fecha: datos.fecha,
       categoria: datos.categoria,
+      comoDeuda: datos.deuda,
     );
   }
 

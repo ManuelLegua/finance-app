@@ -137,17 +137,17 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 
 ### Tests para US3 ⚠️
 
-- [ ] T044 [P] [US3] Escribir `test/dominio/normalizador_comercio_test.dart` **antes de ampliar** T040: mayúsculas, espacios y sufijos de sucursal normalizan igual (FR-032) — ejemplos reales de los fixtures de T034 si los hay, para no inventar formatos de comercio
-- [ ] T045 [P] [US3] Ampliar `test/ui/captura/estado_pendientes_test.dart`: confirmar un comercio nunca antes visto con una categoría guarda la asociación (FR-029); un consumo posterior del mismo comercio llega con `categoriaPropuesta` ya llena (FR-030); confirmarlo con una categoría distinta actualiza la asociación, no la duplica (FR-031)
+- [X] T044 [P] [US3] Escribir `test/dominio/normalizador_comercio_test.dart` **antes de ampliar** T040: mayúsculas, espacios y sufijos de sucursal normalizan igual (FR-032) — ejemplos reales de los fixtures de T034 si los hay, para no inventar formatos de comercio — **sin fixtures de T034 todavía**: se usaron ejemplos sintéticos claramente etiquetados como tales, y el alcance del reconocimiento de sucursal se restringió a patrones seguros (código numérico final, palabra "SUC"/"SUCURSAL") documentando en el propio código qué casos quedan fuera hasta tener notificaciones reales
+- [X] T045 [P] [US3] Ampliar `test/ui/captura/estado_pendientes_test.dart`: confirmar un comercio nunca antes visto con una categoría guarda la asociación (FR-029); un consumo posterior del mismo comercio llega con `categoriaPropuesta` ya llena (FR-030); confirmarlo con una categoría distinta actualiza la asociación, no la duplica (FR-031)
 
 ### Implementación para US3
 
-- [ ] T046 [US3] Completar `normalizarComercio` en `lib/dominio/interpretes/normalizador_comercio.dart` hasta que T044 pase — reemplaza la versión mínima de T040, sin tocar su firma
-- [ ] T047 [P] [US3] Definir el modelo `AsociacionComercio` y la interfaz `RepositorioAsociaciones`, con su implementación `Sqlite` y doble en memoria, según contracts/repositorios.md
-- [ ] T048 [US3] Escribir `test/datos/repositorio_asociaciones_test.dart`: `asociar` sobre un comercio ya asociado reemplaza la categoría (FR-031); `categoriaDe` de un comercio nunca visto es `null`, no una categoría por defecto (FR-033)
-- [ ] T049 [US3] Ampliar `EstadoPendientes`/el callback headless (T042) para consultar `RepositorioAsociaciones.categoriaDe(normalizarComercio(comercio))` al generar cada pendiente, y para guardar la asociación en `confirmar()` hasta que T045 pase
-- [ ] T050 [US3] Construir `lib/ui/pantallas/captura/pantalla_asociaciones.dart`: listar, corregir y eliminar asociaciones aprendidas (FR-034)
-- [ ] T051 [US3] Escribir `test/ui/captura/pantalla_asociaciones_test.dart`
+- [X] T046 [US3] Completar `normalizarComercio` en `lib/dominio/interpretes/normalizador_comercio.dart` hasta que T044 pase — reemplaza la versión mínima de T040, sin tocar su firma — **T040 nunca se había hecho** (quedó bloqueada junto al resto del parser genérico), así que esta tarea creó el archivo directamente con el alcance completo descrito arriba, sin pasar por una versión mínima intermedia que nadie más iba a consumir
+- [X] T047 [P] [US3] Definir el modelo `AsociacionComercio` y la interfaz `RepositorioAsociaciones`, con su implementación `Sqlite` y doble en memoria, según contracts/repositorios.md
+- [X] T048 [US3] Escribir `test/datos/repositorio_asociaciones_test.dart`: `asociar` sobre un comercio ya asociado reemplaza la categoría (FR-031); `categoriaDe` de un comercio nunca visto es `null`, no una categoría por defecto (FR-033)
+- [X] T049 [US3] Ampliar `EstadoPendientes`/el callback headless (T042) para consultar `RepositorioAsociaciones.categoriaDe(normalizarComercio(comercio))` al generar cada pendiente, y para guardar la asociación en `confirmar()` hasta que T045 pase — **la parte del callback headless queda pendiente de T042** (bloqueado por T034/T041): la propuesta de categoría se resuelve en `EstadoPendientes.cargar()`, que es el punto no bloqueado por donde ya pasan todos los pendientes, reales o de prueba
+- [X] T050 [US3] Construir `lib/ui/pantallas/captura/pantalla_asociaciones.dart`: listar, corregir y eliminar asociaciones aprendidas (FR-034)
+- [X] T051 [US3] Escribir `test/ui/captura/pantalla_asociaciones_test.dart`
 
 **Checkpoint**: con el uso, la mayoría de los pendientes llegan con categoría correcta ya propuesta (SC-003) y confirmarlos vuelve a ser un solo toque.
 
@@ -161,13 +161,13 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 
 ### Tests para US4 ⚠️
 
-- [ ] T052 [P] [US4] Ampliar `test/ui/captura/estado_pendientes_test.dart` **antes de implementar**: `confirmar()` con la marca "en cuotas" crea una `Deuda` vía `RepositorioDeudas` de 001 (número de cuotas y cuota mensual del formulario) y **no** crea una `Transaccion`; sin esa marca, el comportamiento es el de US2 sin cambios (FR-037)
+- [X] T052 [P] [US4] Ampliar `test/ui/captura/estado_pendientes_test.dart` **antes de implementar**: `confirmar()` con la marca "en cuotas" crea una `Deuda` vía `RepositorioDeudas` de 001 (número de cuotas y cuota mensual del formulario) y **no** crea una `Transaccion`; sin esa marca, el comportamiento es el de US2 sin cambios (FR-037)
 
 ### Implementación para US4
 
-- [ ] T053 [US4] Ampliar `formulario_confirmar_pendiente.dart` (T028): opción "fue en cuotas", con número de cuotas y cuota mensual, reutilizando los campos de `FormularioDeuda` de 001 (FR-035, FR-036) — a diferencia del diseño original, ya no hay forma de saber por el origen si "admite cuotas" (ese concepto era propio de un banco de tarjeta de crédito conocido de antemano): la opción se ofrece siempre y es el usuario quien decide si aplica, igual que ya elige corregir cualquier otro campo del pendiente
-- [ ] T054 [US4] Ampliar `EstadoPendientes.confirmar()` (T026) hasta que T052 pase: bifurca a `RepositorioDeudas.insertar` o a `RepositorioTransacciones.insertar` según la marca del formulario
-- [ ] T055 [US4] Ampliar `test/ui/pantalla_deudas_test.dart` de 001: una deuda creada desde un pendiente aparece en Deudas igual que una creada a mano, y el presupuesto del mes muestra solo la cuota (FR-036, FR-037 verificado end-to-end)
+- [X] T053 [US4] Ampliar `formulario_confirmar_pendiente.dart` (T028): opción "fue en cuotas", con número de cuotas y cuota mensual, reutilizando los campos de `FormularioDeuda` de 001 (FR-035, FR-036) — a diferencia del diseño original, ya no hay forma de saber por el origen si "admite cuotas" (ese concepto era propio de un banco de tarjeta de crédito conocido de antemano): la opción se ofrece siempre y es el usuario quien decide si aplica, igual que ya elige corregir cualquier otro campo del pendiente — **con una salvedad sobre "siempre"**: si el usuario todavía no registró ninguna tarjeta de crédito (`EstadoTarjetas.deCredito` vacío), el interruptor ni se muestra, porque una `Deuda` exige `tarjetaId` (FR-061) y no hay nada que ofrecer para completarlo; es el mismo criterio que ya aplica `FormularioDeuda` de 001, extendido acá
+- [X] T054 [US4] Ampliar `EstadoPendientes.confirmar()` (T026) hasta que T052 pase: bifurca a `RepositorioDeudas.insertar` o a `RepositorioTransacciones.insertar` según la marca del formulario
+- [X] T055 [US4] Ampliar `test/ui/pantalla_deudas_test.dart` de 001: una deuda creada desde un pendiente aparece en Deudas igual que una creada a mano, y el presupuesto del mes muestra solo la cuota (FR-036, FR-037 verificado end-to-end)
 
 **Checkpoint**: las cuatro historias funcionan de forma independiente. La spec 002 queda completa.
 
@@ -175,9 +175,9 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T056 [P] Verificar que `test/pureza_test.dart` sigue pasando con `lib/dominio/interpretes/` ya completo
-- [ ] T057 [P] Revisar que ningún estado de esta feature (permiso revocado, cantidad inusual de pendientes, notificación en diagnóstico) se comunique solo por color, siguiendo el mismo patrón de `MarcaEstado`/`AvisoMesCerrado` de 001
-- [ ] T058 [P] Dejar `flutter analyze` sin issues y `dart format` aplicado a todo lo nuevo
+- [X] T056 [P] Verificar que `test/pureza_test.dart` sigue pasando con `lib/dominio/interpretes/` ya completo — pasa con lo que existe hoy (`normalizador_comercio.dart`); falta re-verificar cuando el parser genérico (T034–T043) aterrice, ya que ese directorio todavía no está "completo" en el sentido que describe la tarea original
+- [X] T057 [P] Revisar que ningún estado de esta feature (permiso revocado, cantidad inusual de pendientes, notificación en diagnóstico) se comunique solo por color, siguiendo el mismo patrón de `MarcaEstado`/`AvisoMesCerrado` de 001 — activación, pendientes y asociaciones ya lo hacían bien (ícono + texto en cada caso); la revisión encontró que **`PantallaDiagnostico` nunca mostraba `EstadoDiagnostico.error`** (ni con color: no se mostraba nada) — corregido agregando `EstadoDiagnostico.limpiarError()` y el mismo `_BannerError` que ya usan el resto de las pantallas de la feature, con prueba de regresión
+- [X] T058 [P] Dejar `flutter analyze` sin issues y `dart format` aplicado a todo lo nuevo — de paso, se sumó `errorEnLaProximaEscritura` a los dobles de diagnóstico y asociaciones (ya lo tenían pendientes/transacciones/etc.) y una prueba de "fallo al escribir se muestra, no se traga" en pendientes, asociaciones y diagnóstico — 420 pruebas en verde
 - [X] T059 ~~Confirmar la licencia real de `flutter_notification_listener`~~ — resuelto al instalar la dependencia (T001): `LICENSE` en `.pub-cache` es Apache 2.0, coincide con lo que mostraba GitHub. El "unknown" de pub.dev era un problema de detección de esa página, no una ausencia real de licencia.
 - [ ] T060 [MANUAL] Verificar en un dispositivo real, y en lo posible en un fabricante propenso a matar servicios en segundo plano (Samsung o Xiaomi, no el Pixel del emulador de referencia), que el servicio sobrevive un reinicio y que la exención de optimización de batería (D-N4) se puede conceder desde la propia app
 - [ ] T061 [MANUAL] Recorrer entero [quickstart.md](./quickstart.md) en un dispositivo Android real, incluidos modo avión y reinicio del dispositivo

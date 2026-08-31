@@ -1,3 +1,4 @@
+import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
@@ -17,7 +18,7 @@ import '../dobles/repositorios_en_memoria.dart';
 /// Lo que se verifica acá es cómo se ve la pantalla dado un estado, no cómo se
 /// guarda — eso lo cubre `test/datos/` contra la base real.
 void main() {
-  late RepositorioIngresoEnMemoria repoIngreso;
+  late RepositorioCobrosIngresoEnMemoria repoCobrosIngreso;
   late RepositorioObligacionesEnMemoria repoObligaciones;
   late EstadoMes estado;
 
@@ -37,10 +38,10 @@ void main() {
   }
 
   setUp(() async {
-    repoIngreso = RepositorioIngresoEnMemoria();
+    repoCobrosIngreso = RepositorioCobrosIngresoEnMemoria();
     repoObligaciones = RepositorioObligacionesEnMemoria();
     estado = EstadoMes(
-      repoIngreso: repoIngreso,
+      repoCobrosIngreso: repoCobrosIngreso,
       repoObligaciones: repoObligaciones,
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: RepositorioTransaccionesEnMemoria(),
@@ -51,7 +52,7 @@ void main() {
     await estado.cargar();
   });
 
-  group('ingreso', () {
+  group('ingreso (US1, FR-001, FR-003)', () {
     testWidgets('un mes sin ingreso lo pide en vez de mostrar S/ 0.00', (
       tester,
     ) async {
@@ -69,13 +70,195 @@ void main() {
       expect(find.text(r'S/ 0.00'), findsOneWidget);
     });
 
-    testWidgets('con ingreso registrado lo muestra formateado', (tester) async {
-      await estado.guardarIngreso(const Dinero.deCentavos(300000));
+    testWidgets('con un cobro registrado lo muestra formateado', (
+      tester,
+    ) async {
+      await estado.agregarCobro(
+        CobroIngreso(
+          id: null,
+          fecha: quinceDeAgosto,
+          monto: const Dinero.deCentavos(300000),
+        ),
+      );
       await montar(tester);
 
-      expect(find.text(r'S/ 3,000.00'), findsOneWidget);
-      expect(find.text('Corregir'), findsOneWidget);
+      // Aparece dos veces: como total destacado y como el monto de la
+      // única fila del detalle (US2).
+      expect(find.text(r'S/ 3,000.00'), findsNWidgets(2));
+      expect(find.text('Agregar cobro'), findsOneWidget);
     });
+
+    testWidgets(
+      'registrar dos cobros de fechas y montos distintos deja el total '
+      'como su suma exacta (Acceptance Scenario 1)',
+      (tester) async {
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: DateTime(2026, 8, 15),
+            monto: const Dinero.deCentavos(96000),
+          ),
+        );
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: DateTime(2026, 8, 30),
+            monto: const Dinero.deCentavos(104000),
+          ),
+        );
+        await montar(tester);
+
+        expect(find.text(r'S/ 2,000.00'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'con un único cobro el comportamiento es igual a un ingreso único '
+      '(Acceptance Scenario 2, SC-003)',
+      (tester) async {
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: quinceDeAgosto,
+            monto: const Dinero.deCentavos(200000),
+          ),
+        );
+        await montar(tester);
+
+        expect(find.text(r'S/ 2,000.00'), findsNWidgets(2));
+        expect(
+          find.text('Todavía no registraste tu sueldo de este mes.'),
+          findsNothing,
+        );
+      },
+    );
+  });
+
+  group('detalle de los cobros (US2, FR-008)', () {
+    testWidgets(
+      'con dos cobros registrados, ambos aparecen listados con su fecha '
+      'y monto, además del total',
+      (tester) async {
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: DateTime(2026, 8, 15),
+            monto: const Dinero.deCentavos(96000),
+          ),
+        );
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: DateTime(2026, 8, 30),
+            monto: const Dinero.deCentavos(104000),
+          ),
+        );
+        await montar(tester);
+
+        expect(find.text('15/08/2026'), findsOneWidget);
+        expect(find.text(r'S/ 960.00'), findsOneWidget);
+        expect(find.text('30/08/2026'), findsOneWidget);
+        expect(find.text(r'S/ 1,040.00'), findsOneWidget);
+        // Y el total, aparte de cada fila.
+        expect(find.text(r'S/ 2,000.00'), findsOneWidget);
+      },
+    );
+  });
+
+  group('corregir o eliminar un cobro (US3, FR-004)', () {
+    testWidgets(
+      'corregir uno de dos cobros deja el otro sin cambios y el total '
+      'recalculado (Acceptance Scenario 1)',
+      (tester) async {
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: DateTime(2026, 8, 15),
+            monto: const Dinero.deCentavos(96000),
+          ),
+        );
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: DateTime(2026, 8, 30),
+            monto: const Dinero.deCentavos(104000),
+          ),
+        );
+        await montar(tester);
+
+        await tester.tap(find.text('30/08/2026'));
+        await tester.pumpAndSettle();
+        expect(find.text('Corregir cobro'), findsOneWidget);
+
+        await tester.enterText(find.byType(TextFormField).first, '1000.00');
+        await tester.tap(find.widgetWithText(FilledButton, 'Guardar'));
+        await tester.pumpAndSettle();
+
+        expect(find.text(r'S/ 960.00'), findsOneWidget); // sin cambios
+        expect(find.text(r'S/ 1,000.00'), findsOneWidget); // corregido
+        expect(find.text(r'S/ 1,960.00'), findsOneWidget); // total
+      },
+    );
+
+    testWidgets(
+      'eliminar uno de dos deja el ingreso como el del restante, no en '
+      'cero (Acceptance Scenario 2)',
+      (tester) async {
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: DateTime(2026, 8, 15),
+            monto: const Dinero.deCentavos(96000),
+          ),
+        );
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: DateTime(2026, 8, 30),
+            monto: const Dinero.deCentavos(104000),
+          ),
+        );
+        await montar(tester);
+
+        await tester.tap(
+          find.byWidgetPredicate((widget) => widget is PopupMenuButton).first,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Eliminar'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('15/08/2026'), findsNothing);
+        expect(find.text('30/08/2026'), findsOneWidget);
+        // Aparece dos veces: total y monto de la única fila restante.
+        expect(find.text(r'S/ 1,040.00'), findsNWidgets(2));
+      },
+    );
+
+    testWidgets(
+      'eliminar el único cobro del mes vuelve a "sin registrar", no a S/ '
+      '0.00 (Acceptance Scenario 3)',
+      (tester) async {
+        await estado.agregarCobro(
+          CobroIngreso(
+            id: null,
+            fecha: quinceDeAgosto,
+            monto: const Dinero.deCentavos(300000),
+          ),
+        );
+        await montar(tester);
+
+        await tester.tap(find.byType(PopupMenuButton<AccionSobreObligacion>));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Eliminar'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Todavía no registraste tu sueldo de este mes.'),
+          findsOneWidget,
+        );
+        expect(find.text(r'S/ 3,000.00'), findsNothing);
+      },
+    );
   });
 
   group('validación de montos (FR-005)', () {
@@ -190,7 +373,7 @@ void main() {
     ) async {
       final tresDeAgosto = DateTime(2026, 8, 3);
       estado = EstadoMes(
-        repoIngreso: RepositorioIngresoEnMemoria(),
+        repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
         repoObligaciones: RepositorioObligacionesEnMemoria(),
         repoConfiguracion: RepositorioConfiguracionEnMemoria(
           Configuracion.porDefecto.copiarCon(diasGraciaCierre: 5),

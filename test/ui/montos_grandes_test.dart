@@ -1,3 +1,4 @@
+import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
@@ -51,14 +52,20 @@ void main() {
   testWidgets('resumen: ingreso, comprometido y disponible al máximo', (
     tester,
   ) async {
-    final repoIngreso = RepositorioIngresoEnMemoria();
+    final repoCobrosIngreso = RepositorioCobrosIngresoEnMemoria();
     final repoObligaciones = RepositorioObligacionesEnMemoria();
-    await repoIngreso.guardar(agosto, const Dinero.deCentavos(maximo));
+    await repoCobrosIngreso.insertar(
+      CobroIngreso(
+        id: null,
+        fecha: quinceDeAgosto,
+        monto: const Dinero.deCentavos(maximo),
+      ),
+    );
     await repoObligaciones.insertar(
       ObligacionBuilder(mes: agosto, centavos: maximo - 1).build(),
     );
     final estado = EstadoMes(
-      repoIngreso: repoIngreso,
+      repoCobrosIngreso: repoCobrosIngreso,
       repoObligaciones: repoObligaciones,
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: RepositorioTransaccionesEnMemoria(),
@@ -90,10 +97,16 @@ void main() {
   testWidgets('desglose: presupuestado y gastado al máximo en una categoría', (
     tester,
   ) async {
-    final repoIngreso = RepositorioIngresoEnMemoria();
+    final repoCobrosIngreso = RepositorioCobrosIngresoEnMemoria();
     final repoObligaciones = RepositorioObligacionesEnMemoria();
     final repoTransacciones = RepositorioTransaccionesEnMemoria();
-    await repoIngreso.guardar(agosto, const Dinero.deCentavos(maximo));
+    await repoCobrosIngreso.insertar(
+      CobroIngreso(
+        id: null,
+        fecha: quinceDeAgosto,
+        monto: const Dinero.deCentavos(maximo),
+      ),
+    );
     await repoObligaciones.insertar(
       ObligacionBuilder(
         mes: agosto,
@@ -110,7 +123,7 @@ void main() {
       ).build(),
     );
     final estado = EstadoMes(
-      repoIngreso: repoIngreso,
+      repoCobrosIngreso: repoCobrosIngreso,
       repoObligaciones: repoObligaciones,
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: repoTransacciones,
@@ -142,7 +155,7 @@ void main() {
       ).build(),
     );
     final estado = EstadoMes(
-      repoIngreso: RepositorioIngresoEnMemoria(),
+      repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
       repoObligaciones: RepositorioObligacionesEnMemoria(),
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: repoTransacciones,
@@ -166,9 +179,15 @@ void main() {
   testWidgets('presupuesto: ingreso y una obligación al máximo', (
     tester,
   ) async {
-    final repoIngreso = RepositorioIngresoEnMemoria();
+    final repoCobrosIngreso = RepositorioCobrosIngresoEnMemoria();
     final repoObligaciones = RepositorioObligacionesEnMemoria();
-    await repoIngreso.guardar(agosto, const Dinero.deCentavos(maximo));
+    await repoCobrosIngreso.insertar(
+      CobroIngreso(
+        id: null,
+        fecha: quinceDeAgosto,
+        monto: const Dinero.deCentavos(maximo),
+      ),
+    );
     await repoObligaciones.insertar(
       ObligacionBuilder(
         mes: agosto,
@@ -177,7 +196,7 @@ void main() {
       ).build(),
     );
     final estado = EstadoMes(
-      repoIngreso: repoIngreso,
+      repoCobrosIngreso: repoCobrosIngreso,
       repoObligaciones: repoObligaciones,
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: RepositorioTransaccionesEnMemoria(),
@@ -208,7 +227,7 @@ void main() {
       DeudaBuilder(cuotaCentavos: maximo, numCuotas: 1).build(),
     );
     final estado = EstadoMes(
-      repoIngreso: RepositorioIngresoEnMemoria(),
+      repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
       repoObligaciones: RepositorioObligacionesEnMemoria(),
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: RepositorioTransaccionesEnMemoria(),
@@ -245,7 +264,7 @@ void main() {
       ).build(),
     );
     final estado = EstadoMes(
-      repoIngreso: RepositorioIngresoEnMemoria(),
+      repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
       repoObligaciones: RepositorioObligacionesEnMemoria(),
       repoConfiguracion: repoConfiguracion,
       repoTransacciones: RepositorioTransaccionesEnMemoria(),

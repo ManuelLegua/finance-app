@@ -1,3 +1,4 @@
+import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
@@ -13,7 +14,7 @@ import '../dobles/repositorios_en_memoria.dart';
 
 /// Reglas de presentación del resumen del mes (HU2).
 void main() {
-  late RepositorioIngresoEnMemoria repoIngreso;
+  late RepositorioCobrosIngresoEnMemoria repoCobrosIngreso;
   late RepositorioObligacionesEnMemoria repoObligaciones;
   late EstadoMes estado;
   late EstadoAhorro estadoAhorro;
@@ -21,8 +22,16 @@ void main() {
   const agosto = Mes(2026, 8);
   final quinceDeAgosto = DateTime(2026, 8, 15);
 
+  Future<void> sembrarIngreso(int centavos) => repoCobrosIngreso.insertar(
+    CobroIngreso(
+      id: null,
+      fecha: quinceDeAgosto,
+      monto: Dinero.deCentavos(centavos),
+    ),
+  );
+
   EstadoMes crearEstado({Mes mes = agosto}) => EstadoMes(
-    repoIngreso: repoIngreso,
+    repoCobrosIngreso: repoCobrosIngreso,
     repoObligaciones: repoObligaciones,
     repoConfiguracion: RepositorioConfiguracionEnMemoria(),
     repoTransacciones: RepositorioTransaccionesEnMemoria(),
@@ -52,7 +61,7 @@ void main() {
   }
 
   setUp(() {
-    repoIngreso = RepositorioIngresoEnMemoria();
+    repoCobrosIngreso = RepositorioCobrosIngresoEnMemoria();
     repoObligaciones = RepositorioObligacionesEnMemoria();
     estadoAhorro = EstadoAhorro(
       repoAhorro: RepositorioAhorroEnMemoria(),
@@ -63,7 +72,7 @@ void main() {
 
   group('caso normal', () {
     testWidgets('muestra ingreso, comprometido y disponible', (tester) async {
-      await repoIngreso.guardar(agosto, const Dinero.deCentavos(300000));
+      await sembrarIngreso(300000);
       await repoObligaciones.insertar(obligacionDe(180000));
       estado = crearEstado();
       await estado.cargar();
@@ -83,7 +92,7 @@ void main() {
     testWidgets('se comunica con texto e ícono, no solo con color', (
       tester,
     ) async {
-      await repoIngreso.guardar(agosto, const Dinero.deCentavos(200000));
+      await sembrarIngreso(200000);
       await repoObligaciones.insertar(obligacionDe(235000));
       estado = crearEstado();
       await estado.cargar();
@@ -100,7 +109,7 @@ void main() {
 
   group('límite: saldo exactamente cero (FR-030)', () {
     testWidgets('no se reporta como déficit', (tester) async {
-      await repoIngreso.guardar(agosto, const Dinero.deCentavos(300000));
+      await sembrarIngreso(300000);
       await repoObligaciones.insertar(obligacionDe(300000));
       estado = crearEstado();
       await estado.cargar();
@@ -162,7 +171,7 @@ void main() {
 
   group('disponible real (FR-027)', () {
     testWidgets('sin gastos registrados iguala al ingreso', (tester) async {
-      await repoIngreso.guardar(agosto, const Dinero.deCentavos(300000));
+      await sembrarIngreso(300000);
       await repoObligaciones.insertar(obligacionDe(180000));
       estado = crearEstado();
       await estado.cargar();

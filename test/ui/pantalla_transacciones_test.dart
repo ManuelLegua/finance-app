@@ -54,7 +54,7 @@ void main() {
     repoObligaciones = RepositorioObligacionesEnMemoria();
     repoTransacciones = RepositorioTransaccionesEnMemoria();
     estado = EstadoMes(
-      repoIngreso: RepositorioIngresoEnMemoria(),
+      repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
       repoObligaciones: repoObligaciones,
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: repoTransacciones,
@@ -159,7 +159,7 @@ void main() {
     ) async {
       final tresDeAgosto = DateTime(2026, 8, 3);
       estado = EstadoMes(
-        repoIngreso: RepositorioIngresoEnMemoria(),
+        repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
         repoObligaciones: repoObligaciones,
         repoConfiguracion: RepositorioConfiguracionEnMemoria(),
         repoTransacciones: repoTransacciones,
@@ -187,7 +187,7 @@ void main() {
     ) async {
       await repoTransacciones.insertar(gasto(mes: 7, dia: 28));
       estado = EstadoMes(
-        repoIngreso: RepositorioIngresoEnMemoria(),
+        repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
         repoObligaciones: repoObligaciones,
         repoConfiguracion: RepositorioConfiguracionEnMemoria(),
         repoTransacciones: repoTransacciones,

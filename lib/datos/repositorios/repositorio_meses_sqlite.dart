@@ -10,7 +10,7 @@ import 'package:sqflite/sqflite.dart';
 /// cuota de deuda no es un mes que el usuario haya registrado.
 final class RepositorioMesesSqlite implements RepositorioMeses {
   static const String _mesesConDatos = '''
-    SELECT mes_ordinal FROM ingreso
+    SELECT mes_ordinal FROM cobro_ingreso
     UNION SELECT mes_ordinal FROM obligacion
     UNION SELECT mes_ordinal FROM transaccion
     UNION SELECT mes_ordinal FROM aporte_ahorro

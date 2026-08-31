@@ -1,5 +1,7 @@
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/modelos/aporte_ahorro.dart';
+import 'package:finanzas/dominio/modelos/asociacion_comercio.dart';
+import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/dominio/modelos/consumo_pendiente.dart';
 import 'package:finanzas/dominio/modelos/deuda.dart';
@@ -9,15 +11,17 @@ import 'package:finanzas/dominio/modelos/resumen_pendientes.dart';
 import 'package:finanzas/dominio/modelos/tarjeta.dart';
 import 'package:finanzas/dominio/modelos/transaccion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ahorro.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_asociaciones.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_cobros_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_diagnostico.dart';
-import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_pendientes.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/dominio/repositorios/servicio_escucha_notificaciones.dart';
+import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 
@@ -34,32 +38,61 @@ import 'package:finanzas/shared/tipos/mes.dart';
 /// doble se desincroniza del adaptador, es esa suite la que tiene que
 /// atraparlo. Acá se replica el comportamiento observable, no el SQL.
 
-/// Ingreso en memoria. Igual que el real, distingue "no registrado" (`null`)
-/// de un ingreso en cero.
-final class RepositorioIngresoEnMemoria implements RepositorioIngreso {
-  final Map<int, Dinero> _porMesOrdinal = <int, Dinero>{};
+/// Cobros de ingreso en memoria (spec 003, FR-001).
+final class RepositorioCobrosIngresoEnMemoria
+    implements RepositorioCobrosIngreso {
+  final List<CobroIngreso> _guardados = <CobroIngreso>[];
+  int _proximoId = 1;
 
-  /// Cuántas veces se pidió guardar. Deja verificar que una escritura
-  /// bloqueada por el cierre del mes efectivamente no llegó al repositorio.
-  int guardadosSolicitados = 0;
-
-  @override
-  Future<Dinero?> obtener(Mes mes) async => _porMesOrdinal[mes.ordinal];
+  /// Si se fija, la próxima escritura falla con este error.
+  Object? errorEnLaProximaEscritura;
 
   @override
-  Future<void> guardar(Mes mes, Dinero monto) async {
-    guardadosSolicitados++;
-    _porMesOrdinal[mes.ordinal] = monto;
+  Future<List<CobroIngreso>> porMes(Mes mes) async {
+    final delMes = _guardados.where((cobro) => cobro.mes == mes).toList();
+    delMes.sort((primero, segundo) {
+      final porFecha = primero.fecha.compareTo(segundo.fecha);
+      if (porFecha != 0) return porFecha;
+      return (primero.id ?? 0).compareTo(segundo.id ?? 0);
+    });
+    return delMes;
   }
 
   @override
-  Future<void> eliminar(Mes mes) async {
-    _porMesOrdinal.remove(mes.ordinal);
+  Future<int> insertar(CobroIngreso cobro) async {
+    _fallarSiCorresponde();
+    final id = _proximoId++;
+    _guardados.add(cobro.copiarCon(id: id));
+    return id;
   }
 
   @override
-  Future<List<Mes>> mesesConIngreso() async =>
-      (_porMesOrdinal.keys.toList()..sort()).map(Mes.deOrdinal).toList();
+  Future<void> actualizar(CobroIngreso cobro) async {
+    final id = cobro.id;
+    if (id == null) {
+      throw ArgumentError.value(
+        cobro,
+        'cobro',
+        'No se puede actualizar un cobro sin id; usá insertar()',
+      );
+    }
+    _fallarSiCorresponde();
+    final indice = _guardados.indexWhere((guardado) => guardado.id == id);
+    if (indice != -1) _guardados[indice] = cobro;
+  }
+
+  @override
+  Future<void> eliminar(int id) async {
+    _fallarSiCorresponde();
+    _guardados.removeWhere((cobro) => cobro.id == id);
+  }
+
+  void _fallarSiCorresponde() {
+    final error = errorEnLaProximaEscritura;
+    if (error == null) return;
+    errorEnLaProximaEscritura = null;
+    throw error;
+  }
 }
 
 /// Obligaciones en memoria.
@@ -523,6 +556,9 @@ final class RepositorioDiagnosticoEnMemoria implements RepositorioDiagnostico {
   final List<NotificacionDiagnostico> _guardadas = <NotificacionDiagnostico>[];
   int _proximoId = 1;
 
+  /// Si se fija, la próxima escritura falla con este error.
+  Object? errorEnLaProximaEscritura;
+
   @override
   Future<List<NotificacionDiagnostico>> todos() async {
     final ordenadas = List<NotificacionDiagnostico>.of(_guardadas);
@@ -551,9 +587,67 @@ final class RepositorioDiagnosticoEnMemoria implements RepositorioDiagnostico {
 
   @override
   Future<void> eliminar(int id) async {
+    _fallarSiCorresponde();
     _guardadas.removeWhere((entrada) => entrada.id == id);
   }
 
   @override
-  Future<void> vaciar() async => _guardadas.clear();
+  Future<void> vaciar() async {
+    _fallarSiCorresponde();
+    _guardadas.clear();
+  }
+
+  void _fallarSiCorresponde() {
+    final error = errorEnLaProximaEscritura;
+    if (error == null) return;
+    errorEnLaProximaEscritura = null;
+    throw error;
+  }
+}
+
+/// Asociaciones comercio → categoría en memoria (spec 002, FR-029 a FR-034).
+final class RepositorioAsociacionesEnMemoria
+    implements RepositorioAsociaciones {
+  final Map<String, AsociacionComercio> _porComercio =
+      <String, AsociacionComercio>{};
+
+  /// Si se fija, la próxima escritura falla con este error.
+  Object? errorEnLaProximaEscritura;
+
+  @override
+  Future<Categoria?> categoriaDe(String comercioNormalizado) async =>
+      _porComercio[comercioNormalizado]?.categoria;
+
+  @override
+  Future<void> asociar(String comercioNormalizado, Categoria categoria) async {
+    _fallarSiCorresponde();
+    _porComercio[comercioNormalizado] = AsociacionComercio(
+      comercioNormalizado: comercioNormalizado,
+      categoria: categoria,
+      actualizadoEn: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<AsociacionComercio>> todas() async {
+    final ordenadas = _porComercio.values.toList()
+      ..sort(
+        (primera, segunda) =>
+            primera.comercioNormalizado.compareTo(segunda.comercioNormalizado),
+      );
+    return ordenadas;
+  }
+
+  @override
+  Future<void> eliminar(String comercioNormalizado) async {
+    _fallarSiCorresponde();
+    _porComercio.remove(comercioNormalizado);
+  }
+
+  void _fallarSiCorresponde() {
+    final error = errorEnLaProximaEscritura;
+    if (error == null) return;
+    errorEnLaProximaEscritura = null;
+    throw error;
+  }
 }

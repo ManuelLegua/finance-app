@@ -7,15 +7,17 @@ import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/calculos/cierre_mes.dart';
 import 'package:finanzas/dominio/calculos/desglose_categorias.dart';
 import 'package:finanzas/dominio/calculos/deudas.dart';
+import 'package:finanzas/dominio/calculos/ingreso.dart';
 import 'package:finanzas/dominio/calculos/presupuesto.dart';
 import 'package:finanzas/dominio/calculos/resumen_mes.dart';
+import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/modelos/deuda.dart';
 import 'package:finanzas/dominio/modelos/estado_cierre.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/dominio/modelos/transaccion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_cobros_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
-import 'package:finanzas/dominio/repositorios/repositorio_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_meses.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
@@ -50,7 +52,7 @@ enum TipoEscritura {
 /// fijas; en la app es `DateTime.now`.
 class EstadoMes extends ChangeNotifier {
   EstadoMes({
-    required RepositorioIngreso repoIngreso,
+    required RepositorioCobrosIngreso repoCobrosIngreso,
     required RepositorioObligaciones repoObligaciones,
     required RepositorioConfiguracion repoConfiguracion,
     required RepositorioTransacciones repoTransacciones,
@@ -58,7 +60,7 @@ class EstadoMes extends ChangeNotifier {
     RepositorioMeses? repoMeses,
     DateTime Function()? ahora,
     Mes? mesInicial,
-  }) : _repoIngreso = repoIngreso,
+  }) : _repoCobrosIngreso = repoCobrosIngreso,
        _repoObligaciones = repoObligaciones,
        _repoConfiguracion = repoConfiguracion,
        _repoTransacciones = repoTransacciones,
@@ -68,7 +70,7 @@ class EstadoMes extends ChangeNotifier {
     _mes = mesInicial ?? Mes.deFecha(_ahora());
   }
 
-  final RepositorioIngreso _repoIngreso;
+  final RepositorioCobrosIngreso _repoCobrosIngreso;
   final RepositorioObligaciones _repoObligaciones;
   final RepositorioConfiguracion _repoConfiguracion;
   final RepositorioTransacciones _repoTransacciones;
@@ -79,7 +81,7 @@ class EstadoMes extends ChangeNotifier {
   final DateTime Function() _ahora;
 
   late Mes _mes;
-  Dinero? _ingreso;
+  List<CobroIngreso> _cobros = const [];
   List<Obligacion> _obligaciones = const [];
   List<Transaccion> _transacciones = const [];
   List<Deuda> _deudas = const [];
@@ -91,9 +93,16 @@ class EstadoMes extends ChangeNotifier {
   Mes get mes => _mes;
 
   /// `null` significa "no registrado", que no es lo mismo que S/ 0.00.
-  Dinero? get ingreso => _ingreso;
+  ///
+  /// Se **deriva** de `_cobros` en cada lectura (FR-003), igual que
+  /// `cuotasVigentes` se deriva de `_deudas` — nunca un dato guardado
+  /// directamente (D-C3 de research.md 003).
+  Dinero? get ingreso => totalIngreso(_cobros);
 
-  bool get ingresoRegistrado => _ingreso != null;
+  bool get ingresoRegistrado => ingreso != null;
+
+  /// Los cobros del mes, de fecha ascendente (FR-008).
+  List<CobroIngreso> get cobros => List.unmodifiable(_cobros);
 
   List<Obligacion> get obligaciones => List.unmodifiable(_obligaciones);
 
@@ -126,7 +135,7 @@ class EstadoMes extends ChangeNotifier {
     obligaciones: _obligaciones,
     transacciones: _transacciones,
     cuotasVigentes: cuotasVigentes,
-    ingreso: _ingreso,
+    ingreso: ingreso,
   );
 
   /// Meses con datos, para el selector. Vacío si no se inyectó el repositorio.
@@ -137,7 +146,7 @@ class EstadoMes extends ChangeNotifier {
   /// Se recalcula en cada lectura: es barato y evita que quede desfasado tras
   /// una escritura. Las cuotas de deuda entran en US4 y el gasto real en US3.
   ResumenMes get resumen => calcularResumenMes(
-    ingreso: _ingreso,
+    ingreso: ingreso,
     obligaciones: _obligaciones,
     cuotasVigentes: cuotasVigentes,
     gastoRealTotal: totalGastado(_transacciones),
@@ -160,7 +169,7 @@ class EstadoMes extends ChangeNotifier {
 
     try {
       _diasGraciaCierre = (await _repoConfiguracion.obtener()).diasGraciaCierre;
-      _ingreso = await _repoIngreso.obtener(_mes);
+      _cobros = await _repoCobrosIngreso.porMes(_mes);
       _obligaciones = await _repoObligaciones.porMes(_mes);
       _transacciones = await _repoTransacciones.porMes(_mes);
       _deudas = await _repoDeudas.todas();
@@ -182,13 +191,23 @@ class EstadoMes extends ChangeNotifier {
 
   Future<void> irAlMesSiguiente() => irAMes(_mes.siguiente);
 
-  Future<bool> guardarIngreso(Dinero monto) => _escribir(
-    () => _repoIngreso.guardar(_mes, monto),
-    tipo: ingresoRegistrado ? TipoEscritura.modificar : TipoEscritura.crear,
+  /// Registra un cobro de ingreso. El mes lo decide la fecha del cobro, no
+  /// el mes abierto (FR-002), así que el cierre se consulta contra ese mes —
+  /// mismo criterio que `agregarTransaccion` (FR-006).
+  Future<bool> agregarCobro(CobroIngreso cobro) => _escribir(
+    () => _repoCobrosIngreso.insertar(cobro),
+    tipo: TipoEscritura.crear,
+    mesAfectado: cobro.mes,
   );
 
-  Future<bool> eliminarIngreso() => _escribir(
-    () => _repoIngreso.eliminar(_mes),
+  Future<bool> actualizarCobro(CobroIngreso cobro) => _escribir(
+    () => _repoCobrosIngreso.actualizar(cobro),
+    tipo: TipoEscritura.modificar,
+    mesAfectado: cobro.mes,
+  );
+
+  Future<bool> eliminarCobro(int id) => _escribir(
+    () => _repoCobrosIngreso.eliminar(id),
     tipo: TipoEscritura.modificar,
   );
 
@@ -248,6 +267,10 @@ class EstadoMes extends ChangeNotifier {
   /// (FR-056): se registró en la ventana de gracia y no se puede editar.
   bool puedeEditarTransaccion(Transaccion transaccion) =>
       puedeEditarEn(transaccion.mes, hoy: _ahora());
+
+  /// Mismo criterio que [puedeEditarTransaccion], para un cobro (FR-006).
+  bool puedeEditarCobro(CobroIngreso cobro) =>
+      puedeEditarEn(cobro.mes, hoy: _ahora());
 
   /// Registra una deuda nueva.
   ///

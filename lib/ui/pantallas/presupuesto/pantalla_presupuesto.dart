@@ -1,17 +1,18 @@
+import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/shared/componentes/aviso_mes_cerrado.dart';
+import 'package:finanzas/shared/componentes/encabezado_seccion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_fecha.dart';
 import 'package:finanzas/shared/formato/formato_soles.dart';
-import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
-import 'package:finanzas/ui/pantallas/presupuesto/dialogo_ingreso.dart';
+import 'package:finanzas/ui/pantallas/presupuesto/formulario_cobro.dart';
 import 'package:finanzas/ui/pantallas/presupuesto/formulario_obligacion.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-/// Lo que el menu contextual de una obligacion puede hacer.
+/// Lo que el menu contextual de una obligacion (o de un cobro) puede hacer.
 ///
 /// Como enum en vez de cadenas sueltas: el `switch` es exhaustivo, asi que
 /// agregar una accion sin manejarla no compila.
@@ -61,12 +62,27 @@ class _PantallaPresupuestoState extends State<PantallaPresupuesto> {
     }
   }
 
-  Future<void> _editarIngreso(EstadoMes estado) async {
-    final monto = await showDialog<Dinero>(
+  Future<void> _abrirFormularioCobro(
+    EstadoMes estado, [
+    CobroIngreso? original,
+  ]) async {
+    final resultado = await showDialog<CobroIngreso>(
       context: context,
-      builder: (_) => DialogoIngreso(actual: estado.ingreso),
+      builder: (_) => FormularioCobro(
+        fechaPorDefecto: DateTime.now(),
+        original: original,
+        avisoDeCierre: (fecha) => estado.admiteRegistrarEn(fecha)
+            ? estado.motivoDeCierreEn(fecha)
+            : 'Ese mes ya está cerrado y no admite registrar cobros.',
+      ),
     );
-    if (monto != null) await estado.guardarIngreso(monto);
+    if (resultado == null) return;
+
+    if (resultado.estaGuardado) {
+      await estado.actualizarCobro(resultado);
+    } else {
+      await estado.agregarCobro(resultado);
+    }
   }
 
   Future<void> _abrirFormulario(
@@ -104,19 +120,16 @@ class _PantallaPresupuestoState extends State<PantallaPresupuesto> {
             AvisoMesCerrado(estado: estado.estadoCierre),
             _TarjetaIngreso(
               estado: estado,
-              onEditar: () => _editarIngreso(estado),
+              onAgregar: () => _abrirFormularioCobro(estado),
+              onEditarCobro: (cobro) => _abrirFormularioCobro(estado, cobro),
+              onEliminarCobro: (cobro) => estado.eliminarCobro(cobro.id!),
             ),
-            _EncabezadoObligaciones(total: estado.obligaciones.length),
-            if (estado.obligaciones.isEmpty)
-              const _SinObligaciones()
-            else
-              for (final obligacion in estado.obligaciones)
-                _FilaObligacion(
-                  obligacion: obligacion,
-                  puedeEditar: estado.admiteEditar,
-                  onEditar: () => _abrirFormulario(estado, obligacion),
-                  onEliminar: () => estado.eliminarObligacion(obligacion.id!),
-                ),
+            _TarjetaObligaciones(
+              estado: estado,
+              onEditar: (obligacion) => _abrirFormulario(estado, obligacion),
+              onEliminar: (obligacion) =>
+                  estado.eliminarObligacion(obligacion.id!),
+            ),
           ],
         ),
       ),
@@ -132,15 +145,24 @@ class _PantallaPresupuestoState extends State<PantallaPresupuesto> {
 }
 
 class _TarjetaIngreso extends StatelessWidget {
-  const _TarjetaIngreso({required this.estado, required this.onEditar});
+  const _TarjetaIngreso({
+    required this.estado,
+    required this.onAgregar,
+    required this.onEditarCobro,
+    required this.onEliminarCobro,
+  });
 
   final EstadoMes estado;
-  final VoidCallback onEditar;
+  final VoidCallback onAgregar;
+  final void Function(CobroIngreso) onEditarCobro;
+  final void Function(CobroIngreso) onEliminarCobro;
 
   @override
   Widget build(BuildContext context) {
     final ingreso = estado.ingreso;
+    final cobros = estado.cobros;
     final tipografia = Theme.of(context).textTheme;
+    final esquema = Theme.of(context).colorScheme;
 
     return Card(
       margin: const EdgeInsets.fromLTRB(
@@ -154,9 +176,21 @@ class _TarjetaIngreso extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Ingreso de ${FormatoFecha.mesLargo(estado.mes)}',
-              style: tipografia.labelLarge,
+            Row(
+              children: [
+                Icon(
+                  Icons.payments_outlined,
+                  size: 20,
+                  color: esquema.primary,
+                ),
+                const SizedBox(width: Espaciado.chico),
+                Expanded(
+                  child: Text(
+                    'Ingreso de ${FormatoFecha.mesLargo(estado.mes)}',
+                    style: tipografia.labelLarge,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: Espaciado.chico),
             if (ingreso == null)
@@ -169,14 +203,26 @@ class _TarjetaIngreso extends StatelessWidget {
                 FormatoSoles.formatear(ingreso),
                 style: tipografia.montoDestacado,
               ),
+            // El detalle de cada cobro (FR-008): solo tiene sentido mostrarlo
+            // cuando hay algo que listar.
+            if (cobros.isNotEmpty) ...[
+              const SizedBox(height: Espaciado.chico),
+              for (final cobro in cobros)
+                _FilaCobro(
+                  cobro: cobro,
+                  puedeEditar: estado.puedeEditarCobro(cobro),
+                  onEditar: () => onEditarCobro(cobro),
+                  onEliminar: () => onEliminarCobro(cobro),
+                ),
+            ],
             const SizedBox(height: Espaciado.interno),
             Row(
               children: [
                 if (estado.admiteRegistrar)
                   FilledButton.tonalIcon(
-                    onPressed: onEditar,
-                    icon: Icon(ingreso == null ? Icons.add : Icons.edit),
-                    label: Text(ingreso == null ? 'Registrar' : 'Corregir'),
+                    onPressed: onAgregar,
+                    icon: const Icon(Icons.add),
+                    label: Text(cobros.isEmpty ? 'Registrar' : 'Agregar cobro'),
                   ),
                 const Spacer(),
                 // `Flexible`, no un tamaño fijo: con siete dígitos el botón
@@ -202,24 +248,118 @@ class _TarjetaIngreso extends StatelessWidget {
   }
 }
 
-class _EncabezadoObligaciones extends StatelessWidget {
-  const _EncabezadoObligaciones({required this.total});
+/// Un cobro dentro del detalle de ingreso (FR-008). Mismo patrón de
+/// interacción que `_FilaObligacion`: tocable para corregir, con un menú para
+/// eliminar — ambos deshabilitados si el mes de ese cobro ya no admite
+/// edición (FR-006).
+class _FilaCobro extends StatelessWidget {
+  const _FilaCobro({
+    required this.cobro,
+    required this.puedeEditar,
+    required this.onEditar,
+    required this.onEliminar,
+  });
 
-  final int total;
+  final CobroIngreso cobro;
+  final bool puedeEditar;
+  final VoidCallback onEditar;
+  final VoidCallback onEliminar;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(
-      Espaciado.normal,
-      Espaciado.normal,
-      Espaciado.normal,
-      Espaciado.chico,
-    ),
-    child: Text(
-      total == 0 ? 'Obligaciones' : 'Obligaciones ($total)',
-      style: Theme.of(context).textTheme.titleMedium,
-    ),
-  );
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      leading: Icon(
+        Icons.calendar_month_outlined,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      title: Text(FormatoFecha.corta(cobro.fecha)),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Ver el comentario de `_FilaObligacion`: `ConstrainedBox` +
+          // `FittedBox`, no `Flexible` — `trailing` mide a su hijo por
+          // tamaño natural.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 120),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                FormatoSoles.formatear(cobro.monto),
+                style: Theme.of(context).textTheme.monto,
+              ),
+            ),
+          ),
+          if (puedeEditar)
+            PopupMenuButton<AccionSobreObligacion>(
+              padding: EdgeInsets.zero,
+              onSelected: (accion) => switch (accion) {
+                AccionSobreObligacion.editar => onEditar(),
+                AccionSobreObligacion.eliminar => onEliminar(),
+              },
+              itemBuilder: (_) => [
+                for (final accion in AccionSobreObligacion.values)
+                  PopupMenuItem(value: accion, child: Text(accion.etiqueta)),
+              ],
+            ),
+        ],
+      ),
+      onTap: puedeEditar ? onEditar : null,
+    );
+  }
+}
+
+/// Las obligaciones del mes, agrupadas en una tarjeta — mismo tratamiento
+/// visual que `_TarjetaIngreso`, para que las dos secciones se lean como
+/// bloques equivalentes en vez de una tarjeta y una lista suelta.
+class _TarjetaObligaciones extends StatelessWidget {
+  const _TarjetaObligaciones({
+    required this.estado,
+    required this.onEditar,
+    required this.onEliminar,
+  });
+
+  final EstadoMes estado;
+  final void Function(Obligacion) onEditar;
+  final void Function(Obligacion) onEliminar;
+
+  @override
+  Widget build(BuildContext context) {
+    final obligaciones = estado.obligaciones;
+
+    return Card(
+      margin: const EdgeInsets.fromLTRB(
+        Espaciado.normal,
+        0,
+        Espaciado.normal,
+        Espaciado.chico,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          EncabezadoSeccion(
+            icono: Icons.receipt_long_outlined,
+            titulo: 'Obligaciones',
+            contador: obligaciones.length,
+          ),
+          if (obligaciones.isEmpty)
+            const _SinObligaciones()
+          else ...[
+            for (final obligacion in obligaciones)
+              _FilaObligacion(
+                obligacion: obligacion,
+                puedeEditar: estado.admiteEditar,
+                onEditar: () => onEditar(obligacion),
+                onEliminar: () => onEliminar(obligacion),
+              ),
+            const SizedBox(height: Espaciado.chico),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _FilaObligacion extends StatelessWidget {
@@ -240,6 +380,7 @@ class _FilaObligacion extends StatelessWidget {
     final esFija = obligacion.tipo == TipoObligacion.fija;
 
     return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: Espaciado.chico),
       leading: Icon(
         esFija ? Icons.push_pin_outlined : Icons.trending_up,
         // El tipo se distingue por ícono y por texto, no solo por color.
@@ -252,12 +393,27 @@ class _FilaObligacion extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            FormatoSoles.formatear(obligacion.monto),
-            style: Theme.of(context).textTheme.monto,
+          // `ConstrainedBox` + `FittedBox`, no `Flexible`: el slot `trailing`
+          // de `ListTile` mide a su hijo por tamaño natural, no lo encoge
+          // como haría un `Row` — `Flexible` ahí no tiene efecto. Con siete
+          // dígitos y una tarjeta más angosta que la lista plana de antes,
+          // el número puede no entrar a su tamaño natural — se achica en vez
+          // de desbordar (nunca se trunca la cifra, que es lo único que no
+          // puede pasar en una app de plata).
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 120),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                FormatoSoles.formatear(obligacion.monto),
+                style: Theme.of(context).textTheme.monto,
+              ),
+            ),
           ),
           if (puedeEditar)
             PopupMenuButton<AccionSobreObligacion>(
+              padding: EdgeInsets.zero,
               onSelected: (accion) => switch (accion) {
                 AccionSobreObligacion.editar => onEditar(),
                 AccionSobreObligacion.eliminar => onEliminar(),
@@ -278,19 +434,29 @@ class _SinObligaciones extends StatelessWidget {
   const _SinObligaciones();
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(
-      horizontal: Espaciado.amplio,
-      vertical: Espaciado.amplio,
-    ),
-    child: Text(
-      'Todavía no cargaste obligaciones. Agregá el alquiler, los '
-      'servicios y lo que estimás gastar en el mes.',
-      textAlign: TextAlign.center,
-      style: Theme.of(context).textTheme.bodyMedium
-          ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final esquema = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Espaciado.amplio,
+        vertical: Espaciado.normal,
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.playlist_add_outlined, size: 40, color: esquema.outline),
+          const SizedBox(height: Espaciado.chico),
+          Text(
+            'Todavía no cargaste obligaciones. Agregá el alquiler, los '
+            'servicios y lo que estimás gastar en el mes.',
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: esquema.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _BannerError extends StatelessWidget {

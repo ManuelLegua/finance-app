@@ -25,6 +25,13 @@ abstract final class Migraciones {
       Esquema.indiceDiagnosticoFecha,
       Esquema.alterConfiguracionCaptura,
     ],
+    // v2 → v3: spec 003, cobros parciales de ingreso. `ingreso` no se borra
+    // (D-C2): se lee una sola vez acá para copiar sus filas y queda intacta.
+    3: <String>[
+      Esquema.cobroIngreso,
+      Esquema.indiceCobroIngresoMes,
+      Esquema.migrarIngresoACobros,
+    ],
   };
 
   /// Aplica los pasos necesarios para ir de [desde] a [hasta].

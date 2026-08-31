@@ -23,7 +23,7 @@ void main() {
     repoObligaciones = RepositorioObligacionesEnMemoria();
     repoTransacciones = RepositorioTransaccionesEnMemoria();
     estado = EstadoMes(
-      repoIngreso: RepositorioIngresoEnMemoria(),
+      repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
       repoObligaciones: repoObligaciones,
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
       repoTransacciones: repoTransacciones,

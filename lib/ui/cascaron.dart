@@ -7,6 +7,7 @@ import 'package:finanzas/ui/estado/estado_pendientes.dart';
 import 'package:finanzas/ui/pantallas/ahorro/pantalla_ahorro.dart';
 import 'package:finanzas/ui/pantallas/ajustes/pantalla_ajustes.dart';
 import 'package:finanzas/ui/pantallas/captura/pantalla_activacion.dart';
+import 'package:finanzas/ui/pantallas/captura/pantalla_asociaciones.dart';
 import 'package:finanzas/ui/pantallas/captura/pantalla_diagnostico.dart';
 import 'package:finanzas/ui/pantallas/captura/pantalla_pendientes.dart';
 import 'package:finanzas/ui/pantallas/categorias/pantalla_desglose.dart';
@@ -116,6 +117,12 @@ class _CascaronState extends State<Cascaron> {
         icono: Icons.rule_outlined,
         iconoActivo: Icons.rule,
         pantalla: PantallaDiagnostico(),
+      ),
+      const _Destino(
+        etiqueta: 'Comercios',
+        icono: Icons.school_outlined,
+        iconoActivo: Icons.school,
+        pantalla: PantallaAsociaciones(),
       ),
     ],
     const _Destino(

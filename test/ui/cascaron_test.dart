@@ -42,7 +42,7 @@ void main() {
   setUp(() async {
     repoConfiguracion = RepositorioConfiguracionEnMemoria();
     estado = EstadoMes(
-      repoIngreso: RepositorioIngresoEnMemoria(),
+      repoCobrosIngreso: RepositorioCobrosIngresoEnMemoria(),
       repoObligaciones: RepositorioObligacionesEnMemoria(),
       repoConfiguracion: repoConfiguracion,
       repoTransacciones: RepositorioTransaccionesEnMemoria(),

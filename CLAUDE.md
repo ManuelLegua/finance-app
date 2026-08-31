@@ -87,8 +87,8 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/data-model.md` | Entidades, derivados y el esquema SQLite completo |
 | `specs/001-gestion-sueldo-ahorro/contracts/` | API de la capa de cálculo puro y de los repositorios |
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
-| `specs/002-captura-notificaciones-bancarias/` | **En curso: 34 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
-| `specs/003-cobros-parciales-ingreso/` | Ingreso en varios cobros por mes (quincena + fin de mes, etc.); spec completa, aún sin plan |
+| `specs/002-captura-notificaciones-bancarias/` | **En curso: 49 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
+| `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
 | `specs/004-suscripcion-premium/` | Suscripción paga (Deudas + Ahorro + captura de notificaciones) vía Google Play Billing (Principio I enmendado a v2.0.0); plan completo, sin tareas todavía |
 
 Antes de proponer un cambio de diseño, leer `research.md`: es probable que la alternativa ya se haya evaluado y rechazado por escrito.
@@ -150,7 +150,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 ## Convenciones de código
 
 - Arquitectura en capas, dependencia siempre hacia adentro: `ui → datos → dominio → shared`. `shared/` no importa de ninguna capa; la guarda de pureza lo verifica.
-- **Identificadores del dominio en español** (`Mes`, `Obligacion`, `Transaccion`, `Deuda`, `AporteAhorro`), igual que la spec, para que no haya salto de vocabulario entre el requisito y el código. Las palabras del framework quedan en inglés.
+- **Identificadores del dominio en español** (`Mes`, `Obligacion`, `Transaccion`, `Deuda`, `AporteAhorro`, `CobroIngreso`), igual que la spec, para que no haya salto de vocabulario entre el requisito y el código. Las palabras del framework quedan en inglés.
 - UI en español, formato peruano. Material 3 del SDK, sin kit de componentes. Cifras tabulares en todo monto. **Ningún estado se comunica solo por color** (déficit, sobregiro, mes cerrado).
 - La regla de cierre se aplica en `lib/ui/estado/`, nunca en los repositorios: duplicarla crearía dos verdades que se desincronizan.
 
@@ -166,7 +166,9 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 ## Estado actual
 
 **Spec 001 completa (108/108)**, validada en emulador y en un Android real (T107).
-**Spec 002 en curso (34/62).** 383 pruebas en verde, `flutter analyze` sin issues.
+**Spec 002 en curso (49/62).**
+**Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
+**446 pruebas en verde, `flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
 |---|---|
@@ -186,9 +188,9 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 | US1 · activar la captura (T011–T019) | ✅ permiso, 4 estados, servicio en foreground |
 | US2 · bandeja de pendientes (T020–T033) | ✅ confirmar/corregir/descartar, deduplicación, diagnóstico |
 | US2 · parser genérico (T034–T043) | ⛔ **bloqueado por insumo manual** |
-| US3 · categorización aprendida (T044–T051) | pendiente, **sin bloqueo** |
-| US4 · consumos en cuotas (T052–T055) | pendiente, sin bloqueo |
-| Polish (T056–T062) | pendiente |
+| US3 · categorización aprendida (T044–T051) | ✅ normalizador de comercio, `RepositorioAsociaciones`, propuesta y aprendizaje en `EstadoPendientes`, pantalla "Comercios" |
+| US4 · consumos en cuotas (T052–T055) | ✅ `EstadoPendientes.confirmar(comoDeuda:)`, interruptor "fue una compra en cuotas" en el formulario (oculto sin tarjetas de crédito) |
+| Polish (T056–T058 hechas; T060–T061 [MANUAL] esperan al parser + dispositivo; T062 al cierre) | en curso |
 
 **El bloqueo (D-N9 de research.md):** no existe documentación pública del formato
 de las notificaciones de ningún banco peruano, así que el parser genérico no se
@@ -208,5 +210,26 @@ Hasta entonces la captura está construida de punta a punta salvo el tramo
 notificación → pendiente: el callback headless
 (`lib/datos/notificaciones/callback_headless.dart`) existe y está registrado,
 pero su cuerpo está vacío a propósito hasta T042.
+
+**Nota para cuando se retome T042**: la propuesta de categoría de US3 (FR-030)
+ya no necesita resolverse ahí. `EstadoPendientes.cargar()` le busca la
+asociación aprendida a cualquier pendiente que llegue sin `categoriaPropuesta`
+(`lib/ui/estado/estado_pendientes.dart`), sea que lo haya escrito el callback
+headless real o un doble de prueba — así que T042 solo necesita escribir el
+`ConsumoPendiente` crudo que sale del parser, sin consultar
+`RepositorioAsociaciones` por su cuenta.
+
+### Dónde retomar la spec 003
+
+| Spec 003 · Fase | Estado |
+|---|---|
+| Foundational (T001–T016) | ✅ `CobroIngreso`, `RepositorioCobrosIngreso`, migración v2→v3, `EstadoMes` recableado |
+| US1 · registrar el sueldo en cobros (T017–T023) | ✅ `agregarCobro`, `FormularioCobro`, total correcto en toda la app |
+| US2 · ver el detalle (T024–T025) | ✅ lista de cobros en la tarjeta de ingreso |
+| US3 · corregir/eliminar un cobro (T026–T030) | ✅ `actualizarCobro`/`eliminarCobro`, respeta cierre de mes |
+| Polish (T031–T032, T034) | ✅ pureza, analyze/format, este párrafo |
+| T033 [MANUAL] | pendiente — recorrido de [quickstart.md](specs/003-cobros-parciales-ingreso/quickstart.md) en la app corriendo, con especial atención a la migración desde una base con datos reales de 001/002 |
+
+Solo falta la validación manual (T033) para dar la spec 003 por cerrada del todo.
 
 Sigue pendiente, fuera de toda spec: **no hay respaldo ni exportación**. Con un solo usuario es asumible; antes de repartir la app a probadores conviene que sea una feature propia.

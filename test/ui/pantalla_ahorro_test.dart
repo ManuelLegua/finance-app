@@ -1,3 +1,4 @@
+import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
@@ -15,7 +16,7 @@ import '../dobles/repositorios_en_memoria.dart';
 void main() {
   late RepositorioAhorroEnMemoria repoAhorro;
   late RepositorioConfiguracionEnMemoria repoConfiguracion;
-  late RepositorioIngresoEnMemoria repoIngreso;
+  late RepositorioCobrosIngresoEnMemoria repoCobrosIngreso;
   late EstadoMes estadoMes;
   late EstadoAhorro estadoAhorro;
 
@@ -43,9 +44,9 @@ void main() {
   setUp(() {
     repoAhorro = RepositorioAhorroEnMemoria();
     repoConfiguracion = RepositorioConfiguracionEnMemoria();
-    repoIngreso = RepositorioIngresoEnMemoria();
+    repoCobrosIngreso = RepositorioCobrosIngresoEnMemoria();
     estadoMes = EstadoMes(
-      repoIngreso: repoIngreso,
+      repoCobrosIngreso: repoCobrosIngreso,
       repoObligaciones: RepositorioObligacionesEnMemoria(),
       repoConfiguracion: repoConfiguracion,
       repoTransacciones: RepositorioTransaccionesEnMemoria(),
@@ -64,7 +65,13 @@ void main() {
     testWidgets('se acepta e informa, sin bloquear el registro', (
       tester,
     ) async {
-      await repoIngreso.guardar(agosto, const Dinero.deCentavos(50000));
+      await repoCobrosIngreso.insertar(
+        CobroIngreso(
+          id: null,
+          fecha: quinceDeAgosto,
+          monto: const Dinero.deCentavos(50000),
+        ),
+      );
       await estadoMes.cargar();
       await estadoAhorro.cargar(agosto);
       await montar(tester);
@@ -171,7 +178,7 @@ void main() {
       // completamente cerrado: ni siquiera entra en la ventana de gracia.
       const marzo = Mes(2026, 3);
       estadoMes = EstadoMes(
-        repoIngreso: repoIngreso,
+        repoCobrosIngreso: repoCobrosIngreso,
         repoObligaciones: RepositorioObligacionesEnMemoria(),
         repoConfiguracion: repoConfiguracion,
         repoTransacciones: RepositorioTransaccionesEnMemoria(),

@@ -1,3 +1,4 @@
+import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/shared/tipos/dinero.dart';
@@ -15,7 +16,7 @@ import '../dobles/repositorios_en_memoria.dart';
 /// Estas pruebas existen gracias a los dobles: con SQLite real se colgarían
 /// igual que las de widget.
 void main() {
-  late RepositorioIngresoEnMemoria repoIngreso;
+  late RepositorioCobrosIngresoEnMemoria repoCobrosIngreso;
   late RepositorioObligacionesEnMemoria repoObligaciones;
   late RepositorioTransaccionesEnMemoria repoTransacciones;
 
@@ -28,7 +29,7 @@ void main() {
     required DateTime hoy,
     int diasGraciaCierre = 5,
   }) => EstadoMes(
-    repoIngreso: repoIngreso,
+    repoCobrosIngreso: repoCobrosIngreso,
     repoObligaciones: repoObligaciones,
     repoConfiguracion: RepositorioConfiguracionEnMemoria(
       Configuracion.porDefecto.copiarCon(diasGraciaCierre: diasGraciaCierre),
@@ -42,8 +43,11 @@ void main() {
   Obligacion obligacionDe(Mes mes, {int? id}) =>
       ObligacionBuilder(id: id, mes: mes).build();
 
+  CobroIngreso cobroDe(DateTime fecha, {int centavos = 300000}) =>
+      CobroIngreso(id: null, fecha: fecha, monto: Dinero.deCentavos(centavos));
+
   setUp(() {
-    repoIngreso = RepositorioIngresoEnMemoria();
+    repoCobrosIngreso = RepositorioCobrosIngresoEnMemoria();
     repoObligaciones = RepositorioObligacionesEnMemoria();
     repoTransacciones = RepositorioTransaccionesEnMemoria();
   });
@@ -53,10 +57,7 @@ void main() {
       final estado = crearEstado(mes: agosto, hoy: DateTime(2026, 8, 15));
       await estado.cargar();
 
-      expect(
-        await estado.guardarIngreso(const Dinero.deCentavos(300000)),
-        isTrue,
-      );
+      expect(await estado.agregarCobro(cobroDe(DateTime(2026, 8, 10))), isTrue);
       expect(await estado.agregarObligacion(obligacionDe(agosto)), isTrue);
 
       final guardada = estado.obligaciones.single;
@@ -77,11 +78,11 @@ void main() {
       await estado.cargar();
 
       expect(
-        await estado.guardarIngreso(const Dinero.deCentavos(300000)),
+        await estado.agregarCobro(cobroDe(DateTime(2026, 5, 10))),
         isFalse,
       );
       // La escritura se detiene antes de la capa de datos, no después.
-      expect(repoIngreso.guardadosSolicitados, 0);
+      expect(await repoCobrosIngreso.porMes(mayo), isEmpty);
     });
 
     test('explica el motivo en vez de fallar en silencio', () async {
@@ -226,7 +227,9 @@ void main() {
 
   group('navegación entre meses', () {
     test('cambiar de mes recarga sus datos', () async {
-      await repoIngreso.guardar(julio, const Dinero.deCentavos(280000));
+      await repoCobrosIngreso.insertar(
+        cobroDe(DateTime(2026, 7, 10), centavos: 280000),
+      );
       final estado = crearEstado(mes: agosto, hoy: DateTime(2026, 8, 15));
       await estado.cargar();
 
@@ -256,6 +259,106 @@ void main() {
       await estado.cargar();
 
       expect(estado.totalComprometido, Dinero.cero);
+    });
+  });
+
+  group('cobros de ingreso (spec 003, FR-001 a FR-006)', () {
+    test(
+      'agregarCobro en el mes en curso lo agrega y el total refleja la suma',
+      () async {
+        final estado = crearEstado(mes: agosto, hoy: DateTime(2026, 8, 15));
+        await estado.cargar();
+
+        await estado.agregarCobro(
+          cobroDe(DateTime(2026, 8, 15), centavos: 96000),
+        );
+        await estado.agregarCobro(
+          cobroDe(DateTime(2026, 8, 30), centavos: 104000),
+        );
+
+        expect(estado.ingreso, const Dinero.deCentavos(200000));
+        expect(estado.cobros, hasLength(2));
+      },
+    );
+
+    test('agregarCobro con fecha de un mes cerrado se rechaza antes de llegar '
+        'al repositorio', () async {
+      final estado = crearEstado(mes: agosto, hoy: DateTime(2026, 8, 15));
+      await estado.cargar();
+
+      final confirmado = await estado.agregarCobro(
+        cobroDe(DateTime(2026, 5, 10)),
+      );
+
+      expect(confirmado, isFalse);
+      expect(await repoCobrosIngreso.porMes(mayo), isEmpty);
+    });
+
+    test(
+      'actualizarCobro corrige un cobro sin tocar los demás del mes',
+      () async {
+        final estado = crearEstado(mes: agosto, hoy: DateTime(2026, 8, 15));
+        await estado.cargar();
+        await estado.agregarCobro(
+          cobroDe(DateTime(2026, 8, 15), centavos: 96000),
+        );
+        await estado.agregarCobro(
+          cobroDe(DateTime(2026, 8, 30), centavos: 104000),
+        );
+
+        final segundo = estado.cobros.last;
+        await estado.actualizarCobro(
+          segundo.copiarCon(monto: const Dinero.deCentavos(100000)),
+        );
+
+        expect(estado.cobros.first.monto, const Dinero.deCentavos(96000));
+        expect(estado.cobros.last.monto, const Dinero.deCentavos(100000));
+        expect(estado.ingreso, const Dinero.deCentavos(196000));
+      },
+    );
+
+    test('eliminarCobro borra uno y deja el otro intacto', () async {
+      final estado = crearEstado(mes: agosto, hoy: DateTime(2026, 8, 15));
+      await estado.cargar();
+      await estado.agregarCobro(
+        cobroDe(DateTime(2026, 8, 15), centavos: 96000),
+      );
+      await estado.agregarCobro(
+        cobroDe(DateTime(2026, 8, 30), centavos: 104000),
+      );
+
+      await estado.eliminarCobro(estado.cobros.first.id!);
+
+      expect(estado.cobros, hasLength(1));
+      expect(estado.ingreso, const Dinero.deCentavos(104000));
+    });
+
+    test('eliminar el único cobro del mes vuelve a "sin registrar"', () async {
+      final estado = crearEstado(mes: agosto, hoy: DateTime(2026, 8, 15));
+      await estado.cargar();
+      await estado.agregarCobro(cobroDe(DateTime(2026, 8, 15)));
+
+      await estado.eliminarCobro(estado.cobros.single.id!);
+
+      expect(estado.ingreso, isNull);
+      expect(estado.ingresoRegistrado, isFalse);
+    });
+
+    test('actualizarCobro y eliminarCobro se rechazan en un mes cerrado '
+        '(FR-006, sin ventana de gracia para editar)', () async {
+      await repoCobrosIngreso.insertar(cobroDe(DateTime(2026, 7, 3)));
+      final estado = crearEstado(mes: julio, hoy: DateTime(2026, 8, 3));
+      await estado.cargar();
+
+      final guardado = estado.cobros.single;
+      expect(
+        await estado.actualizarCobro(
+          guardado.copiarCon(monto: const Dinero.deCentavos(1)),
+        ),
+        isFalse,
+      );
+      expect(await estado.eliminarCobro(guardado.id!), isFalse);
+      expect(estado.cobros.single.monto, guardado.monto);
     });
   });
 }

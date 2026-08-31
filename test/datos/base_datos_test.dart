@@ -26,7 +26,7 @@ void main() {
   });
 
   group('creación del esquema', () {
-    test('crea las ocho tablas de data-model.md', () async {
+    test('crea las tablas de data-model.md', () async {
       final filas = await conexion.query(
         'sqlite_master',
         columns: ['name'],
@@ -37,7 +37,6 @@ void main() {
       expect(
         tablas,
         containsAll(<String>[
-          'ingreso',
           'obligacion',
           'transaccion',
           'tarjeta',
@@ -49,6 +48,9 @@ void main() {
           'consumo_pendiente',
           'comercio_categoria',
           'notificacion_diagnostico',
+          // Spec 003: cobros parciales de ingreso. `ingreso` (v1) no aparece
+          // acá: una instalación nueva ya no la crea (D-C5 de research.md).
+          'cobro_ingreso',
         ]),
       );
     });
@@ -102,14 +104,16 @@ void main() {
 
     test('los montos en cero o negativos se rechazan', () async {
       expect(
-        () => conexion.insert('ingreso', <String, Object?>{
+        () => conexion.insert('cobro_ingreso', <String, Object?>{
+          'fecha': '2026-08-01',
           'mes_ordinal': 24319,
           'monto_centavos': 0,
         }),
         throwsA(isA<DatabaseException>()),
       );
       expect(
-        () => conexion.insert('ingreso', <String, Object?>{
+        () => conexion.insert('cobro_ingreso', <String, Object?>{
+          'fecha': '2026-08-01',
           'mes_ordinal': 24319,
           'monto_centavos': -100,
         }),
@@ -165,12 +169,13 @@ void main() {
     });
 
     test('los montos se guardan como enteros, nunca como REAL', () async {
-      await conexion.insert('ingreso', <String, Object?>{
+      await conexion.insert('cobro_ingreso', <String, Object?>{
+        'fecha': '2026-08-01',
         'mes_ordinal': 24319,
         'monto_centavos': 300000,
       });
       final filas = await conexion.rawQuery(
-        'SELECT typeof(monto_centavos) AS t FROM ingreso',
+        'SELECT typeof(monto_centavos) AS t FROM cobro_ingreso',
       );
       expect(filas.first['t'], 'integer');
     });
@@ -238,14 +243,15 @@ void main() {
     test('preservan los datos existentes', () async {
       // Simula un salto de versión con un paso aditivo, que es la única forma
       // admitida: nunca se borra ni se recrea una tabla con datos (D10).
-      await conexion.insert('ingreso', <String, Object?>{
+      await conexion.insert('cobro_ingreso', <String, Object?>{
+        'fecha': '2026-08-01',
         'mes_ordinal': 24319,
         'monto_centavos': 300000,
       });
 
-      await conexion.execute('ALTER TABLE ingreso ADD COLUMN nota TEXT');
+      await conexion.execute('ALTER TABLE cobro_ingreso ADD COLUMN nota TEXT');
 
-      final filas = await conexion.query('ingreso');
+      final filas = await conexion.query('cobro_ingreso');
       expect(filas, hasLength(1));
       expect(filas.first['monto_centavos'], 300000);
       expect(filas.first['nota'], isNull);

@@ -13,10 +13,9 @@
 abstract final class Esquema {
   /// Versión actual. Cada cambio incrementa esto y agrega un paso en
   /// `migraciones.dart`.
-  static const int version = 2;
+  static const int version = 3;
 
   static const List<String> creacion = <String>[
-    _ingreso,
     _obligacion,
     _indiceObligacionMes,
     _transaccion,
@@ -34,14 +33,16 @@ abstract final class Esquema {
     comercioCategoria,
     notificacionDiagnostico,
     indiceDiagnosticoFecha,
+    cobroIngreso,
+    indiceCobroIngresoMes,
   ];
 
-  static const String _ingreso = '''
-    CREATE TABLE ingreso (
-      mes_ordinal     INTEGER PRIMARY KEY,
-      monto_centavos  INTEGER NOT NULL CHECK (monto_centavos > 0)
-    )
-  ''';
+  // La tabla `ingreso` de la versión 1 (un monto único por mes) **no
+  // aparece en `creacion`**: una instalación nueva nunca la necesita, va
+  // directo a `cobro_ingreso` (spec 003, D-C2/D-C5). Solo existe todavía en
+  // instalaciones que vienen de una versión anterior, migradas por
+  // `migrarIngresoACobros` más abajo — a esas no se les borra ni se les
+  // vuelve a crear, sigue intacta.
 
   static const String _obligacion = '''
     CREATE TABLE obligacion (
@@ -194,4 +195,35 @@ abstract final class Esquema {
       'ALTER TABLE configuracion '
       'ADD COLUMN captura_notificaciones_activa INTEGER NOT NULL DEFAULT 0 '
       'CHECK (captura_notificaciones_activa IN (0, 1))';
+
+  // --- Spec 003: cobros parciales de ingreso. Ver data-model.md §3. ---
+
+  /// Reemplaza a `ingreso` (un monto único por mes, spec 001): el sueldo
+  /// puede llegar en más de un cobro (FR-001). `mes_ordinal` se deriva de
+  /// `fecha` en toda ruta de escritura, igual que en `transaccion`/
+  /// `aporte_ahorro` — está acá para poder indexar por mes.
+  static const String cobroIngreso = '''
+    CREATE TABLE cobro_ingreso (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      fecha           TEXT    NOT NULL,
+      mes_ordinal     INTEGER NOT NULL,
+      monto_centavos  INTEGER NOT NULL CHECK (monto_centavos > 0)
+    )
+  ''';
+
+  static const String indiceCobroIngresoMes =
+      'CREATE INDEX idx_cobro_ingreso_mes ON cobro_ingreso(mes_ordinal)';
+
+  /// Solo para el paso de migración v2→v3 (`migraciones.dart`): copia cada
+  /// `ingreso` ya guardado como un `CobroIngreso` equivalente, con fecha el
+  /// primer día de su mes — la única fecha razonable cuando el dato original
+  /// nunca tuvo una (D-C2 de research.md 003). No borra `ingreso`.
+  static const String migrarIngresoACobros = '''
+    INSERT INTO cobro_ingreso (fecha, mes_ordinal, monto_centavos)
+    SELECT
+      printf('%04d-%02d-01', mes_ordinal / 12, mes_ordinal % 12 + 1),
+      mes_ordinal,
+      monto_centavos
+    FROM ingreso
+  ''';
 }

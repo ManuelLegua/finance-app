@@ -52,6 +52,11 @@ class PantallaDiagnostico extends StatelessWidget {
         onRefresh: estado.cargar,
         child: ListView(
           children: [
+            if (estado.error != null)
+              _BannerError(
+                mensaje: estado.error!,
+                onCerrar: estado.limpiarError,
+              ),
             const _Explicacion(),
             if (entradas.isEmpty)
               const _SinEntradas()
@@ -163,6 +168,41 @@ class _FilaDiagnostico extends StatelessWidget {
             ),
             const SizedBox(height: Espaciado.chico),
             Text(entrada.textoCrudo, style: tipografia.bodyMedium),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BannerError extends StatelessWidget {
+  const _BannerError({required this.mensaje, required this.onCerrar});
+
+  final String mensaje;
+  final VoidCallback onCerrar;
+
+  @override
+  Widget build(BuildContext context) {
+    final esquema = Theme.of(context).colorScheme;
+    return Card(
+      color: esquema.errorContainer,
+      margin: const EdgeInsets.symmetric(
+        horizontal: Espaciado.normal,
+        vertical: Espaciado.chico,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(Espaciado.interno),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: esquema.onErrorContainer),
+            const SizedBox(width: Espaciado.interno),
+            Expanded(
+              child: Text(
+                mensaje,
+                style: TextStyle(color: esquema.onErrorContainer),
+              ),
+            ),
+            TextButton(onPressed: onCerrar, child: const Text('Entendido')),
           ],
         ),
       ),
