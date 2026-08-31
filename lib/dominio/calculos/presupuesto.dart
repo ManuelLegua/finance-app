@@ -73,13 +73,9 @@ ResultadoValidacion validarMonto(String entrada) {
     );
   }
 
-  final soles = int.tryParse(entera);
-  if (soles == null) {
-    return const ResultadoValidacion.invalido('Escribí un monto válido.');
-  }
-
-  final centimos = decimal.isEmpty ? 0 : int.parse(decimal.padRight(2, '0'));
-  final monto = Dinero.deCentavos(soles * 100 + centimos);
+  final monto = Dinero.deTextoDecimal(
+    decimal.isEmpty ? entera : '$entera.$decimal',
+  );
 
   if (!monto.esPositivo) {
     return const ResultadoValidacion.invalido(

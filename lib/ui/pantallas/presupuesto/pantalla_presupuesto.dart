@@ -178,11 +178,7 @@ class _TarjetaIngreso extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.payments_outlined,
-                  size: 20,
-                  color: esquema.primary,
-                ),
+                Icon(Icons.payments_outlined, size: 20, color: esquema.primary),
                 const SizedBox(width: Espaciado.chico),
                 Expanded(
                   child: Text(
@@ -449,9 +445,8 @@ class _SinObligaciones extends StatelessWidget {
             'Todavía no cargaste obligaciones. Agregá el alquiler, los '
             'servicios y lo que estimás gastar en el mes.',
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: esquema.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: esquema.onSurfaceVariant),
           ),
         ],
       ),

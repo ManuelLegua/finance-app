@@ -33,6 +33,29 @@ final class Dinero implements Comparable<Dinero> {
     return Dinero.deCentavos(soles * 100 + signo * centimos);
   }
 
+  /// Compone un monto desde texto decimal ya normalizado (p. ej. `"57.70"`
+  /// o, con coma de miles, `"1,234.56"`), sin pasar nunca por `double`
+  /// (Principio II): separa la parte entera de la decimal como texto y
+  /// arma los centavos con aritmética entera. Es el mismo partido que ya
+  /// hacía `validarMonto` a mano; existe para que el parser de
+  /// notificaciones (spec 002, D-N3) lo reutilice en vez de duplicarlo.
+  ///
+  /// El separador decimal tiene que ser un punto, con uno o dos dígitos.
+  /// Lanza [FormatException] si el texto no tiene esa forma — quien llama
+  /// ya debe haber validado el formato (p. ej. con una expresión regular)
+  /// antes de llegar acá.
+  factory Dinero.deTextoDecimal(String texto) {
+    final sinMiles = texto.replaceAll(',', '');
+    final coincidencia = RegExp(r'^(\d+)(?:\.(\d{1,2}))?$')
+        .firstMatch(sinMiles);
+    if (coincidencia == null) {
+      throw FormatException('No es un monto decimal válido: "$texto"');
+    }
+    final entera = coincidencia.group(1)!;
+    final decimal = (coincidencia.group(2) ?? '').padRight(2, '0');
+    return Dinero.deCentavos(int.parse(entera) * 100 + int.parse(decimal));
+  }
+
   Dinero operator +(Dinero otro) => Dinero.deCentavos(centavos + otro.centavos);
 
   Dinero operator -(Dinero otro) => Dinero.deCentavos(centavos - otro.centavos);

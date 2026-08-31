@@ -27,6 +27,32 @@ void main() {
     });
   });
 
+  group('deTextoDecimal (spec 002, D-N3)', () {
+    test('compone el mismo entero que validarMonto', () {
+      expect(Dinero.deTextoDecimal('45.00').centavos, 4500);
+      expect(Dinero.deTextoDecimal('57.70').centavos, 5770);
+    });
+
+    test('acepta un solo dígito decimal, igual que "45.5"', () {
+      expect(Dinero.deTextoDecimal('45.5').centavos, 4550);
+    });
+
+    test('sin parte decimal es soles exactos', () {
+      expect(Dinero.deTextoDecimal('1200').centavos, 120000);
+    });
+
+    test('descarta la coma de miles', () {
+      expect(Dinero.deTextoDecimal('1,234.56').centavos, 123456);
+    });
+
+    test('rechaza texto que no es un monto decimal', () {
+      expect(() => Dinero.deTextoDecimal(''), throwsFormatException);
+      expect(() => Dinero.deTextoDecimal('abc'), throwsFormatException);
+      expect(() => Dinero.deTextoDecimal('-45.00'), throwsFormatException);
+      expect(() => Dinero.deTextoDecimal('45.678'), throwsFormatException);
+    });
+  });
+
   group('aritmética entera', () {
     test('suma y resta son exactas', () {
       const a = Dinero.deCentavos(300000); // S/ 3,000.00

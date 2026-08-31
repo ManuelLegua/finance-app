@@ -46,9 +46,7 @@ abstract final class Tema {
         elevation: 1,
         color: esquema.surfaceContainerHigh,
         shadowColor: esquema.shadow.withValues(alpha: 0.3),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
