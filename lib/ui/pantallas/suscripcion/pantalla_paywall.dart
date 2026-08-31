@@ -1,5 +1,7 @@
+import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/ui/estado/estado_suscripcion.dart';
+import 'package:finanzas/ui/pantallas/suscripcion/ficha_estado_suscripcion.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -49,6 +51,13 @@ class PantallaPaywall extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(Espaciado.normal),
       children: [
+        // Quien ya tuvo suscripción merece saber por qué volvió a ver esto;
+        // a quien nunca la tuvo, "Nunca suscripto" no le dice nada que el
+        // aviso no explique mejor abajo.
+        if (suscripcion.situacion != SituacionSuscripcion.nunca) ...[
+          const FichaEstadoSuscripcion(),
+          const SizedBox(height: Espaciado.normal),
+        ],
         Icon(Icons.lock_outline, size: 40, color: esquema.primary),
         const SizedBox(height: Espaciado.chico),
         Text(
@@ -84,7 +93,12 @@ class PantallaPaywall extends StatelessWidget {
           ),
           const SizedBox(height: Espaciado.chico),
           for (final oferta in suscripcion.ofertas)
-            _FichaPlan(oferta: oferta),
+            _FichaPlan(
+              oferta: oferta,
+              comprando: suscripcion.comprando,
+              onComprar: () => suscripcion.comprar(oferta.plan),
+            ),
+          if (suscripcion.comprando) const _CompraEnCurso(),
         ],
       ],
     );
@@ -134,30 +148,94 @@ class _FilaIncluida extends StatelessWidget {
   }
 }
 
-/// Un plan con su precio, tal como lo informa Google Play.
+/// Un plan con su precio, tal como lo informa Google Play, y el botón que
+/// arranca su compra.
 ///
-/// El botón de compra se conecta en US2 (T023): en US1 el paywall explica y
-/// muestra precios, todavía no cobra.
+/// El precio se muestra **antes** de tocar nada (FR-005, Acceptance Scenario
+/// 1): nadie debería tener que abrir el diálogo de Google para enterarse de
+/// cuánto le van a cobrar.
 class _FichaPlan extends StatelessWidget {
-  const _FichaPlan({required this.oferta});
+  const _FichaPlan({
+    required this.oferta,
+    required this.comprando,
+    required this.onComprar,
+  });
 
   final OfertaSuscripcion oferta;
+
+  /// Hay una compra esperando confirmación —de este plan o del otro—, así que
+  /// ningún botón acepta un toque más.
+  final bool comprando;
+
+  final VoidCallback onComprar;
 
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
+    final hayPrueba = oferta.duracionPruebaDias > 0;
 
     return Card(
-      child: ListTile(
-        title: Text('Plan ${oferta.plan.etiqueta.toLowerCase()}'),
-        subtitle: Text(
-          '${oferta.precioFormateado} · ${oferta.duracionPruebaDias} días de '
-          'prueba',
-          style: textos.bodyMedium,
+      child: Padding(
+        padding: const EdgeInsets.all(Espaciado.normal),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Plan ${oferta.plan.etiqueta.toLowerCase()}',
+              style: textos.titleMedium,
+            ),
+            const SizedBox(height: Espaciado.minimo),
+            Text(
+              hayPrueba
+                  ? '${oferta.precioFormateado} · '
+                        '${oferta.duracionPruebaDias} días de prueba'
+                  : oferta.precioFormateado,
+              style: textos.bodyMedium,
+            ),
+            const SizedBox(height: Espaciado.chico),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: comprando ? null : onComprar,
+                child: Text(hayPrueba ? 'Empezar gratis' : 'Suscribirme'),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+}
+
+/// La compra ya se disparó y Google todavía no respondió.
+///
+/// Se dice con texto, no solo grisando los botones: la confirmación puede
+/// tardar, y un botón apagado sin explicación se lee como que la app se
+/// colgó.
+class _CompraEnCurso extends StatelessWidget {
+  const _CompraEnCurso();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: Espaciado.chico),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        const SizedBox(width: Espaciado.chico),
+        Flexible(
+          child: Text(
+            'Confirmando la compra con Google Play…',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// No se pudieron consultar los planes (sin conexión, o Google Play no

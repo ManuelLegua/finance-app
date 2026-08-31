@@ -139,14 +139,32 @@ class _CascaronState extends State<Cascaron> {
 
   _Destino get _actual => _destinoDelDrawer ?? _frecuentes[_destinoFrecuente];
 
-  void _irAFrecuente(int indice) => setState(() {
-    _destinoFrecuente = indice;
-    _destinoDelDrawer = null;
-  });
+  void _irAFrecuente(int indice) {
+    setState(() {
+      _destinoFrecuente = indice;
+      _destinoDelDrawer = null;
+    });
+    _refrescarSiEsPremium(_frecuentes[indice]);
+  }
 
-  void _irAOcasional(_Destino destino) => setState(() {
-    _destinoDelDrawer = destino;
-  });
+  void _irAOcasional(_Destino destino) {
+    setState(() {
+      _destinoDelDrawer = destino;
+    });
+    _refrescarSiEsPremium(destino);
+  }
+
+  /// Entrar a un destino premium es el momento de volver a preguntarle a
+  /// Google Play por la suscripción (D4): el usuario pudo comprarla, dejarla
+  /// vencer o cancelarla fuera de la app, y acá es donde eso se nota.
+  ///
+  /// Es de mejor esfuerzo: sin conexión se sigue con el estado cacheado, sin
+  /// bloquear la navegación ni mostrar ningún error. Abrir Deudas nunca puede
+  /// depender de la red.
+  void _refrescarSiEsPremium(_Destino destino) {
+    if (destino.acceso == AccesoDestino.gratis) return;
+    context.read<EstadoSuscripcionPremium>().refrescar();
+  }
 
   /// Un destino premium sin suscripción vigente muestra el aviso en lugar de
   /// la pantalla (FR-001, FR-002).

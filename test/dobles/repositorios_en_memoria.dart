@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/modelos/aporte_ahorro.dart';
 import 'package:finanzas/dominio/modelos/asociacion_comercio.dart';
@@ -708,6 +710,11 @@ final class RepositorioSuscripcionEnMemoria implements RepositorioSuscripcion {
   /// dispara dos compras.
   int vecesQueSeCompro = 0;
 
+  /// Si se fija, `comprar()` no responde hasta que se complete. Es la única
+  /// forma de dejar una compra a medias en una prueba y ver qué muestra la
+  /// pantalla mientras Google confirma.
+  Completer<void>? confirmacionPendiente;
+
   /// Si se fija, la próxima escritura falla con este error.
   Object? errorEnLaProximaEscritura;
 
@@ -739,6 +746,7 @@ final class RepositorioSuscripcionEnMemoria implements RepositorioSuscripcion {
   @override
   Future<EstadoSuscripcion> comprar(PlanSuscripcion plan) async {
     vecesQueSeCompro++;
+    await confirmacionPendiente?.future;
     if (!hayConexion) return _actual;
     _fallarSiCorresponde();
     final resultado = resultadoDeComprar;

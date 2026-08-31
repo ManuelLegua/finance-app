@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
@@ -59,6 +61,18 @@ void main() {
 
   Future<void> irA(WidgetTester tester, String destino) async {
     await tester.tap(find.text(destino).last);
+    await tester.pumpAndSettle();
+  }
+
+  /// El botón de compra del plan pedido. Se busca dentro de su ficha porque
+  /// los dos planes ofrecen el mismo texto.
+  Finder botonDe(String plan) => find.descendant(
+    of: find.widgetWithText(Card, 'Plan $plan'),
+    matching: find.widgetWithText(FilledButton, 'Empezar gratis'),
+  );
+
+  Future<void> elegirPlan(WidgetTester tester, String plan) async {
+    await tester.tap(botonDe(plan));
     await tester.pumpAndSettle();
   }
 
@@ -256,6 +270,164 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('S/ 19.90'), findsOneWidget);
+    });
+  });
+
+  group('comprar desbloquea sin reiniciar la app (FR-007, SC-002)', () {
+    testWidgets('elegir el plan mensual deja ver Deudas al instante', (
+      tester,
+    ) async {
+      repoSuscripcion.resultadoDeComprar = vigente();
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+      await irA(tester, 'Deudas');
+
+      await elegirPlan(tester, 'mensual');
+
+      // Sin volver a montar nada: el mismo árbol que mostraba el aviso ahora
+      // muestra la pantalla real (Acceptance Scenario 2).
+      expect(find.textContaining('Deudas es parte de Finanzas'), findsNothing);
+      expect(estadoSuscripcion.premiumActivo, isTrue);
+      expect(estadoSuscripcion.plan, PlanSuscripcion.mensual);
+    });
+
+    testWidgets('y Ahorro queda accesible en la misma sesión', (tester) async {
+      repoSuscripcion.resultadoDeComprar = vigente();
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+      await irA(tester, 'Deudas');
+
+      await elegirPlan(tester, 'mensual');
+      await irA(tester, 'Ahorro');
+
+      expect(find.text('Aportes de este mes'), findsOneWidget);
+    });
+
+    testWidgets('el plan anual también desbloquea', (tester) async {
+      repoSuscripcion.resultadoDeComprar = vigente();
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+      await irA(tester, 'Ahorro');
+
+      await elegirPlan(tester, 'anual');
+
+      expect(estadoSuscripcion.premiumActivo, isTrue);
+      expect(estadoSuscripcion.plan, PlanSuscripcion.anual);
+    });
+  });
+
+  group('cancelar la compra no es un error (FR-008)', () {
+    testWidgets('no desbloquea nada y no muestra ningún fallo', (tester) async {
+      // Sin resultado, el doble entiende que el usuario cerró el diálogo de
+      // Google Play antes de confirmar.
+      repoSuscripcion.resultadoDeComprar = null;
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+      await irA(tester, 'Deudas');
+
+      await elegirPlan(tester, 'mensual');
+
+      expect(
+        find.textContaining('Deudas es parte de Finanzas'),
+        findsOneWidget,
+      );
+      expect(estadoSuscripcion.premiumActivo, isFalse);
+      // Cancelar es un flujo esperado: ni banner, ni cartel de problema.
+      expect(estadoSuscripcion.error, isNull);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(find.textContaining('problema'), findsNothing);
+    });
+
+    testWidgets('se puede volver a intentar después de cancelar', (
+      tester,
+    ) async {
+      repoSuscripcion.resultadoDeComprar = null;
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+      await irA(tester, 'Deudas');
+      await elegirPlan(tester, 'mensual');
+
+      repoSuscripcion.resultadoDeComprar = vigente();
+      await elegirPlan(tester, 'mensual');
+
+      expect(estadoSuscripcion.premiumActivo, isTrue);
+      expect(repoSuscripcion.vecesQueSeCompro, 2);
+    });
+  });
+
+  group('mientras Google confirma la compra', () {
+    testWidgets('un doble toque no dispara dos compras', (tester) async {
+      final confirmacion = Completer<void>();
+      repoSuscripcion.confirmacionPendiente = confirmacion;
+      repoSuscripcion.resultadoDeComprar = vigente();
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+      await irA(tester, 'Deudas');
+
+      await tester.tap(botonDe('mensual'));
+      await tester.pump();
+      // El segundo toque cae sobre un botón ya deshabilitado.
+      await tester.tap(botonDe('mensual'), warnIfMissed: false);
+      await tester.pump();
+      confirmacion.complete();
+      await tester.pumpAndSettle();
+
+      expect(repoSuscripcion.vecesQueSeCompro, 1);
+      expect(estadoSuscripcion.premiumActivo, isTrue);
+    });
+
+    testWidgets('se dice con texto que la compra está en curso', (
+      tester,
+    ) async {
+      final confirmacion = Completer<void>();
+      repoSuscripcion.confirmacionPendiente = confirmacion;
+      repoSuscripcion.resultadoDeComprar = vigente();
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+      await irA(tester, 'Deudas');
+
+      await tester.tap(botonDe('mensual'));
+      await tester.pump();
+
+      // Principio IV: un botón grisado no alcanza para explicar la espera.
+      expect(find.textContaining('Confirmando'), findsOneWidget);
+
+      confirmacion.complete();
+      await tester.pumpAndSettle();
+    });
+  });
+
+  group('el estado de la suscripción se consulta desde el aviso (FR-009)', () {
+    testWidgets('una suscripción vencida se explica en el propio aviso', (
+      tester,
+    ) async {
+      repoSuscripcion.fijar(
+        EstadoSuscripcion(
+          situacion: SituacionSuscripcion.vencida,
+          plan: PlanSuscripcion.mensual,
+          vigenteHasta: DateTime(2026, 8, 1),
+          ultimaVerificacion: quinceDeAgosto,
+        ),
+      );
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+
+      await irA(tester, 'Deudas');
+
+      expect(find.text(SituacionSuscripcion.vencida.etiqueta), findsOneWidget);
+    });
+
+    testWidgets('sin suscripción previa el aviso no repite el estado', (
+      tester,
+    ) async {
+      await estadoSuscripcion.cargar();
+      await montar(tester);
+
+      await irA(tester, 'Deudas');
+
+      // "Nunca suscripto" no aporta nada arriba de un aviso que ya explica
+      // que hay que suscribirse.
+      expect(find.text(SituacionSuscripcion.nunca.etiqueta), findsNothing);
     });
   });
 }

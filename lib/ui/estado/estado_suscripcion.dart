@@ -27,6 +27,7 @@ class EstadoSuscripcionPremium extends ChangeNotifier {
   dominio.EstadoSuscripcion? _estado;
   List<dominio.OfertaSuscripcion> _ofertas = const [];
   bool _cargando = true;
+  bool _comprando = false;
   String? _error;
   String? _errorDeOfertas;
 
@@ -46,6 +47,10 @@ class EstadoSuscripcionPremium extends ChangeNotifier {
   List<dominio.OfertaSuscripcion> get ofertas => _ofertas;
 
   bool get cargando => _cargando;
+
+  /// Si hay una compra esperando la confirmación de Google Play. El paywall
+  /// lo dice con texto y deshabilita los botones mientras dure.
+  bool get comprando => _comprando;
 
   String? get error => _error;
 
@@ -89,6 +94,34 @@ class EstadoSuscripcionPremium extends ChangeNotifier {
       _errorDeOfertas = _mensajeDe(error);
     }
     notifyListeners();
+  }
+
+  /// Lanza el flujo de compra de Google Play y deja el estado que resulte.
+  ///
+  /// Al terminar, quien escuche este notificador ve el acceso concedido sin
+  /// reiniciar nada (FR-007): la guarda del cascarón se reconstruye sola.
+  ///
+  /// **Cancelar no es un error** (FR-008). El repositorio devuelve el estado
+  /// sin cambios y acá no se marca ningún fallo: el usuario que cerró el
+  /// diálogo de Google no hizo nada malo y no tiene por qué ver un cartel.
+  ///
+  /// Mientras una compra está en curso, otra no arranca: sin esta guarda un
+  /// doble toque abriría dos flujos de compra.
+  Future<void> comprar(PlanSuscripcion plan) async {
+    if (_comprando) return;
+
+    _comprando = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _estado = await _repoSuscripcion.comprar(plan);
+    } on Object catch (error) {
+      _error = _mensajeDe(error);
+    } finally {
+      _comprando = false;
+      notifyListeners();
+    }
   }
 
   /// Vuelve a preguntarle a Google Play por el estado. Se llama al abrir una
