@@ -35,6 +35,8 @@ void main() {
       final prohibidos = <String, String>{
         'package:flutter/': 'la lógica financiera no puede depender de la UI',
         'package:sqflite': 'el dominio no conoce la persistencia',
+        'package:in_app_purchase':
+            'el dominio no conoce el SDK de facturación (spec 004)',
         'package:provider': 'el dominio no conoce el estado de la UI',
         'dart:io': 'el dominio no toca el sistema de archivos',
         'dart:ui': 'el dominio no conoce la capa de render',

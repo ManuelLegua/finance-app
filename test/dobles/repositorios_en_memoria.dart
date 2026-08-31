@@ -5,6 +5,7 @@ import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/dominio/modelos/consumo_pendiente.dart';
 import 'package:finanzas/dominio/modelos/deuda.dart';
+import 'package:finanzas/dominio/modelos/estado_suscripcion.dart';
 import 'package:finanzas/dominio/modelos/notificacion_diagnostico.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
 import 'package:finanzas/dominio/modelos/resumen_pendientes.dart';
@@ -18,6 +19,7 @@ import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_diagnostico.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_pendientes.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_suscripcion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/dominio/repositorios/servicio_escucha_notificaciones.dart';
@@ -642,6 +644,118 @@ final class RepositorioAsociacionesEnMemoria
   Future<void> eliminar(String comercioNormalizado) async {
     _fallarSiCorresponde();
     _porComercio.remove(comercioNormalizado);
+  }
+
+  void _fallarSiCorresponde() {
+    final error = errorEnLaProximaEscritura;
+    if (error == null) return;
+    errorEnLaProximaEscritura = null;
+    throw error;
+  }
+}
+
+/// Suscripción premium en memoria (spec 004).
+///
+/// Sustituye a Google Play Billing en las pruebas: la interfaz
+/// `RepositorioSuscripcion` es el punto de sustitución correcto (D5 de
+/// research.md), así que nada de la suite toca el plugin real.
+///
+/// Replica los comportamientos que la UI observa:
+///  - `estadoCacheado` nunca falla por falta de conexión;
+///  - `refrescar` sin conexión devuelve el cacheado sin cambios;
+///  - `ofertasDisponibles` sin conexión **sí** falla, porque mostrar un
+///    precio viejo sería engañoso;
+///  - cancelar una compra devuelve el estado sin cambios, no un error.
+final class RepositorioSuscripcionEnMemoria implements RepositorioSuscripcion {
+  RepositorioSuscripcionEnMemoria({
+    EstadoSuscripcion? inicial,
+    DateTime? ultimaVerificacion,
+    this.ofertas = const <OfertaSuscripcion>[
+      OfertaSuscripcion(
+        plan: PlanSuscripcion.mensual,
+        precioFormateado: 'S/ 19.90',
+        duracionPruebaDias: 30,
+      ),
+      OfertaSuscripcion(
+        plan: PlanSuscripcion.anual,
+        precioFormateado: 'S/ 179.90',
+        duracionPruebaDias: 30,
+      ),
+    ],
+  }) : _actual =
+           inicial ??
+           EstadoSuscripcion.nunca(
+             ultimaVerificacion: ultimaVerificacion ?? DateTime(2026, 8, 30),
+           );
+
+  EstadoSuscripcion _actual;
+
+  /// Lo que la tienda ofrece. Vacío simula un producto mal configurado.
+  List<OfertaSuscripcion> ofertas;
+
+  /// Con `false`, la tienda no responde: es el modo avión de las pruebas.
+  bool hayConexion = true;
+
+  /// Qué estado deja una compra completada. Si es `null`, la compra se
+  /// entiende como cancelada por el usuario (FR-008): no cambia nada.
+  EstadoSuscripcion? resultadoDeComprar;
+
+  /// Qué encuentra `restaurar()`. `null` = esta cuenta no tiene ninguna
+  /// suscripción (FR-015).
+  EstadoSuscripcion? resultadoDeRestaurar;
+
+  /// Cuántas veces se pidió comprar, para verificar que un doble toque no
+  /// dispara dos compras.
+  int vecesQueSeCompro = 0;
+
+  /// Si se fija, la próxima escritura falla con este error.
+  Object? errorEnLaProximaEscritura;
+
+  /// Fija el estado sin pasar por la tienda, para armar el escenario de una
+  /// prueba (suscripción ya vencida, ya activa, etc.).
+  void fijar(EstadoSuscripcion estado) => _actual = estado;
+
+  @override
+  Future<EstadoSuscripcion> estadoCacheado() async => _actual;
+
+  @override
+  Future<EstadoSuscripcion> refrescar() async {
+    if (!hayConexion) return _actual;
+    _fallarSiCorresponde();
+    return _actual;
+  }
+
+  @override
+  Future<List<OfertaSuscripcion>> ofertasDisponibles() async {
+    if (!hayConexion) {
+      throw ErrorPersistencia.alLeer(
+        'los planes de suscripción',
+        StateError('Google Play no está disponible'),
+      );
+    }
+    return ofertas;
+  }
+
+  @override
+  Future<EstadoSuscripcion> comprar(PlanSuscripcion plan) async {
+    vecesQueSeCompro++;
+    if (!hayConexion) return _actual;
+    _fallarSiCorresponde();
+    final resultado = resultadoDeComprar;
+    // Sin resultado, el usuario canceló: no se toca nada y no se lanza.
+    if (resultado == null) return _actual;
+    _actual = resultado.copiaCon(plan: plan);
+    return _actual;
+  }
+
+  @override
+  Future<EstadoSuscripcion> restaurar() async {
+    if (!hayConexion) return _actual;
+    _fallarSiCorresponde();
+    _actual =
+        resultadoDeRestaurar ??
+        EstadoSuscripcion.nunca(ultimaVerificacion: _actual.ultimaVerificacion);
+    return _actual;
   }
 
   void _fallarSiCorresponde() {

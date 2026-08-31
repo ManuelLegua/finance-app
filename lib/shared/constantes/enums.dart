@@ -107,6 +107,57 @@ enum MotivoDiagnostico {
   );
 }
 
+/// Plan de la suscripción premium (FR-006, spec 004).
+///
+/// Ambos planes desbloquean exactamente lo mismo: cambian la forma de pago,
+/// no el alcance premium.
+enum PlanSuscripcion {
+  mensual('mensual', 'Mensual'),
+  anual('anual', 'Anual');
+
+  const PlanSuscripcion(this.slug, this.etiqueta);
+
+  final String slug;
+  final String etiqueta;
+
+  static PlanSuscripcion desdeSlug(String slug) => values.firstWhere(
+    (plan) => plan.slug == slug,
+    orElse: () => throw ArgumentError.value(
+      slug,
+      'slug',
+      'Plan de suscripción desconocido en la base de datos',
+    ),
+  );
+}
+
+/// En qué situación está la suscripción premium según Google Play (spec 004).
+///
+/// `enGracia` concede acceso a propósito: es Google Play, no la app, quien
+/// decide cuánto dura el margen tras un cobro fallido (FR-013). La app solo
+/// refleja el estado que le informa.
+enum SituacionSuscripcion {
+  nunca('nunca', 'Nunca suscripto'),
+  enPrueba('en_prueba', 'En prueba gratis'),
+  activa('activa', 'Activa'),
+  enGracia('en_gracia', 'Pago pendiente (en gracia)'),
+  vencida('vencida', 'Vencida'),
+  cancelada('cancelada', 'Cancelada');
+
+  const SituacionSuscripcion(this.slug, this.etiqueta);
+
+  final String slug;
+  final String etiqueta;
+
+  static SituacionSuscripcion desdeSlug(String slug) => values.firstWhere(
+    (situacion) => situacion.slug == slug,
+    orElse: () => throw ArgumentError.value(
+      slug,
+      'slug',
+      'Situación de suscripción desconocida en la base de datos',
+    ),
+  );
+}
+
 /// Tipo de tarjeta (FR-059).
 ///
 /// Solo las de crédito admiten deudas en cuotas (FR-061).

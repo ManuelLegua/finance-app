@@ -11,6 +11,7 @@ import 'package:finanzas/datos/repositorios/repositorio_diagnostico_sqlite.dart'
 import 'package:finanzas/datos/repositorios/repositorio_meses_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_pendientes_sqlite.dart';
+import 'package:finanzas/datos/repositorios/repositorio_suscripcion_billing.dart';
 import 'package:finanzas/datos/repositorios/repositorio_tarjetas_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_transacciones_sqlite.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ahorro.dart';
@@ -22,6 +23,7 @@ import 'package:finanzas/dominio/repositorios/repositorio_diagnostico.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_meses.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_pendientes.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_suscripcion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
@@ -33,6 +35,7 @@ import 'package:finanzas/ui/estado/estado_captura.dart';
 import 'package:finanzas/ui/estado/estado_diagnostico.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_pendientes.dart';
+import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:finanzas/ui/estado/estado_tarjetas.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -149,6 +152,16 @@ class _ArranqueState extends State<_Arranque> {
             ChangeNotifierProvider<EstadoTarjetas>(
               create: (contexto) => EstadoTarjetas(
                 repoTarjetas: contexto.read<RepositorioTarjetas>(),
+              )..cargar(),
+            ),
+            Provider<RepositorioSuscripcion>(
+              create: (_) => RepositorioSuscripcionBilling(conexion),
+            ),
+            // La suscripción se carga al abrir la app (D4): el usuario pudo
+            // comprar, vencer o restaurar fuera de acá.
+            ChangeNotifierProvider<EstadoSuscripcionPremium>(
+              create: (contexto) => EstadoSuscripcionPremium(
+                repoSuscripcion: contexto.read<RepositorioSuscripcion>(),
               )..cargar(),
             ),
             ChangeNotifierProvider<EstadoAhorro>(

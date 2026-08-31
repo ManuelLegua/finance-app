@@ -51,6 +51,8 @@ void main() {
           // Spec 003: cobros parciales de ingreso. `ingreso` (v1) no aparece
           // acá: una instalación nueva ya no la crea (D-C5 de research.md).
           'cobro_ingreso',
+          // Spec 004: suscripción premium.
+          'suscripcion_premium',
         ]),
       );
     });

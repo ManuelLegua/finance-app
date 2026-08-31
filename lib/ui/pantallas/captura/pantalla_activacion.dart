@@ -1,5 +1,7 @@
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/ui/estado/estado_captura.dart';
+import 'package:finanzas/ui/estado/estado_suscripcion.dart';
+import 'package:finanzas/ui/pantallas/suscripcion/pantalla_paywall.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -41,6 +43,13 @@ class _PantallaActivacionState extends State<PantallaActivacion>
   @override
   Widget build(BuildContext context) {
     final estadoCaptura = context.watch<EstadoCapturaNotificaciones>();
+
+    // Sin suscripción vigente, el flujo de permiso ni se ofrece (FR-003,
+    // spec 004): pedirle a Android un permiso tan sensible para algo que
+    // después va a estar bloqueado sería tomarle el pelo al usuario.
+    if (!context.watch<EstadoSuscripcionPremium>().premiumActivo) {
+      return const PantallaPaywall(funcionalidad: 'La captura automática');
+    }
 
     if (estadoCaptura.cargando) {
       return const Center(child: CircularProgressIndicator());

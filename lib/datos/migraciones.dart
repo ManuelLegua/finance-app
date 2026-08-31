@@ -32,6 +32,12 @@ abstract final class Migraciones {
       Esquema.indiceCobroIngresoMes,
       Esquema.migrarIngresoACobros,
     ],
+    // v3 → v4: spec 004, suscripción premium. Solo agrega la tabla del estado
+    // cacheado; ninguna tabla existente se toca. La fila `id = 1` no se
+    // siembra acá: `RepositorioSuscripcionBilling.estadoCacheado()` devuelve
+    // "nunca suscripto" mientras no exista, igual que hace `configuracion`
+    // con sus valores por defecto.
+    4: <String>[Esquema.suscripcionPremium],
   };
 
   /// Aplica los pasos necesarios para ir de [desde] a [hasta].

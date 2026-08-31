@@ -13,7 +13,7 @@
 abstract final class Esquema {
   /// Versión actual. Cada cambio incrementa esto y agrega un paso en
   /// `migraciones.dart`.
-  static const int version = 3;
+  static const int version = 4;
 
   static const List<String> creacion = <String>[
     _obligacion,
@@ -35,6 +35,7 @@ abstract final class Esquema {
     indiceDiagnosticoFecha,
     cobroIngreso,
     indiceCobroIngresoMes,
+    suscripcionPremium,
   ];
 
   // La tabla `ingreso` de la versión 1 (un monto único por mes) **no
@@ -225,5 +226,26 @@ abstract final class Esquema {
       mes_ordinal,
       monto_centavos
     FROM ingreso
+  ''';
+
+  // --- Spec 004: suscripción premium. Ver data-model.md §4. ---
+
+  /// Estado cacheado de la suscripción, **fila única** (`id = 1`), mismo
+  /// patrón que `configuracion`: es un estado global de la app, no algo por
+  /// mes ni por entidad.
+  ///
+  /// Existe para que abrir Deudas o Ahorro no dependa de la red: se guarda lo
+  /// último que informó Google Play y se usa mientras no se pueda refrescar.
+  /// Ningún dato financiero del usuario vive acá (FR-016).
+  static const String suscripcionPremium = '''
+    CREATE TABLE suscripcion_premium (
+      id                   INTEGER PRIMARY KEY CHECK (id = 1),
+      situacion            TEXT    NOT NULL
+                             CHECK (situacion IN ('nunca','en_prueba','activa',
+                                                  'en_gracia','vencida','cancelada')),
+      plan                 TEXT    CHECK (plan IN ('mensual','anual')),
+      vigente_hasta        TEXT,
+      ultima_verificacion  TEXT    NOT NULL
+    )
   ''';
 }

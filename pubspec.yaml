@@ -41,6 +41,8 @@ dependencies:
   provider: ^6.1.5+1
   intl: ^0.20.3
   flutter_notification_listener: ^1.4.0
+  in_app_purchase: ^3.3.0
+  in_app_purchase_android: ^0.5.3
 
 dev_dependencies:
   flutter_test:
