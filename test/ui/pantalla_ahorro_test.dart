@@ -65,15 +65,40 @@ void main() {
     testWidgets('se acepta e informa, sin bloquear el registro', (
       tester,
     ) async {
+      // El diálogo de aporte propone la fecha con `DateTime.now()` real
+      // (`pantalla_ahorro.dart`), no con el reloj inyectado — así tiene que
+      // ser, es el "hoy" de quien lo está llenando. Por eso acá "hoy" y el
+      // mes cargado no pueden quedar fijos en agosto de 2026: apenas la
+      // fecha real cruzara ese mes, el aporte se guardaría en un mes
+      // distinto del que la prueba mira y `aportesDelMes` daría vacío. Se
+      // reconstruyen `estadoMes`/`estadoAhorro` con el reloj real para que
+      // ambos "hoy" coincidan siempre, sea cuando sea que esto se corra.
+      final hoy = DateTime.now();
+      final mesActual = Mes.deFecha(hoy);
+      estadoMes = EstadoMes(
+        repoCobrosIngreso: repoCobrosIngreso,
+        repoObligaciones: RepositorioObligacionesEnMemoria(),
+        repoConfiguracion: repoConfiguracion,
+        repoTransacciones: RepositorioTransaccionesEnMemoria(),
+        repoDeudas: RepositorioDeudasEnMemoria(),
+        ahora: () => hoy,
+        mesInicial: mesActual,
+      );
+      estadoAhorro = EstadoAhorro(
+        repoAhorro: repoAhorro,
+        repoConfiguracion: repoConfiguracion,
+        ahora: () => hoy,
+      );
+
       await repoCobrosIngreso.insertar(
         CobroIngreso(
           id: null,
-          fecha: quinceDeAgosto,
+          fecha: hoy,
           monto: const Dinero.deCentavos(50000),
         ),
       );
       await estadoMes.cargar();
-      await estadoAhorro.cargar(agosto);
+      await estadoAhorro.cargar(mesActual);
       await montar(tester);
 
       await tester.tap(find.byIcon(Icons.add));
