@@ -1,3 +1,25 @@
+<!--
+Sync Impact Report — enmienda 2026-09-07
+
+Versión: 2.0.0 → 3.0.0 (MAJOR: redefine el alcance de un principio existente)
+
+Principios modificados:
+- I. Datos locales y privados (enmendado en v2.0.0) →
+  I. Datos locales y privados (enmendado en v2.0.0 y v3.0.0)
+  Se agrega una segunda excepción explícita y acotada: respaldo y exportación
+  a pedido del usuario, condición previa de la spec 005. La "Razón" se amplía
+  para cubrir ambas excepciones.
+
+Principios sin cambios: II, III, IV, V.
+Secciones agregadas: ninguna.
+Secciones eliminadas: ninguna.
+Follow-up TODOs: ninguno.
+
+Motivo: la spec 005 (respaldo y exportación de datos) implica salida de datos
+del dispositivo, y el propio Principio I exige una enmienda explícita para eso.
+Aprobada por el usuario el 2026-09-07.
+-->
+
 # Finanzas Constitution
 
 Aplicación de finanzas personales de uso individual para administrar un sueldo
@@ -6,7 +28,7 @@ decidir cuánto ahorrar cada mes.
 
 ## Core Principles
 
-### I. Datos locales y privados (enmendado en v2.0.0)
+### I. Datos locales y privados (enmendado en v2.0.0 y v3.0.0)
 
 Toda la información financiera (sueldo, gastos, deudas, ahorro) vive
 exclusivamente en el dispositivo y nunca se transmite a ningún servidor,
@@ -15,20 +37,44 @@ dependencia puede introducir telemetría, analítica ni sincronización remota
 de esos datos. Cualquier funcionalidad futura que implique salida de datos
 del dispositivo exige una enmienda explícita a esta constitución.
 
-**Excepción explícita y acotada**: la verificación de compras dentro de la
-app (Google Play Billing) puede conectarse con los servidores de Google
-exclusivamente para procesar o restaurar una compra. Esa conexión no
-transmite ni puede transmitir ningún dato financiero del usuario: solo el
-identificador del producto comprado y el estado de la licencia, que maneja la
-propia biblioteca de Google Play Billing. Fuera de esa función puntual, la
-app sigue funcionando 100% sin internet.
+**Primera excepción explícita y acotada — verificación de compras (v2.0.0)**:
+la verificación de compras dentro de la app (Google Play Billing) puede
+conectarse con los servidores de Google exclusivamente para procesar o
+restaurar una compra. Esa conexión no transmite ni puede transmitir ningún
+dato financiero del usuario: solo el identificador del producto comprado y el
+estado de la licencia, que maneja la propia biblioteca de Google Play
+Billing. Fuera de esa función puntual, la app sigue funcionando 100% sin
+internet.
+
+**Segunda excepción explícita y acotada — respaldo a pedido del usuario
+(v3.0.0)**: el usuario MUST poder sacar una copia de sus propios datos a un
+archivo, y volver a cargarla, mediante una acción manual que él dispara en
+ese momento. Condiciones que hacen que esto no contradiga el principio:
+
+- La app **no transmite nada**: genera un archivo y se lo entrega al usuario.
+  No hay servidor propio, no hay cuenta, no hay subida automática.
+- **Nada sale sin que el usuario lo pida**: no existe respaldo automático,
+  programado, en segundo plano ni "en la nube". Sin una acción explícita del
+  usuario, el comportamiento de la app es idéntico al de antes de esta
+  enmienda.
+- **El destino lo elige el usuario**: adónde va ese archivo después
+  —guardarlo en el teléfono, mandárselo por correo, subirlo a donde quiera—
+  es una decisión suya sobre datos suyos, tomada fuera de la app. La app no
+  elige destino ni lo sugiere.
+- La restauración es el camino inverso y con las mismas condiciones: leer un
+  archivo que el propio usuario elige.
+- Lo que sigue prohibido: exportar sin pedido explícito, mandar el archivo a
+  un servidor de la app, y cualquier telemetría o analítica, con o sin
+  archivo de por medio.
 
 **Razón**: son datos de sueldo, deudas y gastos de una persona concreta; el
 riesgo de una filtración supera cualquier beneficio de una funcionalidad en la
-nube. La app admite ahora un modelo de monetización con funciones pagas, pero
-el compromiso de privacidad sobre los datos financieros se mantiene intacto:
-lo único que sale del dispositivo es la transacción de compra gestionada por
-Google, nunca el contenido de la app.
+nube. Las dos excepciones no relajan eso, lo delimitan: en la primera lo único
+que sale es la transacción de compra que gestiona Google, nunca el contenido
+de la app; en la segunda el contenido sí puede salir, pero solo porque el
+dueño de esos datos lo pidió y decidió adónde van. Negarle al usuario una
+copia de sus propios datos no sería privacidad, sería dejarlo sin manera de no
+perderlos al reinstalar o cambiar de teléfono.
 
 ### II. Exactitud monetaria (NO NEGOCIABLE)
 
@@ -105,4 +151,4 @@ añadir uno nuevo, PATCH para aclaraciones que no cambian el fondo.
 Cualquier desviación de un principio debe justificarse por escrito en el plan de
 la funcionalidad afectada, no resolverse en silencio durante la implementación.
 
-**Version**: 2.0.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-08-29
+**Version**: 3.0.0 | **Ratified**: 2026-08-26 | **Last Amended**: 2026-09-07

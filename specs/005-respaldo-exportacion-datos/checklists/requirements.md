@@ -32,12 +32,11 @@
 ## Notes
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
-- **Bloqueo de gobernanza, no de calidad de la spec**: el Principio I de la
-  constitución exige una enmienda explícita para cualquier funcionalidad que
-  implique salida de datos del dispositivo. Esta la implica (el usuario puede
-  compartir el archivo exportado por donde quiera), así que la enmienda tiene
-  que aprobarse antes de `/speckit-plan`, igual que se hizo con Google Play
-  Billing en la spec 004 (v2.0.0). Está anotado al inicio de spec.md.
+- **Gobernanza resuelta**: el Principio I exigía una enmienda explícita para
+  cualquier funcionalidad con salida de datos del dispositivo. El usuario la
+  aprobó el 2026-09-07 y quedó registrada como v3.0.0 de la constitución
+  (segunda excepción explícita y acotada: respaldo a pedido del usuario). Ya
+  no bloquea `/speckit-plan`.
 - Cero marcadores [NEEDS CLARIFICATION]: las decisiones abiertas se
   resolvieron con valores por defecto justificados y quedaron registradas en
   la sección Assumptions (gratuidad, reemplazo total al restaurar, sin

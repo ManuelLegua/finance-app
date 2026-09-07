@@ -10,7 +10,7 @@
 
 **Depende de**: [001-gestion-sueldo-ahorro](../001-gestion-sueldo-ahorro/spec.md), [002-captura-notificaciones-bancarias](../002-captura-notificaciones-bancarias/spec.md) y [003-cobros-parciales-ingreso](../003-cobros-parciales-ingreso/spec.md) — esta especificación no cambia lo que esas funcionalidades hacen, solo agrega una forma de sacar y volver a cargar todo lo que guardan.
 
-**Nota sobre la constitución**: el Principio I ("Datos locales y privados") exige una enmienda explícita para cualquier funcionalidad que implique salida de datos del dispositivo. Exportar es exactamente eso — un archivo que el usuario puede guardar o compartir por donde elija — así que esta especificación queda sujeta a que el usuario apruebe esa enmienda antes de pasar a `/speckit-plan`, con la misma lógica que ya se usó para la excepción de Google Play Billing en la spec 004 (v2.0.0): la conexión o la salida de datos existe, pero **nunca es automática ni silenciosa** — ocurre solo cuando el usuario la pide, y con datos que él mismo elige adónde van.
+**Requiere**: la enmienda ya aprobada al Principio I de la constitución del proyecto (v3.0.0, 2026-09-07), que habilita el respaldo y la exportación a pedido del usuario. Se aprobó con la misma lógica que la excepción de Google Play Billing de v2.0.0: la salida de datos existe, pero **nunca es automática ni silenciosa** — ocurre solo cuando el usuario la pide, con datos suyos, y es él quien decide adónde van. Sin una acción explícita suya, la app se comporta igual que antes de esta funcionalidad.
 
 ## User Scenarios & Testing *(mandatory)*
 
