@@ -74,7 +74,8 @@ Ver el contrato completo, con las garantías de cada método, en
 ## 4. Esquema SQL (incremento de versión)
 
 ```sql
--- Esquema.version pasa de 1 a 2. Migración v1 → v2, no destructiva.
+-- Esquema.version pasa de 3 a 4 (la base ya iba por v3: spec 002 la subió
+-- a 2, spec 003 a 3). Migración v3 → v4, no destructiva.
 CREATE TABLE suscripcion_premium (
   id                    INTEGER PRIMARY KEY CHECK (id = 1),
   situacion             TEXT    NOT NULL

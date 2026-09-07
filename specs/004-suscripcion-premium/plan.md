@@ -14,7 +14,7 @@ Una suscripción paga dentro de la app, vía Google Play Billing, con un plan me
 
 **Primary Dependencies**: `in_app_purchase` + `in_app_purchase_android` (paquete oficial de Flutter, ya envuelve Google Play Billing Library 8.0.0 con soporte de planes base y ofertas de prueba — ver [research.md](./research.md) D1). Reutiliza `sqflite` y `provider`, ya presentes desde la feature 001.
 
-**Storage**: SQLite local existente. Una tabla nueva de fila única, `suscripcion_premium` (igual patrón que `configuracion`), agregada en una migración incremental (`Esquema.version` 1 → 2) que no toca ninguna tabla existente. Esquema completo en [data-model.md](./data-model.md) §4.
+**Storage**: SQLite local existente. Una tabla nueva de fila única, `suscripcion_premium` (igual patrón que `configuracion`), agregada en una migración incremental (`Esquema.version` 3 → 4 — la base ya iba por v3: la spec 002 la subió a 2, la 003 a 3) que no toca ninguna tabla existente. Esquema completo en [data-model.md](./data-model.md) §4.
 
 **Testing**: `flutter test` en dominio (vigencia de la suscripción, función pura, escrita antes de implementar) y UI (paywall con un doble en memoria del repositorio); el flujo real de compra/restauración/vencimiento **no se puede automatizar** y se valida a mano contra la pista de pruebas internas de Google Play Console — ver [quickstart.md](./quickstart.md).
 
@@ -78,7 +78,7 @@ lib/
 │                                        # ofertasDisponibles, comprar, restaurar
 ├── datos/
 │   ├── esquema.dart                     # + tabla suscripcion_premium (v2)
-│   ├── migraciones.dart                 # + paso v1 → v2
+│   ├── migraciones.dart                 # + paso v3 → v4
 │   └── repositorios/
 │       └── repositorio_suscripcion_billing.dart  # implementa la interfaz con
 │                                                  # in_app_purchase + caché SQLite

@@ -176,11 +176,11 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T041 [P] Verificar que `test/pureza_test.dart` pasa con todo lo nuevo: `lib/dominio/modelos/estado_suscripcion.dart` y `lib/dominio/repositorios/repositorio_suscripcion.dart` no importan `in_app_purchase`, Flutter ni sqflite (T012 dejó la guarda lista)
-- [ ] T042 [P] Revisar que ningún estado de esta feature (en prueba, activa, en gracia, vencida, bloqueo por suscripción en el resumen) se comunique solo por color, siguiendo el patrón de `MarcaEstado`/`AvisoMesCerrado` de 001
-- [ ] T043 [P] Dejar `flutter analyze` sin issues y `dart format` aplicado a todo lo nuevo
+- [X] T041 [P] Verificar que `test/pureza_test.dart` pasa con todo lo nuevo: `lib/dominio/modelos/estado_suscripcion.dart` y `lib/dominio/repositorios/repositorio_suscripcion.dart` no importan `in_app_purchase`, Flutter ni sqflite (T012 dejó la guarda lista) — pasa sin cambios
+- [X] T042 [P] Revisar que ningún estado de esta feature (en prueba, activa, en gracia, vencida, bloqueo por suscripción en el resumen) se comunique solo por color, siguiendo el patrón de `MarcaEstado`/`AvisoMesCerrado` de 001 — revisado `pantalla_paywall.dart`, `ficha_estado_suscripcion.dart` y la navegación del cascarón: cada situación tiene su ícono y su texto propios (`_detalleDe`/`_iconoDe`), el candado del paywall va acompañado de la explicación completa, y la navegación no marca destinos premium solo con color. D6 ya elimina el único bloqueo que hubiera hecho falta explicar en el resumen. Sin código nuevo
+- [X] T043 [P] Dejar `flutter analyze` sin issues y `dart format` aplicado a todo lo nuevo — limpio
 - [ ] T044 [MANUAL] Recorrer entero [quickstart.md](./quickstart.md) contra la pista de pruebas internas, incluido el paso 7 (modo avión con suscripción activa ya verificada: Deudas debe seguir accesible con el estado cacheado)
-- [ ] T045 Corregir plan.md y data-model.md §4, que dicen `Esquema.version` 1 → 2: la migración real de esta feature es **v3 → v4** (ver la nota al inicio de este documento)
+- [X] T045 Corregir plan.md y data-model.md §4, que dicen `Esquema.version` 1 → 2: la migración real de esta feature es **v3 → v4** (ver la nota al inicio de este documento)
 - [ ] T046 [P] Actualizar `CLAUDE.md` con el estado de esta feature una vez completa
 
 ---

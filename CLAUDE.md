@@ -89,7 +89,7 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
 | `specs/002-captura-notificaciones-bancarias/` | **En curso: 49 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
 | `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
-| `specs/004-suscripcion-premium/` | Suscripción paga (Deudas + Ahorro + captura de notificaciones) vía Google Play Billing (Principio I enmendado a v2.0.0); plan completo, sin tareas todavía |
+| `specs/004-suscripcion-premium/` | **En curso: 40 de 46 tareas.** Suscripción paga (Deudas + Ahorro + captura de notificaciones) vía Google Play Billing (Principio I enmendado a v2.0.0) |
 
 Antes de proponer un cambio de diseño, leer `research.md`: es probable que la alternativa ya se haya evaluado y rechazado por escrito.
 
@@ -168,7 +168,9 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 001 completa (108/108)**, validada en emulador y en un Android real (T107).
 **Spec 002 en curso (49/62).**
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
-**446 pruebas en verde, `flutter analyze` sin issues.**
+**Spec 004 en curso (40/46)** — lo que falta es todo manual (Play Console, dispositivo) salvo T035, bloqueada por la spec 002.
+**520 pruebas, 519 en verde** — la única roja (`pantalla_ahorro_test.dart`, FR-042) es preexistente y depende del reloj real: el diálogo de aporte usa `DateTime.now()` sin inyectar, así que la prueba se rompe cuando la fecha real sale del mes que tiene hardcodeado; no viene de ningún cambio reciente.
+**`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
 |---|---|
@@ -231,5 +233,21 @@ headless real o un doble de prueba — así que T042 solo necesita escribir el
 | T033 [MANUAL] | pendiente — recorrido de [quickstart.md](specs/003-cobros-parciales-ingreso/quickstart.md) en la app corriendo, con especial atención a la migración desde una base con datos reales de 001/002 |
 
 Solo falta la validación manual (T033) para dar la spec 003 por cerrada del todo.
+
+### Dónde retomar la spec 004
+
+| Spec 004 · Fase | Estado |
+|---|---|
+| Setup + Foundational (T001–T016) | ✅ esquema v3→v4, `RepositorioSuscripcion`/`RepositorioSuscripcionBilling`, `EstadoSuscripcionPremium`, guarda del cascarón |
+| US1 · descubrir qué se desbloquea (T017–T019) | ✅ paywall con precio y prueba gratis antes de tocar nada |
+| US2 · elegir plan y desbloquear al instante (T020–T028) | ✅ código; **T027/T028 [MANUAL] pendientes** — producto en Play Console y cuenta de prueba, sin lo cual ninguna compra real funciona |
+| US3 · lo gratis sin límite (T029–T030) | ✅ |
+| US4 · la suscripción vence o se cancela (T031–T036) | ✅ — D6 de research.md: el resumen del mes **no** depende de la suscripción, las cuotas se siguen contando siempre |
+| US5 · restaurar la suscripción (T037–T039) | ✅ `restaurar()`, botón en paywall y Ajustes; **T040 [MANUAL] pendiente** |
+| Polish (T041–T043, T045 hechas; T044 [MANUAL] y T046 pendientes) | en curso |
+
+**Lo único de código que sigue bloqueado**: T035 (que el callback headless descarte notificaciones nuevas si la suscripción no está vigente) depende de que exista el parser genérico de la spec 002 (T042), que a su vez espera insumo manual del teléfono. Quedó documentado en `lib/datos/notificaciones/callback_headless.dart` dónde va la guarda.
+
+Todo lo demás que falta es manual: **T027/T028** (crear el producto `premium` en Play Console — ojo, primero hay que cambiar `applicationId` de `com.example.finanzas`, que Play Console rechaza), **T040** y **T044** (recorrer `quickstart.md` contra la pista de pruebas internas), y **T046** (este párrafo, una vez que lo manual también esté cerrado).
 
 Sigue pendiente, fuera de toda spec: **no hay respaldo ni exportación**. Con un solo usuario es asumible; antes de repartir la app a probadores conviene que sea una feature propia.
