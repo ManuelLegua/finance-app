@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import '../builders/deuda_builder.dart';
 import '../builders/obligacion_builder.dart';
 import '../dobles/repositorios_en_memoria.dart';
 
@@ -16,6 +17,7 @@ import '../dobles/repositorios_en_memoria.dart';
 void main() {
   late RepositorioCobrosIngresoEnMemoria repoCobrosIngreso;
   late RepositorioObligacionesEnMemoria repoObligaciones;
+  late RepositorioDeudasEnMemoria repoDeudas;
   late EstadoMes estado;
   late EstadoAhorro estadoAhorro;
 
@@ -35,7 +37,7 @@ void main() {
     repoObligaciones: repoObligaciones,
     repoConfiguracion: RepositorioConfiguracionEnMemoria(),
     repoTransacciones: RepositorioTransaccionesEnMemoria(),
-    repoDeudas: RepositorioDeudasEnMemoria(),
+    repoDeudas: repoDeudas,
     ahora: () => quinceDeAgosto,
     mesInicial: mes,
   );
@@ -63,6 +65,7 @@ void main() {
   setUp(() {
     repoCobrosIngreso = RepositorioCobrosIngresoEnMemoria();
     repoObligaciones = RepositorioObligacionesEnMemoria();
+    repoDeudas = RepositorioDeudasEnMemoria();
     estadoAhorro = EstadoAhorro(
       repoAhorro: RepositorioAhorroEnMemoria(),
       repoConfiguracion: RepositorioConfiguracionEnMemoria(),
@@ -181,6 +184,67 @@ void main() {
       expect(find.text('Gasto real'), findsOneWidget);
       // Ingreso y disponible real coinciden hasta que US3 registre gastos.
       expect(find.text(r'S/ 3,000.00'), findsNWidgets(2));
+    });
+  });
+
+  group('la suscripción no cambia ni una cifra del resumen (FR-012, D6)', () {
+    /// Ojo con `montar`: el árbol de estas pruebas **no tiene**
+    /// `EstadoSuscripcionPremium` por ningún lado. Si alguien hiciera que el
+    /// resumen consultara la suscripción, esto no fallaría por mostrar una
+    /// cifra distinta sino por un provider inexistente — que es exactamente
+    /// la alarma que se quiere. El resumen es gratis y dice la verdad
+    /// completa del mes, se pague o no se pague la app.
+    testWidgets('la cuota de deuda se cuenta en el comprometido', (
+      tester,
+    ) async {
+      await sembrarIngreso(300000);
+      await repoDeudas.insertar(
+        DeudaBuilder(
+          descripcion: 'Celular',
+          cuotaCentavos: 15000,
+          numCuotas: 12,
+          mesInicio: agosto,
+        ).build(),
+      );
+      estado = crearEstado();
+      await estado.cargar();
+      await montar(tester);
+
+      // La cuota del mes son S/ 150.00, y el disponible sale de restarla:
+      // omitirla lo dejaría inflado en S/ 3,000.00.
+      expect(find.text(r'S/ 150.00'), findsWidgets);
+      expect(find.text(r'S/ 2,850.00'), findsWidgets);
+    });
+
+    testWidgets('y el detalle por deuda se sigue pudiendo abrir (FR-017)', (
+      tester,
+    ) async {
+      // El desglose por categoría queda debajo del pliegue en la pantalla de
+      // 800 px que usa el resto del archivo, y un `ListView` no construye lo
+      // que no se ve.
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await sembrarIngreso(300000);
+      await repoDeudas.insertar(
+        DeudaBuilder(
+          descripcion: 'Celular',
+          cuotaCentavos: 15000,
+          numCuotas: 12,
+          mesInicio: agosto,
+        ).build(),
+      );
+      estado = crearEstado();
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.text('Una deuda en cuotas'));
+      await tester.pumpAndSettle();
+
+      // Ver de dónde sale el monto es información, no gestión: no es lo que
+      // la suscripción bloquea.
+      expect(find.text('Celular'), findsOneWidget);
     });
   });
 }

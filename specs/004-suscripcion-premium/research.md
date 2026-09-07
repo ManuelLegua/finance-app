@@ -61,3 +61,17 @@ Cinco decisiones técnicas, en el mismo formato que `001-gestion-sueldo-ahorro/r
 3. **Validación manual contra Google Play de verdad**: el flujo de compra, restauración y cambio de plan no se puede probar con `flutter test` — se valida a mano contra la pista de pruebas internas de Google Play Console, con cuentas de prueba (licencias de prueba), documentado paso a paso en `quickstart.md`. Es la misma filosofía que el recorrido de prueba manual del `CLAUDE.md` para lo que la suite automatizada no puede cubrir (Principio IV, "que el usuario entienda su situación de un vistazo" también aplica al flujo de compra).
 
 **Alternativas consideradas**: mockear el plugin `in_app_purchase` directamente en las pruebas de dominio/UI. Rechazada como mecanismo principal: el plugin expone tipos concretos difíciles de sustituir limpiamente sin acoplar las pruebas a su API interna; la interfaz `RepositorioSuscripcion` ya es el punto de sustitución correcto (mismo patrón que `RepositorioIngreso`, `RepositorioAhorro`, etc.), y detrás de ella sí puede haber un mock de bajo nivel si hiciera falta probar el adaptador concreto — pero eso queda fuera de lo que la suite automatizada necesita cubrir.
+
+---
+
+## D6 — El resumen del mes no depende de la suscripción
+
+**Decisión**: el resumen sigue mostrando el presupuesto completo del mes —cuotas de deuda incluidas— y su desglose por categoría, esté vigente la suscripción o no. La suscripción **no entra en ningún cálculo financiero** ni oculta ninguna cifra. Lo que se bloquea es *gestionar* deudas y ahorro (crearlas, editarlas, aportar), no verlas contadas en el mes.
+
+**Por qué**: una cifra financiera que cambia según el estado de pago de la app deja de ser confiable, y la confianza en el número es todo lo que esta app vende. La cuota de una deuda se debe igual haya o no suscripción: descontarla del comprometido dejaría el disponible del mes **inflado**, y el usuario tomaría decisiones de gasto contra un número que no es el suyo. Eso es peor que el problema que la omisión pretendía resolver.
+
+Además, el resumen es una pantalla gratis (FR-004): meter la vigencia de la suscripción dentro de `EstadoMes` acoplaría el cálculo del presupuesto —el corazón de la spec 001— a una feature de monetización, justo lo que la arquitectura en capas evita.
+
+**Consecuencia sobre la spec**: FR-012 estaba escrito asumiendo que el resumen "se vería afectado" por una suscripción no activa y que por lo tanto haría falta explicar la ausencia. Al implementar US4 se verificó que **nada en el resumen consulta la suscripción**: ni `lib/ui/estado/estado_mes.dart` ni `lib/ui/pantallas/resumen_mes/pantalla_resumen.dart` la mencionan, y la tarjeta de sugerencia de ahorro es informativa, sin acción que lleve a una pantalla bloqueada. FR-012 se reescribió como **garantía** (el resumen no se degrada) en vez de como aviso, y T033/T034 pasaron de "mostrar un aviso" a "fijar con una prueba que nadie meta esa dependencia más adelante". Revisado 2026-08-31.
+
+**Alternativas consideradas**: omitir las cuotas del comprometido mientras la suscripción no esté vigente y explicarlo con un aviso al estilo de `AvisoMesCerrado`. Rechazada por lo anterior: comunica bien, pero para eso primero rompe la cifra. También se consideró marcar la sugerencia de ahorro como premium y convertirla en entrada al paywall; rechazada por YAGNI, porque no es un callejón sin salida —no es tocable— y el consejo que da es cierto y gratis de dar.

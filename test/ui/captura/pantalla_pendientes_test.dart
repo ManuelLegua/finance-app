@@ -3,6 +3,7 @@ import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_pendientes.dart';
+import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:finanzas/ui/estado/estado_tarjetas.dart';
 import 'package:finanzas/ui/pantallas/captura/pantalla_pendientes.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,7 @@ void main() {
   late RepositorioDeudasEnMemoria repoDeudas;
   late EstadoPendientes estado;
   late EstadoTarjetas estadoTarjetas;
+  late EstadoSuscripcionPremium estadoSuscripcion;
 
   ConsumoPendiente pendiente({
     required String notificacionId,
@@ -48,6 +50,9 @@ void main() {
         providers: [
           ChangeNotifierProvider<EstadoPendientes>.value(value: estado),
           ChangeNotifierProvider<EstadoTarjetas>.value(value: estadoTarjetas),
+          ChangeNotifierProvider<EstadoSuscripcionPremium>.value(
+            value: estadoSuscripcion,
+          ),
         ],
         child: const MaterialApp(home: PantallaPendientes()),
       ),
@@ -55,7 +60,26 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Deja la suscripción en la situación pedida y la carga.
+  ///
+  /// Por omisión, vigente: la bandeja es de la spec 002 y sus pruebas no
+  /// tienen por qué hablar de suscripciones. El grupo de US4 la vence.
+  Future<void> conSuscripcion(SituacionSuscripcion situacion) async {
+    estadoSuscripcion = EstadoSuscripcionPremium(
+      repoSuscripcion: RepositorioSuscripcionEnMemoria(
+        inicial: EstadoSuscripcion(
+          situacion: situacion,
+          plan: PlanSuscripcion.mensual,
+          vigenteHasta: null,
+          ultimaVerificacion: DateTime(2026, 8, 10),
+        ),
+      ),
+    );
+    await estadoSuscripcion.cargar();
+  }
+
   setUp(() async {
+    await conSuscripcion(SituacionSuscripcion.activa);
     repoPendientes = RepositorioPendientesEnMemoria();
     repoTransacciones = RepositorioTransaccionesEnMemoria();
     repoDeudas = RepositorioDeudasEnMemoria();
@@ -254,5 +278,43 @@ void main() {
         expect(find.text('Fue una compra en cuotas'), findsNothing);
       },
     );
+  });
+
+  group('con la suscripción vencida la bandeja no se cierra (FR-011)', () {
+    /// La captura de notificaciones es premium, pero lo que ya está
+    /// capturado y sin confirmar **no lo es**: dejarlo encerrado sería
+    /// exactamente el "perder datos" que US4 promete que no pasa. Lo que se
+    /// corta al vencer es que lleguen consumos nuevos, y eso ocurre en el
+    /// callback headless (T035), no acá.
+    testWidgets('los pendientes que ya existían se siguen viendo', (
+      tester,
+    ) async {
+      await conSuscripcion(SituacionSuscripcion.vencida);
+      await repoPendientes.insertar(
+        pendiente(notificacionId: 'a', comercio: 'Rappi'),
+      );
+      await estado.cargar();
+      await montar(tester);
+
+      expect(find.text('Rappi'), findsOneWidget);
+    });
+
+    testWidgets('y se pueden descartar (FR-025)', (tester) async {
+      await conSuscripcion(SituacionSuscripcion.vencida);
+      await repoPendientes.insertar(pendiente(notificacionId: 'a'));
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(
+        find.byWidgetPredicate((widget) => widget is PopupMenuButton),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Descartar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Descartar').last);
+      await tester.pumpAndSettle();
+
+      expect(estado.pendientes, isEmpty);
+    });
   });
 }

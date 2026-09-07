@@ -110,9 +110,9 @@ de esas pantallas exige pago ni deja de funcionar con el tiempo.
 
 Un usuario suscripto deja de pagar (cancela, o falla el cobro y se agota el
 período de gracia de Google). Deudas y Ahorro vuelven a mostrarse bloqueadas,
-pero al consultar el resumen del mes, lo que esas deudas aportaban al
-presupuesto no desaparece silenciosamente sin explicación: el usuario entiende
-que es por la suscripción, no un error.
+pero el resumen del mes no cambia ni una cifra: las cuotas se siguen contando
+en el presupuesto, porque esa plata se debe igual. Lo que se pierde es la
+gestión, nunca los datos ni el cálculo del mes.
 
 **Why this priority**: sin esto, cancelar se sentiría como perder datos, lo
 que es exactamente lo que el Principio I y la confianza del usuario no
@@ -126,7 +126,7 @@ al reactivar la suscripción más tarde.
 
 1. **Given** una suscripción vencida o cancelada, **When** el usuario abre Deudas, **Then** ve el aviso de suscripción en vez de sus deudas, no una pantalla vacía.
 2. **Given** esa misma situación, **When** el usuario reactiva la suscripción, **Then** vuelve a ver exactamente las deudas y aportes de ahorro que tenía antes de que venciera.
-3. **Given** una suscripción vencida, **When** el usuario consulta el resumen del mes, **Then** entiende, sin ambigüedad, que las cuotas y la sugerencia de ahorro no aparecen porque la suscripción no está activa, no porque los datos se hayan perdido.
+3. **Given** una suscripción vencida, **When** el usuario consulta el resumen del mes, **Then** ve exactamente el mismo presupuesto y el mismo desglose por categoría que antes de que venciera —las cuotas de deuda siguen contadas y el detalle de tarjeta de crédito se sigue pudiendo abrir—, sin que ninguna cifra cambie por el estado de la suscripción.
 4. **Given** la captura de notificaciones activa antes de vencer, **When** la suscripción vence, **Then** la captura deja de procesar notificaciones nuevas, y los consumos pendientes de confirmar que ya existían no se pierden.
 
 ---
@@ -188,7 +188,7 @@ verificando que restaurarla no requiere pagar de nuevo.
 
 - **FR-010**: Cuando la suscripción vence, se cancela, o se reembolsa, el sistema MUST bloquear de nuevo el acceso a Deudas, Ahorro y la captura de notificaciones, de la misma forma que si nunca se hubiera suscrito.
 - **FR-011**: Ningún dato ya guardado en Deudas o Ahorro, ni las asociaciones comercio-categoría o los consumos pendientes de la captura de notificaciones, MUST perderse ni borrarse por el vencimiento o la cancelación de la suscripción.
-- **FR-012**: El sistema MUST comunicar de forma explícita, cuando el resumen del mes se vea afectado por una suscripción no activa, que el motivo es la suscripción y no un error o una pérdida de datos.
+- **FR-012**: El resumen del mes MUST mostrar el presupuesto completo —cuotas de deuda incluidas— y su desglose por categoría, esté vigente la suscripción o no: ninguna cifra financiera puede cambiar según el estado de pago de la app. Lo que la suscripción bloquea es *gestionar* deudas y ahorro, no verlas contadas en el mes (D6 de research.md; revisado 2026-08-31, antes exigía avisar de una omisión que no ocurre).
 - **FR-013**: El sistema MUST respetar cualquier período de gracia que Google Play otorgue tras un cobro fallido, sin bloquear el acceso antes de que ese período termine.
 
 **Restauración**
