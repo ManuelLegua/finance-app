@@ -28,6 +28,7 @@ class EstadoSuscripcionPremium extends ChangeNotifier {
   List<dominio.OfertaSuscripcion> _ofertas = const [];
   bool _cargando = true;
   bool _comprando = false;
+  bool _restaurando = false;
   String? _error;
   String? _errorDeOfertas;
 
@@ -51,6 +52,11 @@ class EstadoSuscripcionPremium extends ChangeNotifier {
   /// Si hay una compra esperando la confirmación de Google Play. El paywall
   /// lo dice con texto y deshabilita los botones mientras dure.
   bool get comprando => _comprando;
+
+  /// Si hay una restauración en curso. Mismo criterio que [comprando]: la
+  /// acción se deshabilita mientras dure, para que un doble toque no dispare
+  /// dos consultas a Google Play.
+  bool get restaurando => _restaurando;
 
   String? get error => _error;
 
@@ -120,6 +126,28 @@ class EstadoSuscripcionPremium extends ChangeNotifier {
       _error = _mensajeDe(error);
     } finally {
       _comprando = false;
+      notifyListeners();
+    }
+  }
+
+  /// Le pide a Google Play las compras ya asociadas a la cuenta actual
+  /// (FR-014). Si no encuentra ninguna, el estado que resulta queda en
+  /// `situacion = nunca` (FR-015): a quien llama le toca decidir cómo
+  /// comunicar "esta cuenta no tiene suscripción", por ejemplo mirando
+  /// [premiumActivo] después de esperar esta llamada.
+  Future<void> restaurar() async {
+    if (_restaurando) return;
+
+    _restaurando = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _estado = await _repoSuscripcion.restaurar();
+    } on Object catch (error) {
+      _error = _mensajeDe(error);
+    } finally {
+      _restaurando = false;
       notifyListeners();
     }
   }

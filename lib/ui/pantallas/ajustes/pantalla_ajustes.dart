@@ -3,6 +3,7 @@ import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_suscripcion.dart';
+import 'package:finanzas/ui/pantallas/suscripcion/boton_restaurar_suscripcion.dart';
 import 'package:finanzas/ui/pantallas/suscripcion/ficha_estado_suscripcion.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -89,6 +90,8 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
         ),
         const _Seccion(titulo: 'Suscripción'),
         const FichaEstadoSuscripcion(),
+        const SizedBox(height: Espaciado.chico),
+        const Center(child: BotonRestaurarSuscripcion()),
       ],
     );
   }

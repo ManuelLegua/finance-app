@@ -162,12 +162,12 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 
 ### Tests para US5 ⚠️
 
-- [ ] T037 [P] [US5] Escribir `test/ui/restaurar_suscripcion_test.dart` **antes de implementar**: `restaurar()` que encuentra una suscripción activa desbloquea el acceso sin pasar por el flujo de compra (FR-014); `restaurar()` que no encuentra ninguna informa con texto claro que esa cuenta no tiene suscripción, y **no** deja al usuario creyendo que falló la app (FR-015, Acceptance Scenario 2)
+- [X] T037 [P] [US5] Escribir `test/ui/restaurar_suscripcion_test.dart` **antes de implementar**: `restaurar()` que encuentra una suscripción activa desbloquea el acceso sin pasar por el flujo de compra (FR-014); `restaurar()` que no encuentra ninguna informa con texto claro que esa cuenta no tiene suscripción, y **no** deja al usuario creyendo que falló la app (FR-015, Acceptance Scenario 2). El caso que le da sentido a la historia es el dispositivo nuevo, con `situacion = nunca` desde el arranque — a diferencia de `FichaEstadoSuscripcion`, que con `nunca` no muestra nada, la acción de restaurar tiene que verse igual
 
 ### Implementación para US5
 
-- [ ] T038 [US5] Implementar `restaurar()` en `EstadoSuscripcion` (`lib/ui/estado/estado_suscripcion.dart`) hasta que T037 pase, delegando en `RepositorioSuscripcion.restaurar()`
-- [ ] T039 [US5] Agregar la acción explícita "Restaurar suscripción" en el paywall y en la ficha de estado de Ajustes (FR-014), con el mensaje de "no encontramos ninguna suscripción para esta cuenta" cuando corresponda (FR-015)
+- [X] T038 [US5] Implementar `restaurar()` en `EstadoSuscripcion` (`lib/ui/estado/estado_suscripcion.dart`) hasta que T037 pase, delegando en `RepositorioSuscripcion.restaurar()`. Mismo patrón que `comprar()`: una bandera `restaurando` evita que un doble toque dispare dos consultas, y quien llama decide el mensaje mirando `error`/`premiumActivo` después de esperar la llamada, sin estado adicional
+- [X] T039 [US5] Agregar la acción explícita "Restaurar suscripción" en el paywall y en la ficha de estado de Ajustes (FR-014), con el mensaje de "no encontramos ninguna suscripción para esta cuenta" cuando corresponda (FR-015). Widget propio, `lib/ui/pantallas/suscripcion/boton_restaurar_suscripcion.dart`, usado en los dos lugares en vez de vivir dentro de `FichaEstadoSuscripcion`
 - [ ] T040 [MANUAL] [US5] Recorrer quickstart.md paso 6: desinstalar y reinstalar (o instalar en otro dispositivo) con la cuenta de prueba ya suscripta y verificar que restaurar devuelve el acceso sin pedir pago
 
 **Checkpoint**: las cinco historias funcionan de forma independiente. La spec 004 queda completa a falta de la validación manual.

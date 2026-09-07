@@ -1,6 +1,7 @@
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/ui/estado/estado_suscripcion.dart';
+import 'package:finanzas/ui/pantallas/suscripcion/boton_restaurar_suscripcion.dart';
 import 'package:finanzas/ui/pantallas/suscripcion/ficha_estado_suscripcion.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -100,6 +101,8 @@ class PantallaPaywall extends StatelessWidget {
             ),
           if (suscripcion.comprando) const _CompraEnCurso(),
         ],
+        const SizedBox(height: Espaciado.chico),
+        const Center(child: BotonRestaurarSuscripcion()),
       ],
     );
   }
