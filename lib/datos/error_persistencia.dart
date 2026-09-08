@@ -16,8 +16,9 @@ final class ErrorPersistencia implements Exception {
   ///
   /// Es el caso que más importa comunicar bien: si la app arrancara con datos
   /// vacíos, el usuario creería que perdió su historial cuando el archivo
-  /// sigue ahí. Y como esta versión no tiene respaldo ni exportación, esa
-  /// confusión no tiene vuelta atrás.
+  /// sigue ahí. Que desde la spec 005 exista respaldo no cambia el mensaje:
+  /// el archivo local sigue estando, y decirle que no hay nada lo empujaría a
+  /// restaurar una copia vieja encima de datos que no se perdieron.
   factory ErrorPersistencia.alAbrir(Object causa) => ErrorPersistencia(
     'No se pudieron abrir tus datos. La información sigue guardada en el '
     'dispositivo, pero la app no puede leerla en este momento.',

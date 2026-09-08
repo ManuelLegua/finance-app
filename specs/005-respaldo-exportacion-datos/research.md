@@ -155,8 +155,20 @@ alguna la incumpliera se cae la dependencia, no el principio. La alternativa
 —escribir a mano el canal de plataforma contra el Storage Access Framework— es
 código nativo propio para reemplazar dos paquetes mantenidos, contra YAGNI.
 
-Las versiones exactas se fijan cuando la tarea corra `flutter pub add`; acá no
-se inventan números.
+Las versiones fijadas por `flutter pub add` (T001) son **`share_plus` 13.3.0**
+y **`file_picker` 12.2.0**.
+
+**Comprobación contra el Principio I (T002)** — hecha sobre el código de los
+paquetes en el pub cache, no sobre su documentación:
+
+| Qué se buscó | Resultado |
+|---|---|
+| `HttpClient`, `Socket`, `package:http` en el Dart de ambos paquetes | Ninguna aparición |
+| `okhttp`, `java.net.URL`/`HttpURLConnection` en el Android de ambos | Una sola: `java.net.URLConnection` en `FileUtils.kt` de `android_file_picker`, usada como `guessContentTypeFromStream(ByteArrayInputStream)` para adivinar el MIME por número mágico. Es una función de la biblioteca estándar que no abre ninguna conexión |
+| Analítica o telemetría (`Analytics`, `firebase`, `telemetry`) | Ninguna aparición |
+| `android.permission.INTERNET` | Solo en la app de ejemplo de `share_plus`, que no forma parte de la librería y no se fusiona en el manifiesto de esta app. Los manifiestos de los plugins declaran únicamente un `FileProvider`, un `BroadcastReceiver` interno y un `<queries>` para `GET_CONTENT` |
+
+Ninguna de las dos incumple el principio, así que ninguna se cae.
 
 **Alternativas consideradas**: escribir directo a `/Downloads` con permiso de
 almacenamiento (rechazada por el permiso), y dejar el archivo en el directorio

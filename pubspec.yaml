@@ -43,6 +43,8 @@ dependencies:
   flutter_notification_listener: ^1.4.0
   in_app_purchase: ^3.3.0
   in_app_purchase_android: ^0.5.3
+  share_plus: ^13.3.0
+  file_picker: ^12.2.0
 
 dev_dependencies:
   flutter_test:

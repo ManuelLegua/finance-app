@@ -10,6 +10,7 @@ import 'package:finanzas/dominio/modelos/deuda.dart';
 import 'package:finanzas/dominio/modelos/estado_suscripcion.dart';
 import 'package:finanzas/dominio/modelos/notificacion_diagnostico.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/dominio/modelos/respaldo.dart';
 import 'package:finanzas/dominio/modelos/resumen_pendientes.dart';
 import 'package:finanzas/dominio/modelos/tarjeta.dart';
 import 'package:finanzas/dominio/modelos/transaccion.dart';
@@ -21,6 +22,7 @@ import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_diagnostico.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_pendientes.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_respaldo.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_suscripcion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
@@ -771,5 +773,75 @@ final class RepositorioSuscripcionEnMemoria implements RepositorioSuscripcion {
     if (error == null) return;
     errorEnLaProximaEscritura = null;
     throw error;
+  }
+}
+
+/// Respaldo y restauración en memoria (spec 005).
+///
+/// Sustituye al intercambio de archivos de verdad, que se prueba aparte en
+/// `test/datos/respaldo_test.dart` contra SQLite real. Acá interesa lo que la
+/// pantalla observa: qué veredicto trae un archivo, cuándo se llegó a tocar
+/// algo y qué pasa si el reemplazo falla a mitad de camino.
+///
+/// **Ninguna ruta se abre**: los métodos aceptan cualquier cadena como
+/// candidato. Lo que decide el resultado son los puntos de control de abajo.
+final class RepositorioRespaldoEnMemoria implements RepositorioRespaldo {
+  /// Qué va a responder [inspeccionar]. Se cambia para simular un archivo
+  /// válido o cada uno de los tres motivos de rechazo.
+  ResultadoValidacionRespaldo veredicto = ResultadoValidacionRespaldo.valido;
+
+  /// Qué versión de esquema dice traer el archivo inspeccionado.
+  int versionDelArchivo = 4;
+  int versionSoportada = 4;
+
+  /// Si se fija, [exportar] falla con este error.
+  Object? errorAlExportar;
+
+  /// Si se fija, [restaurar] falla con este error **después** de haber
+  /// aplicado [efectoDeRestaurar], que es como se simula el fallo a mitad del
+  /// reemplazo (FR-008).
+  Object? errorAlRestaurar;
+
+  /// Qué le pasa al resto de los datos cuando una restauración avanza. Lo
+  /// provee la prueba —por ejemplo, vaciando los otros dobles— para que
+  /// "cancelar no cambió nada" se pueda verificar leyendo repositorios y no
+  /// mirando la pantalla.
+  Future<void> Function()? efectoDeRestaurar;
+
+  /// Las rutas que se inspeccionaron y las que se llegaron a restaurar, en
+  /// orden. Que `restaurados` esté vacío es la prueba de que cancelar no
+  /// tocó nada.
+  final List<String> inspeccionados = <String>[];
+  final List<String> restaurados = <String>[];
+
+  int vecesQueSeExporto = 0;
+
+  @override
+  Future<ArchivoRespaldo> exportar() async {
+    vecesQueSeExporto++;
+    final error = errorAlExportar;
+    if (error != null) throw error;
+    return const ArchivoRespaldo(
+      ruta: '/tmp/finanzas-respaldo-2026-09-08.db',
+      nombrePropuesto: 'finanzas-respaldo-2026-09-08.db',
+    );
+  }
+
+  @override
+  Future<InformeRespaldo> inspeccionar(String rutaCandidato) async {
+    inspeccionados.add(rutaCandidato);
+    return InformeRespaldo(
+      resultado: veredicto,
+      versionDelArchivo: versionDelArchivo,
+      versionSoportada: versionSoportada,
+    );
+  }
+
+  @override
+  Future<void> restaurar(String rutaCandidato) async {
+    restaurados.add(rutaCandidato);
+    await efectoDeRestaurar?.call();
+    final error = errorAlRestaurar;
+    if (error != null) throw error;
   }
 }

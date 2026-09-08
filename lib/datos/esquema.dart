@@ -38,6 +38,23 @@ abstract final class Esquema {
     suscripcionPremium,
   ];
 
+  /// Las tablas que **cualquier** versión soportada de la base tiene, desde la
+  /// v1 hasta hoy. Es lo que se le exige a un archivo candidato a restaurarse
+  /// para decidir que salió de esta app y no de otra (spec 005, D2).
+  ///
+  /// A propósito no es la lista completa de tablas actuales: un respaldo de la
+  /// v1 es legítimo y no tiene `cobro_ingreso` ni `suscripcion_premium`, así
+  /// que exigirlas rechazaría archivos que FR-010 manda aceptar y migrar.
+  static const Set<String> tablasImprescindibles = <String>{
+    'obligacion',
+    'transaccion',
+    'tarjeta',
+    'deuda',
+    'aporte_ahorro',
+    'meta_ahorro',
+    'configuracion',
+  };
+
   // La tabla `ingreso` de la versión 1 (un monto único por mes) **no
   // aparece en `creacion`**: una instalación nueva nunca la necesita, va
   // directo a `cobro_ingreso` (spec 003, D-C2/D-C5). Solo existe todavía en

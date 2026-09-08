@@ -5,9 +5,10 @@ import 'package:sqflite/sqflite.dart';
 ///
 /// D10: cada paso lleva de una versión a la siguiente y **nunca borra ni
 /// recrea tablas con datos**. La constitución exige que toda migración
-/// preserve la información del usuario, y estos datos no tienen respaldo: la
-/// spec descarta backup y exportación en esta versión, así que una migración
-/// destructiva sería una pérdida irreversible.
+/// preserve la información del usuario. Desde la spec 005 existe respaldo y
+/// restauración, pero eso no ablanda la regla: el respaldo es una acción
+/// manual que el usuario pudo no haber hecho nunca, así que una migración
+/// destructiva seguiría siendo una pérdida irreversible para él.
 ///
 /// Para agregar una migración: subir `Esquema.version`, añadir la entrada al
 /// mapa con la versión de destino como clave, y cubrirla con una prueba en

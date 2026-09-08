@@ -4,6 +4,7 @@ import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/cascaron.dart';
 import 'package:finanzas/ui/estado/estado_ahorro.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
+import 'package:finanzas/ui/estado/estado_respaldo.dart';
 import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,10 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
+          ChangeNotifierProvider<EstadoRespaldo>(
+            create: (_) =>
+                EstadoRespaldo(repoRespaldo: RepositorioRespaldoEnMemoria()),
+          ),
           Provider<RepositorioConfiguracion>.value(value: repoConfiguracion),
           ChangeNotifierProvider<EstadoMes>.value(value: estado),
           ChangeNotifierProvider<EstadoAhorro>.value(value: estadoAhorro),

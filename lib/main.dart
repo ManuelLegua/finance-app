@@ -11,6 +11,7 @@ import 'package:finanzas/datos/repositorios/repositorio_diagnostico_sqlite.dart'
 import 'package:finanzas/datos/repositorios/repositorio_meses_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_pendientes_sqlite.dart';
+import 'package:finanzas/datos/repositorios/repositorio_respaldo_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_suscripcion_billing.dart';
 import 'package:finanzas/datos/repositorios/repositorio_tarjetas_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_transacciones_sqlite.dart';
@@ -35,6 +36,7 @@ import 'package:finanzas/ui/estado/estado_captura.dart';
 import 'package:finanzas/ui/estado/estado_diagnostico.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_pendientes.dart';
+import 'package:finanzas/ui/estado/estado_respaldo.dart';
 import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:finanzas/ui/estado/estado_tarjetas.dart';
 import 'package:flutter/material.dart';
@@ -113,112 +115,145 @@ class _ArranqueState extends State<_Arranque> {
           );
         }
 
-        return MultiProvider(
-          providers: [
-            Provider<RepositorioCobrosIngreso>(
-              create: (_) => RepositorioCobrosIngresoSqlite(conexion),
-            ),
-            Provider<RepositorioObligaciones>(
-              create: (_) => RepositorioObligacionesSqlite(conexion),
-            ),
-            Provider<RepositorioConfiguracion>(
-              create: (_) => RepositorioConfiguracionSqlite(conexion),
-            ),
-            Provider<RepositorioTransacciones>(
-              create: (_) => RepositorioTransaccionesSqlite(conexion),
-            ),
-            Provider<RepositorioDeudas>(
-              create: (_) => RepositorioDeudasSqlite(conexion),
-            ),
-            Provider<RepositorioTarjetas>(
-              create: (_) => RepositorioTarjetasSqlite(conexion),
-            ),
-            Provider<RepositorioMeses>(
-              create: (_) => RepositorioMesesSqlite(conexion),
-            ),
-            Provider<RepositorioAhorro>(
-              create: (_) => RepositorioAhorroSqlite(conexion),
-            ),
-            ChangeNotifierProvider<EstadoMes>(
-              create: (contexto) => EstadoMes(
-                repoCobrosIngreso: contexto.read<RepositorioCobrosIngreso>(),
-                repoObligaciones: contexto.read<RepositorioObligaciones>(),
-                repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
-                repoTransacciones: contexto.read<RepositorioTransacciones>(),
-                repoDeudas: contexto.read<RepositorioDeudas>(),
-                repoMeses: contexto.read<RepositorioMeses>(),
-              )..cargar(),
-            ),
-            ChangeNotifierProvider<EstadoTarjetas>(
-              create: (contexto) => EstadoTarjetas(
-                repoTarjetas: contexto.read<RepositorioTarjetas>(),
-              )..cargar(),
-            ),
-            Provider<RepositorioSuscripcion>(
-              create: (_) => RepositorioSuscripcionBilling(conexion),
-            ),
-            // La suscripción se carga al abrir la app (D4): el usuario pudo
-            // comprar, vencer o restaurar fuera de acá.
-            ChangeNotifierProvider<EstadoSuscripcionPremium>(
-              create: (contexto) => EstadoSuscripcionPremium(
-                repoSuscripcion: contexto.read<RepositorioSuscripcion>(),
-              )..cargar(),
-            ),
-            ChangeNotifierProvider<EstadoAhorro>(
-              // El mismo mes inicial que EstadoMes (hoy): así la tarjeta de
-              // sugerencia en Resumen ya tiene la regla y el porcentaje
-              // reales desde el primer render, sin esperar a que el usuario
-              // visite la pestaña de Ahorro.
-              create: (contexto) => EstadoAhorro(
-                repoAhorro: contexto.read<RepositorioAhorro>(),
-                repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
-              )..cargar(Mes.deFecha(DateTime.now())),
-            ),
-            // Captura de notificaciones bancarias: exclusiva de Android
-            // (D-N8, FR-007). El paquete que la implementa ni siquiera
-            // declara soporte para otra plataforma.
-            if (Platform.isAndroid) ...[
-              Provider<RepositorioPendientes>(
-                create: (_) => RepositorioPendientesSqlite(conexion),
-              ),
-              Provider<RepositorioDiagnostico>(
-                create: (_) => RepositorioDiagnosticoSqlite(conexion),
-              ),
-              Provider<RepositorioAsociaciones>(
-                create: (_) => RepositorioAsociacionesSqlite(conexion),
-              ),
-              ChangeNotifierProvider<EstadoCapturaNotificaciones>(
-                create: (contexto) => EstadoCapturaNotificaciones(
-                  repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
-                  servicio: ServicioEscuchaNotificacionesAndroid(
-                    contexto.read<RepositorioConfiguracion>(),
-                  ),
-                )..cargar(),
-              ),
-              ChangeNotifierProvider<EstadoPendientes>(
-                create: (contexto) => EstadoPendientes(
-                  repoPendientes: contexto.read<RepositorioPendientes>(),
-                  repoAsociaciones: contexto.read<RepositorioAsociaciones>(),
-                  estadoMes: contexto.read<EstadoMes>(),
-                )..cargar(),
-              ),
-              ChangeNotifierProvider<EstadoDiagnostico>(
-                create: (contexto) => EstadoDiagnostico(
-                  repoDiagnostico: contexto.read<RepositorioDiagnostico>(),
-                )..cargar(),
-              ),
-              ChangeNotifierProvider<EstadoAsociaciones>(
-                create: (contexto) => EstadoAsociaciones(
-                  repoAsociaciones: contexto.read<RepositorioAsociaciones>(),
-                )..cargar(),
-              ),
-            ],
-          ],
-          child: const Cascaron(),
+        // `EstadoRespaldo` vive **por encima** del árbol que depende de la
+        // conexión, y no dentro de él: restaurar un respaldo reemplaza el
+        // archivo de la base y la vuelve a abrir, así que la conexión de
+        // antes queda cerrada y cada repositorio de abajo tiene que rehacerse
+        // con la nueva. La `key` del árbol es lo que fuerza esa
+        // reconstrucción, sin reiniciar la app (spec 005).
+        //
+        // Es también lo que cumple la otra mitad de D4: al rehacerse,
+        // `EstadoSuscripcionPremium` vuelve a llamar a `cargar()`, que
+        // consulta Google Play. El acceso premium nunca sale del archivo
+        // restaurado — de ahí ya se descartó la fila.
+        return ChangeNotifierProvider<EstadoRespaldo>(
+          create: (_) => EstadoRespaldo(
+            repoRespaldo: RepositorioRespaldoSqlite(_baseDatos),
+          ),
+          child: Consumer<EstadoRespaldo>(
+            builder: (contexto, estadoRespaldo, _) {
+              final conexionViva = _baseDatos.conexionActual;
+              if (conexionViva == null) {
+                // Instante en que la base está cerrada, en medio del
+                // reemplazo de un respaldo.
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              return _arbolDeDatos(conexionViva);
+            },
+          ),
         );
       },
     );
   }
+
+  /// Todo lo que cuelga de una conexión concreta. Se reconstruye entero
+  /// cuando la conexión cambia, que es lo que pasa al restaurar un respaldo.
+  Widget _arbolDeDatos(Database conexion) => MultiProvider(
+    key: ValueKey<Database>(conexion),
+    providers: [
+      Provider<RepositorioCobrosIngreso>(
+        create: (_) => RepositorioCobrosIngresoSqlite(conexion),
+      ),
+      Provider<RepositorioObligaciones>(
+        create: (_) => RepositorioObligacionesSqlite(conexion),
+      ),
+      Provider<RepositorioConfiguracion>(
+        create: (_) => RepositorioConfiguracionSqlite(conexion),
+      ),
+      Provider<RepositorioTransacciones>(
+        create: (_) => RepositorioTransaccionesSqlite(conexion),
+      ),
+      Provider<RepositorioDeudas>(
+        create: (_) => RepositorioDeudasSqlite(conexion),
+      ),
+      Provider<RepositorioTarjetas>(
+        create: (_) => RepositorioTarjetasSqlite(conexion),
+      ),
+      Provider<RepositorioMeses>(
+        create: (_) => RepositorioMesesSqlite(conexion),
+      ),
+      Provider<RepositorioAhorro>(
+        create: (_) => RepositorioAhorroSqlite(conexion),
+      ),
+      ChangeNotifierProvider<EstadoMes>(
+        create: (contexto) => EstadoMes(
+          repoCobrosIngreso: contexto.read<RepositorioCobrosIngreso>(),
+          repoObligaciones: contexto.read<RepositorioObligaciones>(),
+          repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
+          repoTransacciones: contexto.read<RepositorioTransacciones>(),
+          repoDeudas: contexto.read<RepositorioDeudas>(),
+          repoMeses: contexto.read<RepositorioMeses>(),
+        )..cargar(),
+      ),
+      ChangeNotifierProvider<EstadoTarjetas>(
+        create: (contexto) =>
+            EstadoTarjetas(repoTarjetas: contexto.read<RepositorioTarjetas>())
+              ..cargar(),
+      ),
+      Provider<RepositorioSuscripcion>(
+        create: (_) => RepositorioSuscripcionBilling(conexion),
+      ),
+      // La suscripción se carga al abrir la app (D4): el usuario pudo
+      // comprar, vencer o restaurar fuera de acá.
+      ChangeNotifierProvider<EstadoSuscripcionPremium>(
+        create: (contexto) => EstadoSuscripcionPremium(
+          repoSuscripcion: contexto.read<RepositorioSuscripcion>(),
+        )..cargar(),
+      ),
+      ChangeNotifierProvider<EstadoAhorro>(
+        // El mismo mes inicial que EstadoMes (hoy): así la tarjeta de
+        // sugerencia en Resumen ya tiene la regla y el porcentaje
+        // reales desde el primer render, sin esperar a que el usuario
+        // visite la pestaña de Ahorro.
+        create: (contexto) => EstadoAhorro(
+          repoAhorro: contexto.read<RepositorioAhorro>(),
+          repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
+        )..cargar(Mes.deFecha(DateTime.now())),
+      ),
+      // Captura de notificaciones bancarias: exclusiva de Android
+      // (D-N8, FR-007). El paquete que la implementa ni siquiera
+      // declara soporte para otra plataforma.
+      if (Platform.isAndroid) ...[
+        Provider<RepositorioPendientes>(
+          create: (_) => RepositorioPendientesSqlite(conexion),
+        ),
+        Provider<RepositorioDiagnostico>(
+          create: (_) => RepositorioDiagnosticoSqlite(conexion),
+        ),
+        Provider<RepositorioAsociaciones>(
+          create: (_) => RepositorioAsociacionesSqlite(conexion),
+        ),
+        ChangeNotifierProvider<EstadoCapturaNotificaciones>(
+          create: (contexto) => EstadoCapturaNotificaciones(
+            repoConfiguracion: contexto.read<RepositorioConfiguracion>(),
+            servicio: ServicioEscuchaNotificacionesAndroid(
+              contexto.read<RepositorioConfiguracion>(),
+            ),
+          )..cargar(),
+        ),
+        ChangeNotifierProvider<EstadoPendientes>(
+          create: (contexto) => EstadoPendientes(
+            repoPendientes: contexto.read<RepositorioPendientes>(),
+            repoAsociaciones: contexto.read<RepositorioAsociaciones>(),
+            estadoMes: contexto.read<EstadoMes>(),
+          )..cargar(),
+        ),
+        ChangeNotifierProvider<EstadoDiagnostico>(
+          create: (contexto) => EstadoDiagnostico(
+            repoDiagnostico: contexto.read<RepositorioDiagnostico>(),
+          )..cargar(),
+        ),
+        ChangeNotifierProvider<EstadoAsociaciones>(
+          create: (contexto) => EstadoAsociaciones(
+            repoAsociaciones: contexto.read<RepositorioAsociaciones>(),
+          )..cargar(),
+        ),
+      ],
+    ],
+    child: const Cascaron(),
+  );
 }
 
 class _PantallaErrorArranque extends StatelessWidget {

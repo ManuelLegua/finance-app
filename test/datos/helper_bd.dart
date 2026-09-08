@@ -1,4 +1,9 @@
+import 'dart:io';
+
 import 'package:finanzas/datos/base_datos.dart';
+import 'package:finanzas/datos/esquema.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Infraestructura de las pruebas de datos.
@@ -24,3 +29,142 @@ Future<BaseDatos> abrirBaseEnMemoria() async {
   await baseDatos.abrir();
   return baseDatos;
 }
+
+// --- Spec 005: respaldo y exportación. Pruebas con archivos de verdad. ---
+//
+// La base en memoria no sirve para probar el respaldo: toda la feature
+// consiste en copiar, renombrar y reemplazar el **archivo** de la base, y un
+// `:memory:` no tiene archivo que mover. Estas ayudas montan bases reales en
+// un directorio temporal que se borra al terminar cada prueba.
+
+/// Un directorio temporal propio de esta prueba, que se borra al terminar.
+Directory crearDirectorioTemporal() {
+  final directorio = Directory.systemTemp.createTempSync('finanzas_respaldo_');
+  addTearDown(() {
+    if (directorio.existsSync()) directorio.deleteSync(recursive: true);
+  });
+  return directorio;
+}
+
+/// Abre una base **en un archivo real** dentro de [directorio], con el
+/// esquema actual ya creado.
+Future<BaseDatos> abrirBaseEnArchivo(Directory directorio) async {
+  final baseDatos = BaseDatos(
+    rutaOverride: p.join(directorio.path, BaseDatos.nombreArchivo),
+    factoryOverride: databaseFactoryFfi,
+  );
+  await baseDatos.abrir();
+  addTearDown(baseDatos.cerrar);
+  return baseDatos;
+}
+
+/// Crea en [ruta] una base con el esquema de la **versión 3** (specs 001, 002
+/// y 003), es decir el actual menos `suscripcion_premium`.
+///
+/// Sirve para probar que un respaldo viejo restaurado en la app de hoy queda
+/// migrado (FR-010). Mismo criterio que `migracion_004_test.dart`: el paso a
+/// la v4 es puramente aditivo, así que "la versión 3" es el esquema actual
+/// menos esa tabla, y reproducir a mano su DDL solo agregaría una copia que
+/// se desincroniza.
+Future<void> crearBaseEnVersion3(
+  String ruta, {
+  required Future<void> Function(Database conexion) sembrar,
+}) async {
+  final conexion = await databaseFactoryFfi.openDatabase(
+    ruta,
+    options: OpenDatabaseOptions(
+      version: 3,
+      onCreate: (conexion, version) async {
+        final lote = conexion.batch();
+        for (final sentencia in Esquema.creacion) {
+          if (sentencia == Esquema.suscripcionPremium) continue;
+          lote.execute(sentencia);
+        }
+        await lote.commit(noResult: true);
+      },
+    ),
+  );
+  await sembrar(conexion);
+  await conexion.close();
+}
+
+/// Siembra una fila en cada tabla que el usuario carga, más las dos que **no**
+/// viajan en el respaldo (D4), para poder comprobar que se vacían.
+///
+/// Los montos son centavos enteros, como en toda la app (Principio II).
+Future<void> sembrarDatosDeEjemplo(Database conexion) async {
+  await conexion.insert('cobro_ingreso', <String, Object?>{
+    'fecha': '2026-09-15',
+    'mes_ordinal': 24332,
+    'monto_centavos': 180000,
+  });
+  await conexion.insert('obligacion', <String, Object?>{
+    'mes_ordinal': 24332,
+    'nombre': 'Alquiler',
+    'categoria': 'departamento',
+    'monto_centavos': 90000,
+    'tipo': 'fija',
+  });
+  await conexion.insert('transaccion', <String, Object?>{
+    'fecha': '2026-09-03',
+    'mes_ordinal': 24332,
+    'categoria': 'comida',
+    'monto_centavos': 4550,
+    'descripcion': 'Menú del día',
+  });
+  final tarjetaId = await conexion.insert('tarjeta', <String, Object?>{
+    'nombre': 'Visa BCP',
+    'entidad': 'BCP',
+    'tipo': 'credito',
+  });
+  await conexion.insert('deuda', <String, Object?>{
+    'descripcion': 'Laptop',
+    'tarjeta_id': tarjetaId,
+    'cuota_centavos': 15000,
+    'num_cuotas': 12,
+    'mes_inicio_ordinal': 24332,
+  });
+  await conexion.insert('aporte_ahorro', <String, Object?>{
+    'fecha': '2026-09-16',
+    'mes_ordinal': 24332,
+    'monto_centavos': 30000,
+  });
+  await conexion.insert('meta_ahorro', <String, Object?>{
+    'mes_ordinal': 24332,
+    'monto_centavos': 50000,
+  });
+  await conexion.insert('comercio_categoria', <String, Object?>{
+    'comercio_normalizado': 'TOTTUS',
+    'categoria': 'comida',
+    'actualizado_en': '2026-09-02',
+  });
+  await conexion.insert('configuracion', <String, Object?>{
+    'id': 1,
+    'regla': 'porcentaje',
+    'porcentaje_bp': 2000,
+    'dias_gracia_cierre': 5,
+    'captura_notificaciones_activa': 0,
+  });
+
+  // Las dos que no viajan (D4). Se siembran justamente para comprobar que la
+  // copia sale sin ellas y que el original las conserva.
+  await conexion.insert('notificacion_diagnostico', <String, Object?>{
+    'origen_paquete': 'com.bcp.innovacxion.yapeapp',
+    'motivo': 'formato_no_reconocido',
+    'texto_crudo': 'Pagaste S/ 45.50 en TOTTUS',
+    'fecha': '2026-09-03',
+  });
+  await sembrarSuscripcionPremium(conexion);
+}
+
+/// Una fila de suscripción vigente. Aparte de [sembrarDatosDeEjemplo] porque
+/// también hace falta ponerla **a mano dentro de un respaldo**, para probar
+/// que restaurarlo no concede acceso pagado (SC-004).
+Future<void> sembrarSuscripcionPremium(Database conexion) =>
+    conexion.insert('suscripcion_premium', <String, Object?>{
+      'id': 1,
+      'situacion': 'activa',
+      'plan': 'mensual',
+      'vigente_hasta': '2026-10-15',
+      'ultima_verificacion': '2026-09-15',
+    });

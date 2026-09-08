@@ -73,6 +73,7 @@ Lo que la suite no puede verificar: si la pantalla se entiende de un vistazo (Pr
 6. **Resumen** → la categoría tarjeta de crédito se despliega y muestra de qué deuda sale el monto (FR-017).
 7. **Editar la deuda** y cambiarle la cuota: el comprometido se recalcula solo, sin reescribir nada. Es D3 funcionando.
 8. **Ajustes** → poner los días de gracia en 0 y navegar al mes anterior: queda cerrado de inmediato.
+9. **Ajustes → Respaldo** → exportar: tiene que abrirse la hoja de compartir de Android. Después `adb shell pm clear com.example.finanzas`, restaurar ese archivo y comprobar que el disponible del mes vuelve idéntico. El recorrido completo está en [quickstart.md](specs/005-respaldo-exportacion-datos/quickstart.md).
 
 ## Cómo se trabaja acá
 
@@ -90,6 +91,7 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/002-captura-notificaciones-bancarias/` | **En curso: 49 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
 | `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
 | `specs/004-suscripcion-premium/` | **En curso: 40 de 46 tareas.** Suscripción paga (Deudas + Ahorro + captura de notificaciones) vía Google Play Billing (Principio I enmendado a v2.0.0) |
+| `specs/005-respaldo-exportacion-datos/` | **Implementada (42 de 43 tareas; falta el paso 8 de T042).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
 
 Antes de proponer un cambio de diseño, leer `research.md`: es probable que la alternativa ya se haya evaluado y rechazado por escrito.
 
@@ -101,7 +103,7 @@ Antes de proponer un cambio de diseño, leer `research.md`: es probable que la a
 
 3. **Las pruebas de reglas financieras se escriben ANTES que la implementación**, cubriendo caso normal, límite (saldo exactamente cero) y adverso (déficit). Es requisito de entrada por constitución, no un paso opcional.
 
-4. **Nada sale del dispositivo.** Sin red, sin telemetría, sin cuentas, sin sincronización. Ninguna dependencia puede abrir conexiones. Cualquier funcionalidad que implique salida de datos exige enmendar la constitución primero.
+4. **Nada sale del dispositivo por su cuenta.** Sin red, sin telemetría, sin cuentas, sin sincronización. Ninguna dependencia puede abrir conexiones. Hay exactamente dos excepciones, las dos enmiendas a la constitución y las dos acotadas por escrito: Google Play Billing (v2.0.0) y el **respaldo a pedido del usuario** (v3.0.0) — que genera un archivo y se lo entrega a la hoja de compartir del sistema, nunca a un servidor propio, y nunca sin que el usuario lo pida en ese momento. No hay respaldo automático ni programado. Cualquier otra salida de datos exige enmendar la constitución primero.
 
 5. **YAGNI.** El código que no respalda un requisito vigente no se escribe. Sin multiusuario, multimoneda, capas de casos de uso ni infraestructura de i18n.
 
@@ -169,7 +171,8 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 002 en curso (49/62).**
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
 **Spec 004 en curso (40/46)** — lo que falta es todo manual (Play Console, dispositivo) salvo T035, bloqueada por la spec 002.
-**520 pruebas, 519 en verde** — la única roja (`pantalla_ahorro_test.dart`, FR-042) es preexistente y depende del reloj real: el diálogo de aporte usa `DateTime.now()` sin inyectar, así que la prueba se rompe cuando la fecha real sale del mes que tiene hardcodeado; no viene de ningún cambio reciente.
+**Spec 005 implementada (42/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. Solo falta el paso 8 de T042 (que el premium no se herede del archivo), que necesita una suscripción real.
+**552 pruebas, todas en verde.** La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -250,4 +253,23 @@ Solo falta la validación manual (T033) para dar la spec 003 por cerrada del tod
 
 Todo lo demás que falta es manual: **T027/T028** (crear el producto `premium` en Play Console — ojo, primero hay que cambiar `applicationId` de `com.example.finanzas`, que Play Console rechaza), **T040** y **T044** (recorrer `quickstart.md` contra la pista de pruebas internas), y **T046** (este párrafo, una vez que lo manual también esté cerrado).
 
-Sigue pendiente, fuera de toda spec: **no hay respaldo ni exportación**. Con un solo usuario es asumible; antes de repartir la app a probadores conviene que sea una feature propia.
+### Dónde retomar la spec 005
+
+| Spec 005 · Fase | Estado |
+|---|---|
+| Setup + Foundational (T001–T009) | ✅ `share_plus` y `file_picker` auditados contra el Principio I, `validarRespaldo` puro, `RepositorioRespaldo`, `BaseDatos` sabe reabrirse |
+| US1 · exportar un respaldo (T010–T018) | ✅ copia con el WAL consolidado, sin las dos tablas que no viajan, entregada a la hoja de compartir |
+| US2 · restaurar (T020–T029) | ✅ inspección sin migrar el candidato, intercambio todo-o-nada, migración de un respaldo v3 probada |
+| US3 · no perder datos por error (T031–T037) | ✅ aviso de reemplazo con confirmación aparte, motivo concreto de rechazo, vuelta atrás |
+| Polish (T038–T041, T043) | ✅ |
+| T019, T030 [MANUAL] | ✅ verificadas en emulador: la hoja de compartir entrega `finanzas-respaldo-AAAA-MM-DD.db`, y tras `adb shell pm clear` el respaldo devuelve los datos idénticos |
+| T042 [MANUAL] | pasos 6 y 7 ✅ (confirmación aparte al reemplazar, rechazo de un archivo cualquiera con su motivo); **falta el paso 8**, que el premium no se herede del archivo — necesita una suscripción real, bloqueada por Play Console (spec 004) |
+
+**Esta feature no toca el esquema**: `Esquema.version` sigue en 4. Es la primera del proyecto que no agrega ni altera tablas — opera sobre el archivo entero, no sobre sus filas.
+
+Dos cosas fáciles de romper sin querer, las dos con prueba propia en `test/datos/respaldo_test.dart`:
+
+- **Lo que no viaja se vacía en la copia, nunca en el original** (D4). `suscripcion_premium` y `notificacion_diagnostico` se borran del archivo exportado; si alguien invirtiera el orden, exportar le borraría al usuario su suscripción.
+- **Los `-wal`/`-shm` viejos se borran al reemplazar** (D3). Un sidecar huérfano junto a un archivo principal distinto es corrupción silenciosa, no un error visible.
+
+Y una consecuencia en `main.dart`: restaurar cierra y reabre la base, así que la conexión anterior queda muerta. El árbol de providers cuelga de una `key` con la conexión viva y se reconstruye entero al restaurar — que es también lo que hace que `EstadoSuscripcionPremium` vuelva a preguntarle a Google Play en vez de heredar el estado del archivo (SC-004).

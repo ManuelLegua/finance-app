@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/datos/esquema.dart';
 import 'package:finanzas/datos/migraciones.dart';
@@ -25,15 +27,34 @@ final class BaseDatos {
 
   bool get estaAbierta => _conexion != null;
 
+  /// La conexión viva, o `null` si todavía no se abrió o está reemplazándose.
+  ///
+  /// La expone para que el árbol de providers pueda reconstruirse con la
+  /// conexión nueva después de restaurar un respaldo (spec 005): los
+  /// repositorios reciben un `Database` concreto, y el de antes queda cerrado.
+  Database? get conexionActual => _conexion;
+
+  /// La fábrica en uso: la real de `sqflite` en la app, la de
+  /// `sqflite_common_ffi` en las pruebas.
+  ///
+  /// La necesita `RepositorioRespaldoSqlite` para abrir un archivo candidato
+  /// **aparte** de esta base, sin `version:` (D2 de la spec 005). Abrir *esta*
+  /// base sigue siendo responsabilidad exclusiva de [abrir].
+  DatabaseFactory get fabrica => factoryOverride ?? databaseFactory;
+
+  /// La ruta del archivo en uso.
+  ///
+  /// Es la que el intercambio de la spec 005 necesita conocer para poder
+  /// renombrar, reemplazar y reabrir; sigue resolviéndose en un solo lugar.
+  Future<String> rutaEnUso() async =>
+      rutaOverride ?? p.join(await fabrica.getDatabasesPath(), nombreArchivo);
+
   Future<Database> abrir() async {
     final abierta = _conexion;
     if (abierta != null) return abierta;
 
     try {
-      final fabrica = factoryOverride ?? databaseFactory;
-      final ruta =
-          rutaOverride ??
-          p.join(await fabrica.getDatabasesPath(), nombreArchivo);
+      final ruta = await rutaEnUso();
 
       _conexion = await fabrica.openDatabase(
         ruta,
@@ -56,6 +77,22 @@ final class BaseDatos {
     await _conexion?.close();
     _conexion = null;
   }
+
+  /// Borra los `-wal` y `-shm` que hayan quedado al lado del archivo en uso.
+  ///
+  /// Se llama con la base **cerrada**, en medio del intercambio de la spec
+  /// 005: un `finanzas.db-wal` sobreviviente junto a un archivo principal
+  /// distinto es corrupción silenciosa, no un error visible, y es el modo de
+  /// fallo más fácil de pasar por alto de todo el diseño (D3).
+  Future<void> borrarSidecars() async {
+    final ruta = await rutaEnUso();
+    for (final sufijo in _sufijosSidecar) {
+      final sidecar = File('$ruta$sufijo');
+      if (sidecar.existsSync()) await sidecar.delete();
+    }
+  }
+
+  static const List<String> _sufijosSidecar = <String>['-wal', '-shm'];
 
   /// SQLite no activa las claves foráneas por defecto, y hay que hacerlo en
   /// **cada** conexión, no una sola vez al crear.
