@@ -88,7 +88,7 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/data-model.md` | Entidades, derivados y el esquema SQLite completo |
 | `specs/001-gestion-sueldo-ahorro/contracts/` | API de la capa de cálculo puro y de los repositorios |
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
-| `specs/002-captura-notificaciones-bancarias/` | **En curso: 49 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
+| `specs/002-captura-notificaciones-bancarias/` | **En curso: 52 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
 | `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
 | `specs/004-suscripcion-premium/` | **En curso: 40 de 46 tareas.** Suscripción paga (Deudas + Ahorro + captura de notificaciones) vía Google Play Billing (Principio I enmendado a v2.0.0) |
 | `specs/005-respaldo-exportacion-datos/` | **Implementada (42 de 43 tareas; falta el paso 8 de T042).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
@@ -168,7 +168,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 ## Estado actual
 
 **Spec 001 completa (108/108)**, validada en emulador y en un Android real (T107).
-**Spec 002 en curso (49/62).**
+**Spec 002 en curso (52/62)** — el tramo que falta dejó de ser solo insumo manual: ver el hallazgo del 2026-09-12 más abajo.
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
 **Spec 004 en curso (40/46)** — lo que falta es todo manual (Play Console, dispositivo) salvo T035, bloqueada por la spec 002.
 **Spec 005 implementada (42/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. Solo falta el paso 8 de T042 (que el premium no se herede del archivo), que necesita una suscripción real.
@@ -210,6 +210,42 @@ consiguen con el teléfono en la mano:
   completar `lib/shared/constantes/origenes_reconocidos.dart`, que hoy tiene los
   15 nombres pero todos con `paquete: ''` (un origen sin paquete no se escucha,
   y eso no rompe nada).
+
+**Hallazgo del 2026-09-12 que agrava el bloqueo, y que hay que leer antes de
+retomar esto.** El usuario intentó capturar el insumo de T034 y lo que salió es
+otra cosa: en su teléfono las apps de BCP, Yape y Sip **solo mandan push del
+dinero entrante** (transferencias y yapeos recibidos). Los consumos —lo único
+que esta spec captura, FR-012 y FR-013 mandan ignorar todo lo entrante— llegan
+**únicamente por correo**, y lo que aparece en la barra es una notificación de
+Gmail, no del banco.
+
+La consecuencia es de diseño, no de implementación: **con el diseño actual
+—filtrar por el `packageName` de cada app bancaria (D-N10)— la captura no
+registraría ni un consumo en este dispositivo.** Todo push que reciba sería
+correctamente clasificado como entrante y descartado. El insumo que T034 pide no
+existe acá, así que T034 no está "pendiente de capturar": está pendiente de una
+decisión de alcance.
+
+Los textos que sí se consiguieron quedaron transcritos en
+`test/dominio/interpretes/fixtures/correo-gmail.md`, marcados como anexo y **no**
+como cumplimiento de T034. No son inservibles: confirman palabras clave de
+D-N11 (`realizaste un consumo`, `acabas de yapear`, `recibiste`), aportan tres
+frases salientes que D-N11 no contempla (`transacción`, `pago de servicios`,
+`enviar a celular`), y dejan ver tres cosas que ningún texto inventado habría
+anticipado — que Yape parte el `S/` y la cifra en líneas distintas, que el mismo
+comercio se escribe `ESVISALUD SAC` o `ESVISALUD S.A.C.` según la tarjeta, y que
+un traspaso entre cuentas propias genera dos notificaciones opuestas por el
+mismo monto que la deduplicación de D-N7 no relaciona.
+
+Antes de escribir una línea de parser hay que resolver, **en la spec**, por
+dónde entran los consumos. Las tres salidas evaluadas, sin decidir todavía:
+activar alertas push de consumo en los ajustes de la app del banco, si es que se
+puede; reconocer Gmail como origen y filtrar por remitente en vez de por paquete
+(que implica que la app reciba el preview de todo el correo, no solo el
+bancario); o aceptar que la feature no se sostiene en este teléfono. La primera
+pregunta a responder, y la más barata, es si el `NotificationEvent` de Gmail
+trae el correo completo o solo el preview truncado: en las capturas el corte cae
+justo sobre el comercio, y sin comercio no hay categorización aprendida (US3).
 
 Hasta entonces la captura está construida de punta a punta salvo el tramo
 notificación → pendiente: el callback headless
