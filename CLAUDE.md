@@ -57,7 +57,7 @@ flutter run    # r = hot reload · R = hot restart · q = salir
 | `adb: device offline` intermitente | `adb reconnect`, o esperar unos segundos y reintentar |
 | El teclado sale como una barrita flotante | `adb shell pm clear com.google.android.inputmethod.latin` |
 | No aparece el teclado en pantalla | Android detecta el teclado físico de la laptop. Tipeá con él, o tocá el ícono de teclado en la franja negra inferior |
-| Empezar con datos limpios | `adb shell pm clear com.example.finanzas` |
+| Empezar con datos limpios | `adb shell pm clear io.github.manuellegua.finanzas` |
 
 `adb` vive en `$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe`.
 
@@ -73,7 +73,7 @@ Lo que la suite no puede verificar: si la pantalla se entiende de un vistazo (Pr
 6. **Resumen** → la categoría tarjeta de crédito se despliega y muestra de qué deuda sale el monto (FR-017).
 7. **Editar la deuda** y cambiarle la cuota: el comprometido se recalcula solo, sin reescribir nada. Es D3 funcionando.
 8. **Ajustes** → poner los días de gracia en 0 y navegar al mes anterior: queda cerrado de inmediato.
-9. **Ajustes → Respaldo** → exportar: tiene que abrirse la hoja de compartir de Android. Después `adb shell pm clear com.example.finanzas`, restaurar ese archivo y comprobar que el disponible del mes vuelve idéntico. El recorrido completo está en [quickstart.md](specs/005-respaldo-exportacion-datos/quickstart.md).
+9. **Ajustes → Respaldo** → exportar: tiene que abrirse la hoja de compartir de Android. Después `adb shell pm clear io.github.manuellegua.finanzas`, restaurar ese archivo y comprobar que el disponible del mes vuelve idéntico. El recorrido completo está en [quickstart.md](specs/005-respaldo-exportacion-datos/quickstart.md).
 
 ## Cómo se trabaja acá
 
@@ -251,7 +251,7 @@ Solo falta la validación manual (T033) para dar la spec 003 por cerrada del tod
 
 **Lo único de código que sigue bloqueado**: T035 (que el callback headless descarte notificaciones nuevas si la suscripción no está vigente) depende de que exista el parser genérico de la spec 002 (T042), que a su vez espera insumo manual del teléfono. Quedó documentado en `lib/datos/notificaciones/callback_headless.dart` dónde va la guarda.
 
-Todo lo demás que falta es manual: **T027/T028** (crear el producto `premium` en Play Console — ojo, primero hay que cambiar `applicationId` de `com.example.finanzas`, que Play Console rechaza), **T040** y **T044** (recorrer `quickstart.md` contra la pista de pruebas internas), y **T046** (este párrafo, una vez que lo manual también esté cerrado).
+Todo lo demás que falta es manual: **T027/T028** (crear el producto `premium` en Play Console — el `applicationId` ya dejó de ser obstáculo: es `io.github.manuellegua.finanzas` desde el 2026-09-12), **T040** y **T044** (recorrer `quickstart.md` contra la pista de pruebas internas), y **T046** (este párrafo, una vez que lo manual también esté cerrado).
 
 ### Dónde retomar la spec 005
 

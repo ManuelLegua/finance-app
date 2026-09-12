@@ -48,7 +48,7 @@ flutter run
    archivo no se puede sacar del teléfono, la feature no cumple su propósito.
 3. **Confirmación**: al volver de la hoja de compartir, la app tiene que decir
    con claridad que terminó bien (FR-005), no dejarte con la duda.
-4. **Simular el desastre**: `adb shell pm clear com.example.finanzas`. La app
+4. **Simular el desastre**: `adb shell pm clear io.github.manuellegua.finanzas`. La app
    queda como recién instalada, sin nada.
 5. **Ajustes → Restaurar respaldo**: elegí el archivo del paso 2 con el
    selector del sistema. Al terminar, el Resumen tiene que mostrar
