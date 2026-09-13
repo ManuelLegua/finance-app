@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nada de esta app entra en las copias de Android (Principio I).
+
+  Sin esto, `allowBackup` vale `true` por omisión y la Copia de seguridad
+  automática sube el almacenamiento privado de la app —incluida la base SQLite
+  con el sueldo, los gastos, las deudas y el ahorro— al Google Drive del
+  usuario. La app promete que sus datos no salen del teléfono, y esa promesa
+  sería falsa.
+
+  No deja al usuario sin manera de cambiar de teléfono: para eso está el
+  respaldo de la spec 005, que él dispara, cuyo archivo recibe en la mano y
+  cuyo destino elige. Es la misma diferencia que separa las dos excepciones
+  aprobadas del Principio I de todo lo que el Principio I prohíbe: que lo pida
+  el dueño de los datos.
+
+  `device-transfer` se excluye por lo mismo. Es local entre dos teléfonos, sin
+  nube de por medio, pero sigue siendo una copia que la app no pidió ni puede
+  explicarle al usuario.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

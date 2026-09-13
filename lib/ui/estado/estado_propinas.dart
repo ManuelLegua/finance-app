@@ -24,6 +24,7 @@ class EstadoPropinas extends ChangeNotifier {
 
   List<OfertaPropina> _ofertas = const [];
   bool _cargando = true;
+  bool _desechado = false;
   bool _apoyando = false;
   String? _errorDeOfertas;
   ResultadoPropina? _ultimoResultado;
@@ -93,6 +94,21 @@ class EstadoPropinas extends ChangeNotifier {
   void limpiarResultado() {
     _ultimoResultado = null;
     notifyListeners();
+  }
+
+  /// Este estado vive mientras la pantalla de apoyo está abierta, y una compra
+  /// puede seguir en curso cuando el usuario la cierra: sin esta guarda, el
+  /// `notifyListeners()` del `finally` estalla con "used after being disposed".
+  @override
+  void dispose() {
+    _desechado = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (_desechado) return;
+    super.notifyListeners();
   }
 
   static String _mensajeDe(Object error) => error is ErrorPersistencia

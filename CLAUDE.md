@@ -155,7 +155,13 @@ Antes de proponer un cambio de diseño, leer `research.md`: es probable que la a
 
 3. **Las pruebas de reglas financieras se escriben ANTES que la implementación**, cubriendo caso normal, límite (saldo exactamente cero) y adverso (déficit). Es requisito de entrada por constitución, no un paso opcional.
 
-4. **Nada sale del dispositivo por su cuenta.** Sin red, sin telemetría, sin cuentas, sin sincronización. Ninguna dependencia puede abrir conexiones. Hay exactamente dos excepciones, las dos enmiendas a la constitución y las dos acotadas por escrito: Google Play Billing (v2.0.0) y el **respaldo a pedido del usuario** (v3.0.0) — que genera un archivo y se lo entrega a la hoja de compartir del sistema, nunca a un servidor propio, y nunca sin que el usuario lo pida en ese momento. No hay respaldo automático ni programado. Cualquier otra salida de datos exige enmendar la constitución primero.
+4. **Nada sale del dispositivo por su cuenta.** Incluida la copia automática
+   de Android: `android:allowBackup="false"` más
+   `reglas_extraccion_datos.xml` apagan la subida a Google Drive y la
+   transferencia entre dispositivos. Sin eso —y así estuvo hasta el
+   2026-09-13— Android sube el almacenamiento privado de la app, **con la base
+   SQLite entera**, y la promesa de esta regla sería falsa sin que nadie la
+   hubiera roto en el código. Sin red, sin telemetría, sin cuentas, sin sincronización. Ninguna dependencia puede abrir conexiones. Hay exactamente dos excepciones, las dos enmiendas a la constitución y las dos acotadas por escrito: Google Play Billing (v2.0.0) y el **respaldo a pedido del usuario** (v3.0.0) — que genera un archivo y se lo entrega a la hoja de compartir del sistema, nunca a un servidor propio, y nunca sin que el usuario lo pida en ese momento. No hay respaldo automático ni programado. Cualquier otra salida de datos exige enmendar la constitución primero.
 
 5. **YAGNI.** El código que no respalda un requisito vigente no se escribe. Sin multiusuario, multimoneda, capas de casos de uso ni infraestructura de i18n.
 

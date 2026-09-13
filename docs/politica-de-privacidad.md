@@ -34,6 +34,17 @@ verla aunque quisiéramos. No existe ningún servidor de Finanzas.
   tiene.
 - **No crea perfiles** de vos ni de tus hábitos de consumo.
 
+### Ni siquiera en la copia de seguridad de Android
+
+Android ofrece subir automáticamente los datos de las apps al Google Drive del
+usuario. **Finanzas lo tiene desactivado a propósito**, tanto para la copia en
+la nube como para la transferencia entre dispositivos.
+
+Es una decisión deliberada y tiene un costo: si cambiás de teléfono, tus datos
+no aparecen solos. Para eso está el respaldo que podés exportar desde Ajustes,
+que vos disparás y cuyo destino elegís. Preferimos que mover tus datos sea una
+decisión tuya y no algo que pasa sin que te enteres.
+
 ## Las únicas dos situaciones en que algo sale de tu teléfono
 
 Ambas las disparás vos, con una acción explícita. Fuera de estas dos, la app

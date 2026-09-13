@@ -20,8 +20,12 @@ final class ServicioEscuchaNotificacionesAndroid
   Future<bool> permisoConcedido() async =>
       await NotificationsListener.hasPermission ?? false;
 
-  /// En Android 12 y anteriores `Permission.notification` ya viene concedido
-  /// y esto devuelve `true` sin mostrar nada: no hay diálogo que pedir.
+  /// En Android 12 y anteriores no hay diálogo que mostrar, pero **eso no
+  /// significa que siempre devuelva `true`**: si el usuario apagó las
+  /// notificaciones de la app desde los ajustes del sistema, devuelve
+  /// denegado igual. Y desde Android 13, un segundo rechazo deja el permiso
+  /// denegado de forma permanente: el diálogo ya no vuelve a aparecer y la
+  /// única salida es habilitarlo a mano en los ajustes de la app.
   @override
   Future<bool> pedirPermisoDelAvisoPersistente() async {
     final estado = await Permission.notification.request();

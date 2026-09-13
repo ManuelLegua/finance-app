@@ -72,18 +72,14 @@ const String _rutaDelVolcado =
     '/data/user/0/io.github.manuellegua.finanzas/files/'
     'volcado-notificaciones.txt';
 
-/// Deja constancia de [texto] por las dos vías que pueden sobrevivir a un
-/// fabricante hostil.
+/// Deja constancia de [texto] en el log del dispositivo y en un archivo.
 ///
-/// **Por `stderr` y no por `print`**: la salida estándar de Dart llega a
-/// `logcat` con nivel INFO, y este teléfono —un Honor— descarta todo lo que
-/// las apps escriban por debajo de ERROR. El volcado corría bien y no
-/// aparecía. `stderr` sale como ERROR y atraviesa ese filtro.
+/// **`print` alcanza**: llega a `logcat` como `I/flutter` y se lee con
+/// `adb logcat -d | Select-String "FINANZAS-VOLCADO"`.
 ///
-/// **Y además a un archivo**, porque si el fabricante también filtrara los
-/// errores, el archivo sigue ahí para leerlo después. Cada ciclo de
-/// reinstalar cuesta volver a conceder el permiso de notificaciones a mano,
-/// así que conviene que un intento traiga las dos respuestas.
+/// **Y además a un archivo**, porque leer el log exige tener el teléfono
+/// conectado en el momento justo, y cada ciclo de reinstalar cuesta volver a
+/// conceder el permiso de notificaciones a mano.
 ///
 /// Cualquier fallo se traga en silencio a propósito: es un instrumento de
 /// diagnóstico, y hacer caer el callback por no poder escribir una nota sería
@@ -95,19 +91,14 @@ void _anotar(String texto) {
   // ignore: avoid_print
   print(fechado);
 
-  // Vía 2: una excepción asíncrona sin capturar. El motor de Flutter la
-  // reporta como `E/flutter`, y **ese nivel sí atraviesa el filtro** de este
-  // teléfono: las excepciones de otras apps se ven en el log y las líneas
-  // INFO de las apps no.
-  //
-  // Va dentro de un `Future.microtask` a propósito: así queda sin capturar
-  // —que es lo que la hace visible— sin cortar el flujo sincrónico de este
-  // callback, que tiene que seguir para escribir el archivo.
-  //
-  // **Es un hack de diagnóstico y se va con el resto del instrumento.**
-  Future<void>.microtask(() => throw StateError(fechado));
+  // Acá hubo una excepción sin capturar a propósito, para forzar nivel ERROR
+  // en `logcat` cuando pareció que este teléfono filtraba INFO. **Esa
+  // sospecha era falsa** —`I/flutter` se ve perfecto; lo que no corría era el
+  // callback— y el hack se quitó: una excepción sin capturar en un isolate
+  // headless puede tumbarlo, y con él la captura que se está observando.
 
-  // Vía 3: el archivo, que no depende de ninguna decisión del fabricante.
+  // Vía 2: el archivo, que no depende de que haya un cable conectado en el
+  // momento justo.
   try {
     File(_rutaDelVolcado)
         .writeAsStringSync('$fechado\n', mode: FileMode.append);

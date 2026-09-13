@@ -78,12 +78,27 @@ class EstadoCapturaNotificaciones extends ChangeNotifier {
   /// pantalla que dice "activa" y una captura que nunca corrió. Si lo
   /// rechaza, no se enciende nada y se explica por qué.
   Future<void> activar() async {
-    final puedeAvisar = await _servicio.pedirPermisoDelAvisoPersistente();
+    final bool puedeAvisar;
+    try {
+      puedeAvisar = await _servicio.pedirPermisoDelAvisoPersistente();
+    } on Object catch (error) {
+      // Pedir un permiso puede fallar por su cuenta —por ejemplo si ya hay
+      // otra solicitud abierta—, y sin este `catch` el error escapaba del
+      // callback del botón en vez de llegar al aviso de la pantalla.
+      _error = _mensajeDe(error);
+      notifyListeners();
+      return;
+    }
+
     if (!puedeAvisar) {
+      // Se nombra dónde habilitarlo porque el diálogo puede no volver a
+      // aparecer: tras un segundo rechazo, Android lo da por denegado para
+      // siempre y la única salida son los ajustes de la app.
       _error =
           'Android necesita que la app pueda mostrar una notificación para '
           'dejar la captura corriendo en segundo plano. Sin ese permiso la '
-          'captura se apagaría sola.';
+          'captura se apagaría sola. Si ya no te aparece el aviso, habilitá '
+          'las notificaciones de Finanzas desde los ajustes de Android.';
       notifyListeners();
       return;
     }

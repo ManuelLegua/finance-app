@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:finanzas/datos/error_persistencia.dart';
 import 'package:finanzas/dominio/modelos/propina.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_propinas.dart';
@@ -84,9 +86,22 @@ final class RepositorioPropinasBilling implements RepositorioPropinas {
         .expand((compras) => compras)
         .firstWhere((compra) => compra.productID == oferta.id);
 
-    await _tienda.buyConsumable(
+    // **El `bool` que devuelve importa.** Si el flujo ni siquiera se lanza
+    // —el producto ya está comprado sin consumir, el servicio se desconectó,
+    // o ya hay un diálogo abierto— Google no emite nada por el stream, y
+    // esperar esa confirmación colgaría la pantalla en "Confirmando…" con los
+    // botones apagados, para siempre. Se corta acá.
+    final seLanzo = await _tienda.buyConsumable(
       purchaseParam: PurchaseParam(productDetails: detalle),
     );
+    if (!seLanzo) {
+      // La espera queda abandonada: si el stream se cierra sin coincidencia,
+      // `firstWhere` lanza, y nadie estaría escuchando. `ignore()` es la forma
+      // de decir "este error no le importa a nadie" sin que termine en la
+      // consola como excepción sin capturar.
+      confirmacion.ignore();
+      return ResultadoPropina.fallida;
+    }
 
     final compra = await confirmacion;
     switch (compra.status) {
@@ -103,6 +118,12 @@ final class RepositorioPropinasBilling implements RepositorioPropinas {
         // (FR-008).
         return ResultadoPropina.cancelada;
       case PurchaseStatus.error:
+        // Ojo con este caso: el plugin también reescribe a `error` una compra
+        // **ya cobrada** cuya consumición automática falló. No se puede
+        // distinguir acá de un rechazo real, así que el mensaje que la
+        // pantalla muestra evita prometer que no se cobró y se limita a
+        // ofrecer reintentar. Al reintentar, `_consumirPendientes()` limpia
+        // esa compra colgada antes de nada.
         return ResultadoPropina.fallida;
     }
   }
@@ -130,17 +151,29 @@ final class RepositorioPropinasBilling implements RepositorioPropinas {
   ///
   /// Un fallo consumiendo **no interrumpe** la consulta de montos: sería
   /// dejar al usuario sin poder apoyar por un problema que no es suyo.
+  ///
+  /// El `try` de adentro es por compra y no alrededor del bucle a propósito:
+  /// una que no se pueda consumir —una pendiente de aprobación, por ejemplo—
+  /// no tiene por qué dejar colgadas a las demás, que es justo lo que impide
+  /// volver a apoyar con esos montos.
   Future<void> _consumirPendientes() async {
+    final InAppPurchaseAndroidPlatformAddition extension;
+    final List<GooglePlayPurchaseDetails> pendientes;
     try {
-      final extension = _tienda
+      extension = _tienda
           .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
-      final respuesta = await extension.queryPastPurchases();
-      for (final compra in respuesta.pastPurchases) {
-        if (!idsDePropina.contains(compra.productID)) continue;
-        await extension.consumePurchase(compra);
-      }
+      pendientes = (await extension.queryPastPurchases()).pastPurchases;
     } on Object {
       return;
+    }
+
+    for (final compra in pendientes) {
+      if (!idsDePropina.contains(compra.productID)) continue;
+      try {
+        await extension.consumePurchase(compra);
+      } on Object {
+        continue;
+      }
     }
   }
 

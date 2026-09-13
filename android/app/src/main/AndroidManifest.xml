@@ -11,7 +11,10 @@
     <application
         android:label="finanzas"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/reglas_extraccion_datos">
         <activity
             android:name=".MainActivity"
             android:exported="true"
