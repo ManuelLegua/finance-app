@@ -61,6 +61,37 @@ flutter run    # r = hot reload · R = hot restart · q = salir
 
 `adb` vive en `$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe`.
 
+## Firmar la app para publicar
+
+El `release` se firma con la clave de depuración **mientras no exista
+`android/key.properties`**. Eso sirve para instalar y probar, y Play Store lo
+rechaza — que es el comportamiento buscado: el build no se rompe en una máquina
+recién clonada, pero tampoco deja publicar por accidente algo mal firmado.
+
+**La keystore se genera una sola vez.** No está en el repo ni puede estarlo
+(`android/.gitignore` excluye `key.properties`, `*.jks` y `*.keystore`):
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+& "$env:JAVA_HOME\bin\keytool.exe" -genkeypair -v `
+  -keystore C:\Users\manue\llaves\finanzas-release.jks `
+  -keyalg RSA -keysize 2048 -validity 10000 -alias finanzas
+```
+
+Después se copia `android/key.properties.ejemplo` a `android/key.properties` y
+se completan las cuatro líneas. Con eso, `flutter build apk --release` y
+`flutter build appbundle` firman solos.
+
+**Perder la keystore es perder la app.** Google no deja cambiar la clave de
+firma de una app ya publicada salvo por un trámite de recuperación que no
+siempre prospera: sin ese archivo no se puede volver a publicar una
+actualización, nunca. Hay que guardarla fuera del repo **y** tener una copia en
+otro lado. Lo mismo vale para las contraseñas.
+
+Para Play Store el formato es `appbundle` (`.aab`), no `apk`. El APK sigue
+sirviendo para instalar a mano y para los probadores que no pasan por la
+tienda.
+
 ## Recorrido de prueba manual
 
 Lo que la suite no puede verificar: si la pantalla se entiende de un vistazo (Principio IV). Los tres defectos de layout que aparecieron hasta ahora — etiquetas más largas que su contenedor, la última vez "Presupuesto" partido en dos líneas en un teléfono real — salieron de acá, no de las pruebas: `flutter test` no carga tipografía real ni mide en anchos de pantalla reales, así que este tipo de desborde no es reproducible en la suite (ver `lib/shared/estilos/tema.dart`).

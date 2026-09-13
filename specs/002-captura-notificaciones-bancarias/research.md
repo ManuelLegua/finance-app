@@ -219,9 +219,17 @@ corre y no hay ninguna señal visible de que algo ande mal.
 
 ## D-N14 — `permission_handler` para el único permiso que la app pide *(2026-09-13)*
 
-**Decisión**: usar `permission_handler` (MIT, Baseflow, 13.0.2) para pedir
-`POST_NOTIFICATIONS` en tiempo de ejecución, en vez de escribir un canal de
-plataforma propio.
+**Decisión**: usar `permission_handler` para pedir `POST_NOTIFICATIONS` en
+tiempo de ejecución, en vez de escribir un canal de plataforma propio.
+
+**Versión fijada en `^12.0.0`, y el motivo importa**: la 13.0.2 arrastra
+`permission_handler_android` 14.1.0, que exige `compileSdk 37`. El proyecto
+compila contra 36, que además es el máximo recomendado para el Android Gradle
+Plugin 9.1.0 que usa este Flutter. Con la 13 el `flutter build apk` falla en
+`checkReleaseAarMetadata` — y **la suite no lo detecta**, porque `flutter test`
+no compila el lado Android. Subir a la 13 obliga a subir antes AGP y
+`compileSdk`, que es un cambio de infraestructura con su propio riesgo y
+ningún beneficio acá: la 12 pide el mismo permiso igual de bien.
 
 **Por qué**: es el único permiso que esta app pide desde su propio código —el
 de leer notificaciones se concede en los ajustes de Android, no con un

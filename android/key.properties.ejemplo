@@ -1,0 +1,27 @@
+# Plantilla de las credenciales de firma de release.
+#
+# Copiá este archivo como `android/key.properties` y completá los valores.
+# **El archivo real nunca se commitea** — `android/.gitignore` lo excluye, junto
+# con la keystore. Este de ejemplo sí se versiona, para que quien clone el repo
+# sepa qué necesita.
+#
+# La keystore se genera una sola vez con `keytool` (ver CLAUDE.md, "Firmar la
+# app para publicar"). Guardala fuera del repo y hacele una copia en un lugar
+# seguro: **si se pierde, no se puede volver a publicar una actualización de la
+# app en Play Store nunca más**. Google no permite cambiar la clave de firma de
+# una app ya publicada salvo por un trámite de recuperación que no siempre
+# prospera.
+
+# El alias que le diste a la clave al crear la keystore.
+keyAlias=finanzas
+
+# La contraseña de la clave.
+keyPassword=
+
+# La contraseña del almacén. Puede ser la misma que la de la clave.
+storePassword=
+
+# Ruta de la keystore, relativa a la carpeta `android/` o absoluta.
+# Ejemplo relativo:  ../../finanzas-release.jks
+# Ejemplo absoluto:  C:/Users/manue/llaves/finanzas-release.jks
+storeFile=
