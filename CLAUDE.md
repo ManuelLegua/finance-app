@@ -144,6 +144,7 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
 | `specs/004-suscripcion-premium/` | **Revisada el 2026-09-12 y reimplementada: de suscripción paga a propina voluntaria** (68 de 70 tareas). La app se reparte completa y gratis; apoyar no desbloquea nada. La carpeta conserva su nombre viejo para no romper los enlaces del historial (Principio I enmendado a v2.0.0, sin enmienda nueva) |
 | `specs/005-respaldo-exportacion-datos/` | **Implementada (43 de 43).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
+| `specs/006-moneda-extranjera/` | **Draft, bloqueada.** Aceptar montos en dólares sin abandonar el sol como moneda de cuenta: la conversión ocurre una vez, con un tipo de cambio que informa el usuario, y el importe original viaja como dato adjunto. Ninguno de los 8 archivos de `lib/dominio/calculos/` cambia. Necesita una **enmienda v4.0.0** al Principio II —que hoy dice "la moneda es siempre el sol peruano"— y quedan dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030) |
 
 Antes de proponer un cambio de diseño, leer `research.md`: es probable que la alternativa ya se haya evaluado y rechazado por escrito.
 
@@ -230,6 +231,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
+**Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
 **525 pruebas, todas en verde.** Bajaron de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
@@ -370,9 +372,48 @@ ningún texto inventado habría anticipado:
    lo capturado el dato útil entra en los primeros 200, pero un consumo que
    ponga el comercio más abajo lo perdería. Sin verificar.
 
-**Lo que falta**: los tres capturados son movimientos entre cuentas, no
-consumos con tarjeta — lo único que la spec registra. Falta un consumo real
-para cerrar T034.
+### Resultado del 2026-09-13, más tarde: el consumo con tarjeta, capturado
+
+**T066 cerrada.** A las 10:54 llegó un consumo real con Tarjeta de Crédito
+BCP, por correo y vía Gmail como los anteriores, y está transcrito como G4 en
+[notificacion-gmail-capturada.md](test/dominio/interpretes/fixtures/notificacion-gmail-capturada.md).
+Con esto **D-N12 ya se puede decidir**: la vía de Gmail entrega el consumo
+entero, con comercio, monto, fecha, últimos cuatro dígitos de la tarjeta y
+número de operación, todo dentro de los primeros 511 caracteres de los 1024
+que Android deja pasar.
+
+Cinco cosas que cambian lo que hay que escribir en el parser:
+
+1. **La regla de descarte del punto 2 de arriba es falsa.** Gmail publicó dos
+   notificaciones para este correo, y la del resumen de grupo (`id: 0`) traía
+   **el mismo `bigText` completo y sin `textLines`** — porque resumía un solo
+   correo sin leer. `bigText == null && textLines != null` no las distingue y
+   el consumo se contaría dos veces. Lo que sí las distingue es
+   `evento.isGroup`, campo tipado del plugin.
+2. **El comercio viene dos veces**: bajo la etiqueta `Empresa` y dentro de la
+   frase de apertura. `ANTHROPIC* CLAUDE SUB` — el asterisco es parte del
+   nombre que manda el adquirente, y el normalizador de comercio (T040) no
+   debe partirlo ahí.
+3. **Hay un `Número de operación`**, mejor clave de deduplicación (D-N7) que
+   monto+fecha.
+4. **El BCP escribe `setiembre` y `septiembre`** indistintamente, el mismo día
+   y desde el mismo remitente.
+5. **El pie del correo envenena las palabras clave de D-N11.** El boilerplate
+   fijo del BCP dice "¿Problemas con tus **compras**? Si tu compra fue
+   **rechazada**…" y "…tu **tarjeta de débito o crédito**…". Un clasificador
+   que lea el `bigText` entero encuentra señales contradictorias y, por la
+   propia regla de D-N11, mandaría a diagnóstico un consumo que es inequívoco
+   en sus primeros 200 caracteres. El parser tiene que acotar lo que lee:
+   hasta el primer renglón que empiece con `¿`, que en los dos correos del BCP
+   separa la operación del pie.
+
+**Lo que falta**: el consumo capturado vino **en dólares** (`$ 23.60`), que es
+justo el caso que FR-014 manda rechazar como `NoInterpretable(monedaExtranjera)`
+—la regla 5 del proyecto no admite multimoneda y D14 rechazó traer tipos de
+cambio—. Así que cierra ese camino de T038 y deja abierto el feliz: **falta un
+consumo con tarjeta en soles** para terminar de cerrar T034. Hasta entonces el
+instrumento de volcado sigue en pie y **T067 no se puede cerrar**, que es el
+requisito que falta para publicar en Play.
 
 ### Tres bugs de la spec 002 que salieron de este mismo recorrido
 
