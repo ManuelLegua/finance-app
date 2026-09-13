@@ -1,6 +1,4 @@
-import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/ui/estado/estado_captura.dart';
-import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:finanzas/ui/pantallas/captura/pantalla_activacion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,21 +11,12 @@ void main() {
   late RepositorioConfiguracionEnMemoria repoConfiguracion;
   late ServicioEscuchaNotificacionesEnMemoria servicio;
   late EstadoCapturaNotificaciones estado;
-  late RepositorioSuscripcionEnMemoria repoSuscripcion;
-  late EstadoSuscripcionPremium estadoSuscripcion;
 
   Future<void> montar(WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: MultiProvider(
-          providers: [
-            ChangeNotifierProvider<EstadoCapturaNotificaciones>.value(
-              value: estado,
-            ),
-            ChangeNotifierProvider<EstadoSuscripcionPremium>.value(
-              value: estadoSuscripcion,
-            ),
-          ],
+        home: ChangeNotifierProvider<EstadoCapturaNotificaciones>.value(
+          value: estado,
           child: const PantallaActivacion(),
         ),
       ),
@@ -42,21 +31,6 @@ void main() {
       repoConfiguracion: repoConfiguracion,
       servicio: servicio,
     );
-    // La captura es premium (spec 004, FR-003). Salvo en el grupo que prueba
-    // justamente eso, estas pruebas parten de una suscripción vigente: lo que
-    // verifican es el permiso de Android, no el cobro.
-    repoSuscripcion = RepositorioSuscripcionEnMemoria(
-      inicial: EstadoSuscripcion(
-        situacion: SituacionSuscripcion.activa,
-        plan: PlanSuscripcion.mensual,
-        vigenteHasta: null,
-        ultimaVerificacion: DateTime(2026, 8, 30),
-      ),
-    );
-    estadoSuscripcion = EstadoSuscripcionPremium(
-      repoSuscripcion: repoSuscripcion,
-    );
-    await estadoSuscripcion.cargar();
   });
 
   group('sin permiso (FR-001, FR-003)', () {
@@ -138,53 +112,29 @@ void main() {
     });
   });
 
-  group('sin suscripción no se ofrece el permiso (spec 004, FR-003)', () {
-    setUp(() async {
-      repoSuscripcion.fijar(
-        EstadoSuscripcion.nunca(ultimaVerificacion: DateTime(2026, 8, 30)),
-      );
-      await estadoSuscripcion.cargar();
-    });
-
-    testWidgets('muestra el aviso de suscripción en vez de la activación', (
+  group('la captura no depende de ningún pago (spec 004 revisada)', () {
+    // Acá vivía el grupo que verificaba lo contrario: sin suscripción
+    // vigente, esta pantalla mostraba el paywall en vez del flujo de permiso.
+    // La revisión a propina lo borró — la captura es gratis como todo lo
+    // demás (FR-001), y este grupo es lo que impide que la guarda vuelva sin
+    // pasar antes por la spec.
+    testWidgets('sin el permiso de Android se ofrece ir a pedirlo', (
       tester,
     ) async {
       await estado.cargar();
       await montar(tester);
 
-      expect(
-        find.textContaining('La captura automática es parte de Finanzas'),
-        findsOneWidget,
-      );
-      expect(find.text('Ir a ajustes de Android'), findsNothing);
-      expect(find.text('Activar captura'), findsNothing);
+      expect(find.text('Ir a ajustes de Android'), findsOneWidget);
+      expect(find.textContaining('parte de Finanzas'), findsNothing);
     });
 
-    testWidgets('no hay forma de disparar la solicitud de permiso', (
-      tester,
-    ) async {
-      await estado.cargar();
-      await montar(tester);
-
-      // Pedirle a Android un permiso tan sensible para algo que después va a
-      // estar bloqueado sería tomarle el pelo al usuario.
-      expect(servicio.vecesQueAbrioAjustes, 0);
-    });
-
-    testWidgets('con el permiso ya concedido antes, tampoco se ofrece', (
-      tester,
-    ) async {
-      // Caso real: se suscribió, activó la captura, y después venció.
+    testWidgets('con el permiso concedido se ofrece activar', (tester) async {
       servicio.permiso = true;
-      await servicio.activar();
       await estado.cargar();
       await montar(tester);
 
-      expect(find.text('Captura activa'), findsNothing);
-      expect(
-        find.textContaining('La captura automática es parte de Finanzas'),
-        findsOneWidget,
-      );
+      expect(find.text('Activar captura'), findsOneWidget);
+      expect(find.textContaining('parte de Finanzas'), findsNothing);
     });
   });
 }

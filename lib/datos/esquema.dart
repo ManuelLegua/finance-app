@@ -13,7 +13,7 @@
 abstract final class Esquema {
   /// Versión actual. Cada cambio incrementa esto y agrega un paso en
   /// `migraciones.dart`.
-  static const int version = 4;
+  static const int version = 5;
 
   static const List<String> creacion = <String>[
     _obligacion,
@@ -35,16 +35,25 @@ abstract final class Esquema {
     indiceDiagnosticoFecha,
     cobroIngreso,
     indiceCobroIngresoMes,
-    suscripcionPremium,
   ];
+
+  // La tabla `suscripcion_premium` de la versión 4 **tampoco aparece acá**,
+  // por el mismo motivo que `ingreso`: una instalación nueva no la necesita.
+  // La spec 004 se revisó a propina voluntaria y el acceso premium dejó de
+  // existir, así que el paso v4 → v5 la borra (D9 de su research.md). Su DDL
+  // sigue más abajo porque la migración v3 → v4 lo sigue necesitando: una
+  // base que venga de la v3 la crea y el paso siguiente la borra.
 
   /// Las tablas que **cualquier** versión soportada de la base tiene, desde la
   /// v1 hasta hoy. Es lo que se le exige a un archivo candidato a restaurarse
   /// para decidir que salió de esta app y no de otra (spec 005, D2).
   ///
   /// A propósito no es la lista completa de tablas actuales: un respaldo de la
-  /// v1 es legítimo y no tiene `cobro_ingreso` ni `suscripcion_premium`, así
-  /// que exigirlas rechazaría archivos que FR-010 manda aceptar y migrar.
+  /// v1 es legítimo y no tiene `cobro_ingreso`, así que exigirla rechazaría
+  /// archivos que FR-010 manda aceptar y migrar. Por el mismo motivo tampoco
+  /// se puede exigir lo contrario —que una tabla *no* esté—: un respaldo de la
+  /// v4 trae `suscripcion_premium` y es igual de legítimo; la migración a la
+  /// v5 se encarga de ella al restaurarlo.
   static const Set<String> tablasImprescindibles = <String>{
     'obligacion',
     'transaccion',
@@ -265,4 +274,18 @@ abstract final class Esquema {
       ultima_verificacion  TEXT    NOT NULL
     )
   ''';
+
+  /// Paso v4 → v5: se va la tabla de la suscripción (spec 004 revisada, D9).
+  ///
+  /// **Es la primera sentencia destructiva del esquema, y no contradice D10.**
+  /// La regla es que ninguna migración destruya *información del usuario*, y
+  /// esta tabla nunca tuvo ninguna: era la caché de lo que respondía Google
+  /// Play sobre la vigencia de la suscripción. Nada de lo que el usuario cargó
+  /// a mano vive acá.
+  ///
+  /// El `IF EXISTS` no es por costumbre: un respaldo restaurado puede venir de
+  /// una v1, v2 o v3, donde la tabla nunca existió, y esa base también pasa
+  /// por este paso.
+  static const String borrarSuscripcionPremium =
+      'DROP TABLE IF EXISTS suscripcion_premium';
 }

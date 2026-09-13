@@ -4,7 +4,6 @@ import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/shared/formato/formato_fecha.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_pendientes.dart';
-import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:finanzas/ui/pantallas/ahorro/pantalla_ahorro.dart';
 import 'package:finanzas/ui/pantallas/ajustes/pantalla_ajustes.dart';
 import 'package:finanzas/ui/pantallas/captura/pantalla_activacion.dart';
@@ -16,7 +15,6 @@ import 'package:finanzas/ui/pantallas/deudas/pantalla_deudas.dart';
 import 'package:finanzas/ui/pantallas/deudas/pantalla_tarjetas.dart';
 import 'package:finanzas/ui/pantallas/presupuesto/pantalla_presupuesto.dart';
 import 'package:finanzas/ui/pantallas/resumen_mes/pantalla_resumen.dart';
-import 'package:finanzas/ui/pantallas/suscripcion/pantalla_paywall.dart';
 import 'package:finanzas/ui/pantallas/transacciones/pantalla_transacciones.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -71,14 +69,12 @@ class _CascaronState extends State<Cascaron> {
       icono: Icons.credit_card_outlined,
       iconoActivo: Icons.credit_card,
       pantalla: PantallaDeudas(),
-      acceso: AccesoDestino.premium,
     ),
     _Destino(
       etiqueta: 'Ahorro',
       icono: Icons.savings_outlined,
       iconoActivo: Icons.savings,
       pantalla: PantallaAhorro(),
-      acceso: AccesoDestino.premium,
     ),
   ];
 
@@ -144,44 +140,12 @@ class _CascaronState extends State<Cascaron> {
       _destinoFrecuente = indice;
       _destinoDelDrawer = null;
     });
-    _refrescarSiEsPremium(_frecuentes[indice]);
   }
 
   void _irAOcasional(_Destino destino) {
     setState(() {
       _destinoDelDrawer = destino;
     });
-    _refrescarSiEsPremium(destino);
-  }
-
-  /// Entrar a un destino premium es el momento de volver a preguntarle a
-  /// Google Play por la suscripción (D4): el usuario pudo comprarla, dejarla
-  /// vencer o cancelarla fuera de la app, y acá es donde eso se nota.
-  ///
-  /// Es de mejor esfuerzo: sin conexión se sigue con el estado cacheado, sin
-  /// bloquear la navegación ni mostrar ningún error. Abrir Deudas nunca puede
-  /// depender de la red.
-  void _refrescarSiEsPremium(_Destino destino) {
-    if (destino.acceso == AccesoDestino.gratis) return;
-    context.read<EstadoSuscripcionPremium>().refrescar();
-  }
-
-  /// Un destino premium sin suscripción vigente muestra el aviso en lugar de
-  /// la pantalla (FR-001, FR-002).
-  ///
-  /// La pantalla real **no se construye**: así no se ven datos parciales de
-  /// algo a lo que no hay acceso (SC-001), y los repositorios de Deudas y
-  /// Ahorro ni se consultan — sus datos quedan intactos, que es lo que exige
-  /// FR-011 al vencer la suscripción.
-  Widget _cuerpoDe(_Destino destino) {
-    if (destino.acceso == AccesoDestino.gratis) return destino.pantalla;
-
-    final premiumActivo = context
-        .watch<EstadoSuscripcionPremium>()
-        .premiumActivo;
-    if (premiumActivo) return destino.pantalla;
-
-    return PantallaPaywall(funcionalidad: destino.etiqueta);
   }
 
   @override
@@ -195,7 +159,7 @@ class _CascaronState extends State<Cascaron> {
         ocasionales: _ocasionales,
         onElegir: _irAOcasional,
       ),
-      body: _cuerpoDe(actual),
+      body: actual.pantalla,
       bottomNavigationBar: NavigationBar(
         // Con un destino del drawer en pantalla ninguno de la barra está
         // activo, pero NavigationBar exige un índice: se conserva el último
@@ -298,31 +262,24 @@ class _IconoDeDestino extends StatelessWidget {
   }
 }
 
-/// Bajo qué condición se puede abrir un destino (spec 004).
+/// Un destino de navegación.
 ///
-/// Es un enum y no un `bool` para que agregar mañana una condición nueva
-/// (por ejemplo, un destino solo de Android) no compile hasta manejarla en
-/// todos lados.
-enum AccesoDestino {
-  /// Siempre accesible, sin suscripción y sin límite (FR-004).
-  gratis,
-
-  /// Exige una suscripción vigente (FR-001, FR-002).
-  premium,
-}
-
+/// **Ningún destino tiene condición de acceso, y esa ausencia es el
+/// requisito** (spec 004 revisada, FR-001): acá vivía un enum `AccesoDestino`
+/// y una guarda que sustituía la pantalla por el aviso de suscripción cuando
+/// el destino era premium. Se fue entera con el modelo de propina — la app se
+/// reparte completa. Si alguien vuelve a necesitar condicionar un destino,
+/// que lo justifique primero en la spec.
 class _Destino {
   const _Destino({
     required this.etiqueta,
     required this.icono,
     required this.iconoActivo,
     required this.pantalla,
-    this.acceso = AccesoDestino.gratis,
   });
 
   final String etiqueta;
   final IconData icono;
   final IconData iconoActivo;
   final Widget pantalla;
-  final AccesoDestino acceso;
 }

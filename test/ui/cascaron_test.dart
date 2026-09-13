@@ -1,11 +1,10 @@
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
-import 'package:finanzas/shared/constantes/enums.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_propinas.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/cascaron.dart';
 import 'package:finanzas/ui/estado/estado_ahorro.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_respaldo.dart';
-import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -18,7 +17,6 @@ void main() {
   late EstadoMes estado;
   late EstadoAhorro estadoAhorro;
   late RepositorioConfiguracionEnMemoria repoConfiguracion;
-  late EstadoSuscripcionPremium estadoSuscripcion;
 
   const agosto = Mes(2026, 8);
   final quinceDeAgosto = DateTime(2026, 8, 15);
@@ -40,8 +38,8 @@ void main() {
           Provider<RepositorioConfiguracion>.value(value: repoConfiguracion),
           ChangeNotifierProvider<EstadoMes>.value(value: estado),
           ChangeNotifierProvider<EstadoAhorro>.value(value: estadoAhorro),
-          ChangeNotifierProvider<EstadoSuscripcionPremium>.value(
-            value: estadoSuscripcion,
+          Provider<RepositorioPropinas>(
+            create: (_) => RepositorioPropinasEnMemoria(),
           ),
         ],
         child: const MaterialApp(home: Cascaron()),
@@ -68,20 +66,6 @@ void main() {
       ahora: () => quinceDeAgosto,
     );
     await estadoAhorro.cargar(agosto);
-    // Estas pruebas son de navegación, no de la suscripción: con una vigente,
-    // Deudas y Ahorro muestran su pantalla real y no el paywall de la spec
-    // 004, que tiene sus propias pruebas en `pantalla_paywall_test.dart`.
-    estadoSuscripcion = EstadoSuscripcionPremium(
-      repoSuscripcion: RepositorioSuscripcionEnMemoria(
-        inicial: EstadoSuscripcion(
-          situacion: SituacionSuscripcion.activa,
-          plan: PlanSuscripcion.mensual,
-          vigenteHasta: null,
-          ultimaVerificacion: quinceDeAgosto,
-        ),
-      ),
-    );
-    await estadoSuscripcion.cargar();
   });
 
   group('barra inferior', () {

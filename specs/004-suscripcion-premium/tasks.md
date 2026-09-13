@@ -103,8 +103,8 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 - [X] T024 [P] [US2] Construir `lib/ui/pantallas/suscripcion/ficha_estado_suscripcion.dart` hasta que T021 pase: indicador reusable con la situación vigente en texto, el plan y la fecha hasta la que cubre — el título sale de `situacion.etiqueta` y el detalle de un `switch` exhaustivo, así que sumar una situación al enum no compila hasta decidir qué se le explica al usuario. `vencida` y `cancelada` aclaran que los datos siguen guardados: es exactamente lo que se teme al ver una pantalla bloqueada (FR-011)
 - [X] T025 [US2] Mostrar la ficha en `lib/ui/pantallas/ajustes/pantalla_ajustes.dart` y en el paywall (FR-009), de forma que el estado de la suscripción sea consultable desde un lugar fijo de la app — en Ajustes siempre, bajo su propia sección; en el paywall **solo si hubo suscripción antes**: a quien nunca se suscribió, un "Nunca suscripto" arriba del aviso no le agrega nada, y a quien se le venció le explica por qué volvió a ver esta pantalla
 - [X] T026 [US2] Implementar el refresco de D4 en `EstadoSuscripcion.cargar()`/`refrescar()`: al abrir la app y al entrar a una pantalla premium o a la ficha de estado, con política de mejor esfuerzo — sin conexión usa el cacheado, sin bloquear ni mostrar error. Al abrir la app ya lo hacía `main.dart`; se sumó el disparo en la navegación (`_refrescarSiEsPremium` en `lib/ui/cascaron.dart`, para los destinos con `AccesoDestino.premium`) y al entrar a Ajustes, que es donde vive la ficha. **`PantallaActivacion` queda fuera**: no es un destino premium del cascarón sino una pantalla gratis con un flujo bloqueado adentro (T018), y lee el mismo estado que estos dos caminos ya mantienen fresco
-- [ ] T027 [MANUAL] [US2] Crear el producto de suscripción en Google Play Console (ID `premium`, planes base `mensual` y `anual`, oferta de prueba de un mes en cada uno) y subir la app a la pista de **pruebas internas** con el mismo `applicationId` y firma — **sin esto ninguna compra funciona ni siquiera en depuración** (quickstart.md, Requisitos previos). El `applicationId` ya está listo: se cambió de `com.example.finanzas` —que Play Console rechaza— a `io.github.manuellegua.finanzas` (`android/app/build.gradle.kts`), junto con el `namespace` y el paquete de `MainActivity.kt`. Ese era el prerrequisito que faltaba; lo que queda de esta tarea es todo dentro de Play Console
-- [ ] T028 [MANUAL] [US2] Configurar una cuenta de prueba de licencias en Play Console y recorrer la compra de ambos planes según quickstart.md pasos 2 y 3, incluida la simulación del fin del período de prueba (el estado debe pasar de "en prueba" a "activa" al refrescar)
+- [~] T027 ⚰️ **SUPERADA por T068: el producto a crear ya no es una suscripción sino tres consumibles.** [MANUAL] [US2] Crear el producto de suscripción en Google Play Console (ID `premium`, planes base `mensual` y `anual`, oferta de prueba de un mes en cada uno) y subir la app a la pista de **pruebas internas** con el mismo `applicationId` y firma — **sin esto ninguna compra funciona ni siquiera en depuración** (quickstart.md, Requisitos previos). El `applicationId` ya está listo: se cambió de `com.example.finanzas` —que Play Console rechaza— a `io.github.manuellegua.finanzas` (`android/app/build.gradle.kts`), junto con el `namespace` y el paquete de `MainActivity.kt`. Ese era el prerrequisito que faltaba; lo que queda de esta tarea es todo dentro de Play Console
+- [~] T028 ⚰️ **SUPERADA por T068.** [MANUAL] [US2] Configurar una cuenta de prueba de licencias en Play Console y recorrer la compra de ambos planes según quickstart.md pasos 2 y 3, incluida la simulación del fin del período de prueba (el estado debe pasar de "en prueba" a "activa" al refrescar)
 
 **Checkpoint**: US1 + US2 + US3 son el MVP. Se puede comprar, la prueba gratis arranca sin cobro y el acceso se desbloquea sin reiniciar.
 
@@ -147,7 +147,7 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 ### Implementación para US4
 
 - [X] T034 [US4] **Revisado 2026-08-31 (D6 de research.md)**: ~~mostrar un aviso en el desglose~~ → verificar que `lib/ui/pantallas/resumen_mes/` y `lib/ui/estado/estado_mes.dart` **no consultan** la suscripción por ningún camino, igual que T030 hizo con los destinos gratis del cascarón. Sin código nuevo si la verificación sale limpia: una cifra financiera que cambia según el estado de pago de la app deja de ser confiable, y omitir las cuotas dejaría el disponible del mes inflado. **Salió limpia: cero coincidencias de `Suscripcion` o `premium` en los dos archivos, cero código nuevo**
-- [ ] T035 [US4] Detener el procesamiento de notificaciones nuevas cuando la suscripción no está vigente, en `lib/datos/notificaciones/callback_headless.dart`: el callback consulta el estado cacheado (`estadoCacheado()`, sin red, porque corre en un isolate headless) y descarta la notificación sin escribir nada; **los pendientes ya existentes no se tocan** (FR-011, Acceptance Scenario 4). Depende de que T042 de la spec 002 exista — si sigue bloqueada, dejar la comprobación escrita en el cuerpo vacío del callback con su prueba pendiente. **Sigue bloqueada** (T034/T041 de la spec 002 esperan insumo manual del teléfono), así que quedó escrito el requisito en la documentación de `alRecibirNotificacion` y un comentario en el cuerpo vacío marcando dónde va: `estadoCacheado()` y no `refrescar()`, porque el isolate headless corre sin UI y sin garantía de red. La prueba automatizada no se puede escribir todavía: el callback no recibe dependencias inyectables y hoy no escribe nada, así que cualquier aserción pasaría en vano. La mitad verificable de FR-011 —que los pendientes viejos sobrevivan— está en T036
+- [~] T035 ⚰️ **SIN OBJETO desde la revisión: no hay suscripción que guardar en el callback headless.** [US4] Detener el procesamiento de notificaciones nuevas cuando la suscripción no está vigente, en `lib/datos/notificaciones/callback_headless.dart`: el callback consulta el estado cacheado (`estadoCacheado()`, sin red, porque corre en un isolate headless) y descarta la notificación sin escribir nada; **los pendientes ya existentes no se tocan** (FR-011, Acceptance Scenario 4). Depende de que T042 de la spec 002 exista — si sigue bloqueada, dejar la comprobación escrita en el cuerpo vacío del callback con su prueba pendiente. **Sigue bloqueada** (T034/T041 de la spec 002 esperan insumo manual del teléfono), así que quedó escrito el requisito en la documentación de `alRecibirNotificacion` y un comentario en el cuerpo vacío marcando dónde va: `estadoCacheado()` y no `refrescar()`, porque el isolate headless corre sin UI y sin garantía de red. La prueba automatizada no se puede escribir todavía: el callback no recibe dependencias inyectables y hoy no escribe nada, así que cualquier aserción pasaría en vano. La mitad verificable de FR-011 —que los pendientes viejos sobrevivan— está en T036
 - [X] T036 [P] [US4] Escribir `test/ui/captura/estado_pendientes_test.dart` (ampliar): con la suscripción vencida, la bandeja sigue mostrando los pendientes que ya existían y permite descartarlos, pero no llegan nuevos (FR-011) — se amplió `pantalla_pendientes_test.dart` y no `estado_pendientes_test.dart`: `EstadoPendientes` no recibe la suscripción por ningún lado, así que el escenario solo se puede montar donde hay árbol de widgets. La mitad de "no llegan nuevos" es del callback headless (T035) y queda con él
 
 **Checkpoint**: cancelar se siente como perder acceso, nunca como perder datos.
@@ -168,7 +168,7 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 
 - [X] T038 [US5] Implementar `restaurar()` en `EstadoSuscripcion` (`lib/ui/estado/estado_suscripcion.dart`) hasta que T037 pase, delegando en `RepositorioSuscripcion.restaurar()`. Mismo patrón que `comprar()`: una bandera `restaurando` evita que un doble toque dispare dos consultas, y quien llama decide el mensaje mirando `error`/`premiumActivo` después de esperar la llamada, sin estado adicional
 - [X] T039 [US5] Agregar la acción explícita "Restaurar suscripción" en el paywall y en la ficha de estado de Ajustes (FR-014), con el mensaje de "no encontramos ninguna suscripción para esta cuenta" cuando corresponda (FR-015). Widget propio, `lib/ui/pantallas/suscripcion/boton_restaurar_suscripcion.dart`, usado en los dos lugares en vez de vivir dentro de `FichaEstadoSuscripcion`
-- [ ] T040 [MANUAL] [US5] Recorrer quickstart.md paso 6: desinstalar y reinstalar (o instalar en otro dispositivo) con la cuenta de prueba ya suscripta y verificar que restaurar devuelve el acceso sin pedir pago
+- [~] T040 ⚰️ **SIN OBJETO desde la revisión: una propina no se restaura (D8).** [MANUAL] [US5] Recorrer quickstart.md paso 6: desinstalar y reinstalar (o instalar en otro dispositivo) con la cuenta de prueba ya suscripta y verificar que restaurar devuelve el acceso sin pedir pago
 
 **Checkpoint**: las cinco historias funcionan de forma independiente. La spec 004 queda completa a falta de la validación manual.
 
@@ -179,9 +179,9 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 - [X] T041 [P] Verificar que `test/pureza_test.dart` pasa con todo lo nuevo: `lib/dominio/modelos/estado_suscripcion.dart` y `lib/dominio/repositorios/repositorio_suscripcion.dart` no importan `in_app_purchase`, Flutter ni sqflite (T012 dejó la guarda lista) — pasa sin cambios
 - [X] T042 [P] Revisar que ningún estado de esta feature (en prueba, activa, en gracia, vencida, bloqueo por suscripción en el resumen) se comunique solo por color, siguiendo el patrón de `MarcaEstado`/`AvisoMesCerrado` de 001 — revisado `pantalla_paywall.dart`, `ficha_estado_suscripcion.dart` y la navegación del cascarón: cada situación tiene su ícono y su texto propios (`_detalleDe`/`_iconoDe`), el candado del paywall va acompañado de la explicación completa, y la navegación no marca destinos premium solo con color. D6 ya elimina el único bloqueo que hubiera hecho falta explicar en el resumen. Sin código nuevo
 - [X] T043 [P] Dejar `flutter analyze` sin issues y `dart format` aplicado a todo lo nuevo — limpio
-- [ ] T044 [MANUAL] Recorrer entero [quickstart.md](./quickstart.md) contra la pista de pruebas internas, incluido el paso 7 (modo avión con suscripción activa ya verificada: Deudas debe seguir accesible con el estado cacheado)
+- [~] T044 ⚰️ **SUPERADA por T069.** [MANUAL] Recorrer entero [quickstart.md](./quickstart.md) contra la pista de pruebas internas, incluido el paso 7 (modo avión con suscripción activa ya verificada: Deudas debe seguir accesible con el estado cacheado)
 - [X] T045 Corregir plan.md y data-model.md §4, que dicen `Esquema.version` 1 → 2: la migración real de esta feature es **v3 → v4** (ver la nota al inicio de este documento)
-- [ ] T046 [P] Actualizar `CLAUDE.md` con el estado de esta feature una vez completa
+- [~] T046 ⚰️ **SUPERADA por T070.** [P] Actualizar `CLAUDE.md` con el estado de esta feature una vez completa
 
 ---
 
@@ -247,3 +247,66 @@ Cada incremento deja la app usable y no rompe 001, 002 ni 003.
 - `precioFormateado` nunca se convierte a `Dinero` ni se opera: es un texto que informa Google Play, no un monto que la app calcule (Constitution Check de plan.md).
 - Commitear por tarea o por grupo coherente, referenciando el id de la tarea.
 - Cualquier desviación de un principio se justifica por escrito en plan.md, no en silencio durante la implementación.
+
+---
+
+# Phase 9: Revisión 2026-09-12 — de suscripción a propina
+
+**Propósito**: la app se reparte completa y gratis; el ingreso pasa a ser una
+propina voluntaria que no desbloquea nada. Ver [spec.md](./spec.md) §Revisión,
+research.md D7–D9 y la sección revisada de [plan.md](./plan.md).
+
+**Qué pasa con T001–T046**: quedan como están, marcadas como se completaron.
+T017–T026 y T031–T039 construyeron el paywall, la guarda y la restauración, que
+esta fase **borra**; se conservan en el historial porque explican por qué
+existió ese código. **T035 y T040 quedan sin objeto**: la primera era la guarda
+de suscripción en el callback headless de la spec 002 (ya no hay nada que
+guardar) y la segunda la validación manual de restaurar (ya no hay nada que
+restaurar). **T027/T028 cambian de contenido**: el producto a crear en Play
+Console ya no es una suscripción sino tres consumibles (T068).
+
+**Tests**: acá la prueba de entrada del Principio III es la inversa de la
+anterior. Antes había que probar que el acceso se concedía bien; ahora hay que
+probar que **no existe ninguna condición de acceso** (T053), y esa prueba se
+escribe antes de tocar el cascarón.
+
+## Documentación (spec → plan → tasks, antes del código)
+
+- [X] T047 Reescribir `spec.md` con el alcance de propina: US1–US3, FR-001 a FR-012, SC-001 a SC-005, y la tabla de trazabilidad de qué pasó con cada FR anterior
+- [X] T048 Agregar D7 (propina en vez de suscripción), D8 (consumible repetible, sin estado local) y D9 (migración v4 → v5 que borra la tabla) a `research.md`, y marcar D2, D3, D4 y D6 como superadas sin borrarlas
+- [X] T049 Reescribir `data-model.md`: cero entidades persistidas, `OfertaPropina`, `ResultadoPropina`, el `DROP TABLE` y su efecto sobre el respaldo de la spec 005
+- [X] T050 Agregar a `plan.md` la sección revisada: summary, Constitution Check nuevo y estructura de archivos con lo que nace y lo que muere
+- [X] T051 Reemplazar `contracts/repositorio-suscripcion.md` por `contracts/repositorio-propinas.md`, documentando explícitamente los tres métodos que la interfaz **no** tiene y por qué
+- [X] T052 Reescribir `quickstart.md` para el recorrido de la propina
+
+## Pruebas primero
+
+- [X] T053 [P] Prueba en `test/ui/todo_gratis_test.dart` (renombra `gratis_sin_limite_test.dart`) de que **ningún** destino de la app queda condicionado a un pago: recorrer los cinco de la barra y los del drawer y verificar que ninguno sustituye su contenido por un aviso (SC-001, SC-002)
+- [X] T054 [P] Prueba en `test/ui/pantalla_propina_test.dart`: muestra los montos con su precio, dice que no desbloquea nada, sin conexión muestra el motivo y el reintento sin inventar precios, cancelar no produce error, y una compra completada agradece
+- [X] T055 [P] Prueba en `test/datos/migracion_005_test.dart` de que la migración v4 → v5 borra `suscripcion_premium` sin tocar ninguna otra tabla ni perder una sola fila del usuario
+
+## Dominio y datos
+
+- [X] T056 [P] `lib/shared/constantes/propinas.dart` con `idsDePropina` (Dart puro, lista de datos ordenada, no enum — data-model.md §4)
+- [X] T057 [P] `lib/dominio/modelos/propina.dart` con `OfertaPropina` y `ResultadoPropina`
+- [X] T058 `lib/dominio/repositorios/repositorio_propinas.dart` con la interfaz de dos métodos del contrato
+- [X] T059 `lib/datos/repositorios/repositorio_propinas_billing.dart`: `buyConsumable`, acuse de recibo de pendientes antes de consultar, y traducción del estado de compra a `ResultadoPropina`
+- [X] T060 Doble en memoria `RepositorioPropinasEnMemoria` en `test/dobles/repositorios_en_memoria.dart`, reemplazando a `RepositorioSuscripcionEnMemoria`
+- [X] T061 Subir `Esquema.version` a 5, sacar `suscripcionPremium` de `Esquema.creacion` y agregar el paso v4 → v5 en `migraciones.dart`
+- [X] T062 Quitar `suscripcion_premium` de `_tablasQueNoViajan` y borrar `_descartarSuscripcionHeredada` en `repositorio_respaldo_sqlite.dart`, con sus pruebas en `test/datos/respaldo_test.dart`
+
+## Interfaz
+
+- [X] T063 `lib/ui/estado/estado_propinas.dart`: cargar ofertas, apoyar, y el resultado de la última compra para que la pantalla agradezca
+- [X] T064 `lib/ui/pantallas/propina/pantalla_propina.dart`, única pantalla de la feature
+- [X] T065 Entrada "Apoyar esta app" en `pantalla_ajustes.dart`, reemplazando la ficha de estado y el botón de restaurar
+- [X] T066 Quitar de `cascaron.dart` el enum `AccesoDestino`, la guarda `_cuerpoDe` y el refresco al navegar; quitar la guarda premium de `pantalla_activacion.dart`; ajustar los providers de `main.dart`
+- [X] T067 Borrar el código y las pruebas de la suscripción: los cuatro archivos de `lib`, los tres widgets de `lib/ui/pantallas/suscripcion/`, `PlanSuscripcion` y `SituacionSuscripcion` de `enums.dart`, y los cinco archivos de prueba que quedaron sin objeto
+
+## Cierre
+
+- [ ] T068 [MANUAL] Crear en Google Play Console los tres productos consumibles (`propina_cafe`, `propina_menu`, `propina_generosa`) con sus precios, en reemplazo del producto `premium` de suscripción que pedía T027
+- [ ] T069 [MANUAL] Recorrer `quickstart.md` en un dispositivo contra la pista de pruebas internas: apoyar, cancelar, apoyar dos veces, y comprobar que nada de la app cambió
+- [X] T070 `flutter analyze` sin issues, `flutter test` en verde y `test/pureza_test.dart` pasando; actualizar el estado de la spec 004 en `CLAUDE.md`, incluido que T035 y el paso 8 de T042 de la spec 005 quedaron sin objeto
+
+**Total de la revisión**: 24 tareas (T047–T070), 2 de ellas `[MANUAL]`.

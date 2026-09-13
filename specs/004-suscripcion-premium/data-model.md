@@ -1,105 +1,106 @@
-# Data Model: Suscripción premium
+# Data Model: Apoyo voluntario (propina)
 
-## 1. Enums
+**Revisado 2026-09-12** junto con la spec. El modelo anterior —`EstadoSuscripcion`,
+`PlanSuscripcion`, `SituacionSuscripcion`, `OfertaSuscripcion` y la tabla
+`suscripcion_premium`— **desaparece por completo**. Ver research.md D7, D8 y D9.
 
-### `PlanSuscripcion`
+---
 
-| Valor | Slug | Etiqueta |
-|---|---|---|
-| `mensual` | `mensual` | Mensual |
-| `anual` | `anual` | Anual |
+## 1. Lo que esta feature persiste
 
-### `SituacionSuscripcion`
+**Nada.**
 
-| Valor | Slug | Etiqueta | ¿Acceso premium? |
-|---|---|---|---|
-| `nunca` | `nunca` | Nunca suscripto | No |
-| `enPrueba` | `en_prueba` | En prueba gratis | Sí |
-| `activa` | `activa` | Activa | Sí |
-| `enGracia` | `en_gracia` | Pago pendiente (en gracia) | Sí |
-| `vencida` | `vencida` | Vencida | No |
-| `cancelada` | `cancelada` | Cancelada | No |
+No es una omisión: es la decisión D8. Una propina no concede ningún acceso, así
+que no hay estado que consultar, cachear, vencer ni restaurar. El historial de
+compras vive en Google Play, que es de quien es. La app no guarda si el usuario
+apoyó, cuántas veces ni cuándo.
 
-`enGracia` concede acceso porque es Google Play, no la app, quien decide cuánto
-dura ese margen tras un cobro fallido (FR-013): la app solo refleja el estado
-que le informa.
+Esta es la primera feature del proyecto que no agrega ni una fila al SQLite. La
+segunda cosa rara que hace con la base es la contraria: **quitarle una tabla**
+(§3).
 
-## 2. Entidades
+## 2. Valores en memoria
 
-### `EstadoSuscripcion`
+### `OfertaPropina` (`lib/dominio/modelos/propina.dart`)
 
-Estado cacheado localmente de la suscripción. Fila única, análoga a
-`Configuracion` (spec 001).
+Un monto que se puede dejar, tal como lo informa Google Play. No se persiste:
+se consulta en vivo cada vez que se abre la pantalla de apoyo (FR-004).
 
 | Campo | Tipo | Reglas |
 |---|---|---|
-| `situacion` | `SituacionSuscripcion` | Nunca ausente; arranca en `nunca`. |
-| `plan` | `PlanSuscripcion?` | `null` solo cuando `situacion == nunca`. |
-| `vigenteHasta` | `DateTime?` | Fecha hasta la que cubre el período actual. `null` cuando `situacion == nunca` o `cancelada` sin período restante. Informativo: no se usa para calcular vigencia (ver `research.md` D2). |
-| `ultimaVerificacion` | `DateTime` | Cuándo se confirmó este estado contra Google Play por última vez. Arranca en la fecha de instalación si nunca se pudo verificar. |
+| `id` | `String` | Identificador del producto en Google Play Console. Es lo único que la app conoce de antemano (§4). |
+| `titulo` | `String` | Nombre que la tienda le da al producto, ya localizado. |
+| `precioFormateado` | `String` | Precio ya formateado y localizado por Google Play (p. ej. `S/ 5.00`). |
 
-**Derivado**:
+**Por qué `precioFormateado` es `String` y no `Dinero`**: no es dinero que la
+app calcule, sume ni guarde — es un precio que la tienda informa para mostrar
+tal cual. Sobre este valor no se hace aritmética ni se parsea nada, así que el
+Principio II no le aplica. Es el mismo criterio que tenía
+`OfertaSuscripcion.precioFormateado` y es la única razón por la que un monto
+puede vivir en un `String` en este proyecto.
 
-| Campo | Fórmula |
-|---|---|
-| `estaVigente` | `situacion` es `enPrueba`, `activa` o `enGracia`. |
+### `ResultadoPropina` (enum)
 
-### `OfertaSuscripcion`
+Cómo terminó un intento de apoyar. Es un enum y no un `bool` porque son cuatro
+desenlaces con tratamientos distintos, y el `switch` exhaustivo obliga a
+manejarlos todos.
 
-No persistida: se consulta en vivo a Google Play para mostrar el paywall
-(FR-005). Si no hay conexión, el paywall lo indica y ofrece reintentar; no se
-inventan precios.
-
-| Campo | Tipo | Reglas |
+| Valor | Cuándo | Qué hace la UI |
 |---|---|---|
-| `plan` | `PlanSuscripcion` | |
-| `precioFormateado` | `String` | Ya viene localizado y formateado por Google Play (ej. `"S/ 19.90 al mes"`); la app no hace aritmética sobre este valor (Principio II no aplica: no es un monto que la app calcule o guarde). |
-| `duracionPruebaDias` | `int` | Días de prueba gratis de esa oferta (FR-006a). |
+| `completada` | Google confirmó el pago. | Agradece (FR-012). |
+| `cancelada` | El usuario cerró el diálogo de Google. | **Nada**: no es un error (FR-008). |
+| `pendiente` | Google aceptó pero todavía no confirma. | Lo dice; se acusará recibo al volver (FR-010). |
+| `fallida` | La tienda rechazó la compra o no está disponible. | Muestra el motivo y deja reintentar (FR-011). |
 
-## 3. Puerto de datos
+## 3. Cambio de esquema: `suscripcion_premium` se elimina
 
-### `RepositorioSuscripcion` (interfaz en `dominio/repositorios/`)
-
-```dart
-Future<EstadoSuscripcion>        estadoCacheado();
-Future<EstadoSuscripcion>        refrescar();
-Future<List<OfertaSuscripcion>>  ofertasDisponibles();
-Future<EstadoSuscripcion>        comprar(PlanSuscripcion plan);
-Future<EstadoSuscripcion>        restaurar();
-```
-
-Ver el contrato completo, con las garantías de cada método, en
-[contracts/repositorio-suscripcion.md](./contracts/repositorio-suscripcion.md).
-
-## 4. Esquema SQL (incremento de versión)
+`Esquema.version` pasa de **4 a 5**. El paso v4 → v5 es una sola sentencia:
 
 ```sql
--- Esquema.version pasa de 3 a 4 (la base ya iba por v3: spec 002 la subió
--- a 2, spec 003 a 3). Migración v3 → v4, no destructiva.
-CREATE TABLE suscripcion_premium (
-  id                    INTEGER PRIMARY KEY CHECK (id = 1),
-  situacion             TEXT    NOT NULL
-                          CHECK (situacion IN ('nunca','en_prueba','activa',
-                                                'en_gracia','vencida','cancelada')),
-  plan                  TEXT    CHECK (plan IN ('mensual','anual')),
-  vigente_hasta         TEXT,               -- 'YYYY-MM-DD', nullable
-  ultima_verificacion   TEXT    NOT NULL     -- 'YYYY-MM-DD'
-);
+DROP TABLE IF EXISTS suscripcion_premium;
 ```
 
-**Convenciones**: mismo criterio que el resto del esquema — `CHECK` como
-última línea de defensa, no como validación de cara al usuario; una sola fila
-(`id = 1`) igual que `configuracion`; fechas en texto ISO, igual que
-`transaccion.fecha` y `aporte_ahorro.fecha`.
+**Es la primera migración destructiva del proyecto, y no viola D10.** La regla
+es que ninguna migración destruya *información del usuario*; esta tabla nunca
+tuvo ninguna: era la caché de lo que respondía Google Play sobre la vigencia de
+la suscripción. Nada de lo que el usuario cargó a mano vive ahí.
 
-## 5. Trazabilidad requisito → modelo
+`IF EXISTS` no es defensivo por costumbre: un respaldo restaurado puede venir
+de una v1, v2 o v3, donde la tabla nunca existió, y esa migración también pasa
+por acá.
 
-| Requisito | Modelo/campo |
+La tabla sale además de `Esquema.creacion`, así que **una instalación nueva ya
+no la crea**. Su DDL se conserva como constante porque el paso v3 → v4 lo sigue
+necesitando: una base que venga de la v3 la crea y la migración siguiente la
+borra. Es el mismo patrón que la tabla `ingreso` de la spec 001, que tampoco
+está en `creacion` y solo existe en instalaciones que vienen de antes (D-C2 de
+la spec 003).
+
+### Consecuencia sobre el respaldo (spec 005)
+
+| Antes | Después |
 |---|---|
-| FR-001, FR-002, FR-003 (bloquear sin suscripción activa) | `EstadoSuscripcion.estaVigente` |
-| FR-005, FR-006, FR-006a (paywall con plan, precio y prueba) | `OfertaSuscripcion` |
-| FR-007, FR-008 (desbloqueo inmediato / compra cancelada sin efecto) | `RepositorioSuscripcion.comprar` |
-| FR-009 (mostrar estado vigente) | `EstadoSuscripcion.situacion`, `.plan`, `.vigenteHasta` |
-| FR-010, FR-011, FR-013 (vencimiento sin pérdida de datos, período de gracia) | `SituacionSuscripcion` (`enGracia`, `vencida`, `cancelada`) — no toca ninguna tabla de Deudas/Ahorro/notificaciones |
-| FR-014, FR-015 (restaurar) | `RepositorioSuscripcion.restaurar` |
-| FR-016 (sin datos financieros en la verificación) | El modelo no incluye ningún campo de `Dinero`, `Deuda`, `AporteAhorro` ni similar |
+| `_tablasQueNoViajan = ['suscripcion_premium', 'notificacion_diagnostico']` | `_tablasQueNoViajan = ['notificacion_diagnostico']` |
+| Al restaurar, `_descartarSuscripcionHeredada()` borraba la fila para que nadie se fabricara acceso pagado editando el archivo | Se elimina: la migración v4 → v5 borra la tabla entera, y de todos modos ya no hay acceso que fabricarse |
+
+## 4. Los identificadores de producto
+
+`lib/shared/constantes/propinas.dart` — Dart puro, verificado por
+`test/pureza_test.dart`.
+
+```dart
+const List<String> idsDePropina = <String>[
+  'propina_cafe',
+  'propina_menu',
+  'propina_generosa',
+];
+```
+
+Es una **lista de datos, no un enum**, por el mismo criterio que
+`origenesReconocidos` en la spec 002: agregar o quitar un monto es editar esta
+lista y crear el producto en Play Console, sin migración de esquema ni tipo
+nuevo. El orden de la lista es el orden en que se muestran.
+
+La app no conoce ni el precio ni el nombre de cada uno: los pide a Google Play
+y muestra lo que responda (FR-004). Un identificador que no exista en Play
+Console simplemente no aparece, sin romper nada.

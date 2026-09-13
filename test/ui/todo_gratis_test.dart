@@ -1,18 +1,19 @@
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_propinas.dart';
 import 'package:finanzas/shared/constantes/enums.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/cascaron.dart';
 import 'package:finanzas/ui/estado/estado_ahorro.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_respaldo.dart';
-import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:finanzas/ui/estado/estado_tarjetas.dart';
+import 'package:finanzas/ui/pantallas/ahorro/pantalla_ahorro.dart';
 import 'package:finanzas/ui/pantallas/ajustes/pantalla_ajustes.dart';
 import 'package:finanzas/ui/pantallas/categorias/pantalla_desglose.dart';
+import 'package:finanzas/ui/pantallas/deudas/pantalla_deudas.dart';
 import 'package:finanzas/ui/pantallas/deudas/pantalla_tarjetas.dart';
 import 'package:finanzas/ui/pantallas/presupuesto/pantalla_presupuesto.dart';
 import 'package:finanzas/ui/pantallas/resumen_mes/pantalla_resumen.dart';
-import 'package:finanzas/ui/pantallas/suscripcion/pantalla_paywall.dart';
 import 'package:finanzas/ui/pantallas/transacciones/pantalla_transacciones.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,12 +24,14 @@ import '../builders/obligacion_builder.dart';
 import '../builders/transaccion_builder.dart';
 import '../dobles/repositorios_en_memoria.dart';
 
-/// Lo básico sigue gratis y sin límite (US3, spec 004).
+/// La app entera es gratis y completa (US1, spec 004 revisada).
 ///
-/// La monetización no puede degradar lo que la app ya prometía antes de
-/// existir: quien nunca se suscribe presupuesta, mira su resumen y anota
-/// gastos sin tope de cantidad ni de meses, y sin encontrarse un aviso de
-/// pago en el camino (FR-004, SC-005).
+/// **Esta es la prueba central de la revisión de 2026-09-12**, y está escrita
+/// en negativo a propósito: no verifica que algo funcione, verifica que una
+/// condición de acceso **no exista en ningún lado**. Antes de la revisión,
+/// Deudas y Ahorro se sustituían por un paywall sin suscripción vigente; el
+/// modelo de propina borró esa guarda y esta prueba es lo que impide que
+/// vuelva sin pasar antes por la spec (FR-001, FR-002, SC-001, SC-002).
 void main() {
   late RepositorioObligacionesEnMemoria repoObligaciones;
   late RepositorioTransaccionesEnMemoria repoTransacciones;
@@ -37,24 +40,38 @@ void main() {
   late EstadoMes estadoMes;
   late EstadoAhorro estadoAhorro;
   late EstadoTarjetas estadoTarjetas;
-  late EstadoSuscripcionPremium estadoSuscripcion;
 
   const agosto = Mes(2026, 8);
   final quinceDeAgosto = DateTime(2026, 8, 15);
 
-  /// Todo lo que se usa sin pagar, con cómo se llega y qué pantalla tiene que
-  /// quedar en el cuerpo.
+  /// **Todos** los destinos de la app, con cómo se llega y qué pantalla tiene
+  /// que quedar en el cuerpo. Deudas y Ahorro están en la misma lista que el
+  /// resto porque ya no se distinguen en nada: esa es la revisión.
   ///
   /// La lista está escrita a mano porque `_frecuentes` y `_ocasionales` son
-  /// privados del cascarón: si mañana se suma un destino gratis, hay que
-  /// sumarlo también acá.
-  const destinosGratis = <({String etiqueta, bool enElDrawer, Type pantalla})>[
+  /// privados del cascarón: si mañana se suma un destino, hay que sumarlo
+  /// también acá. Los cuatro de la captura (Pendientes, Captura, Diagnóstico,
+  /// Comercios) solo existen en Android y la suite corre en el escritorio.
+  const destinos = <({String etiqueta, bool enElDrawer, Type pantalla})>[
     (etiqueta: 'Resumen', enElDrawer: false, pantalla: PantallaResumen),
     (etiqueta: 'Presupuesto', enElDrawer: false, pantalla: PantallaPresupuesto),
     (etiqueta: 'Gastos', enElDrawer: false, pantalla: PantallaTransacciones),
+    (etiqueta: 'Deudas', enElDrawer: false, pantalla: PantallaDeudas),
+    (etiqueta: 'Ahorro', enElDrawer: false, pantalla: PantallaAhorro),
     (etiqueta: 'Categorías', enElDrawer: true, pantalla: PantallaDesglose),
     (etiqueta: 'Tarjetas', enElDrawer: true, pantalla: PantallaTarjetas),
     (etiqueta: 'Ajustes', enElDrawer: true, pantalla: PantallaAjustes),
+  ];
+
+  /// Palabras que no pueden aparecer en ninguna pantalla que no sea la de
+  /// apoyo (FR-006, SC-002).
+  const palabrasDePago = <String>[
+    'Suscribirme',
+    'suscripción',
+    'Premium',
+    'premium',
+    'Desbloquear',
+    'desbloquea',
   ];
 
   Future<void> montar(WidgetTester tester) async {
@@ -70,11 +87,11 @@ void main() {
                 EstadoRespaldo(repoRespaldo: RepositorioRespaldoEnMemoria()),
           ),
           Provider<RepositorioConfiguracion>.value(value: repoConfiguracion),
+          Provider<RepositorioPropinas>(
+            create: (_) => RepositorioPropinasEnMemoria(),
+          ),
           ChangeNotifierProvider<EstadoMes>.value(value: estadoMes),
           ChangeNotifierProvider<EstadoAhorro>.value(value: estadoAhorro),
-          ChangeNotifierProvider<EstadoSuscripcionPremium>.value(
-            value: estadoSuscripcion,
-          ),
           ChangeNotifierProvider<EstadoTarjetas>.value(value: estadoTarjetas),
         ],
         child: const MaterialApp(home: Cascaron()),
@@ -120,26 +137,16 @@ void main() {
       repoTarjetas: RepositorioTarjetasEnMemoria(),
     );
     await estadoTarjetas.cargar();
-    // El punto de partida de toda esta historia: nadie se suscribió nunca.
-    estadoSuscripcion = EstadoSuscripcionPremium(
-      repoSuscripcion: RepositorioSuscripcionEnMemoria(),
-    );
-    await estadoSuscripcion.cargar();
   });
 
-  group('ningún destino gratis pide pago (FR-004, SC-005)', () {
-    testWidgets('las seis pantallas se ven enteras, sin aviso', (tester) async {
+  group('ningún destino está condicionado a un pago (FR-001, SC-001)', () {
+    testWidgets('los ocho destinos muestran su pantalla real', (tester) async {
       await estadoMes.cargar();
       await montar(tester);
 
-      for (final destino in destinosGratis) {
+      for (final destino in destinos) {
         await irA(tester, destino.etiqueta, enElDrawer: destino.enElDrawer);
 
-        expect(
-          find.byType(PantallaPaywall),
-          findsNothing,
-          reason: '${destino.etiqueta} no debería pedir suscripción',
-        );
         expect(
           find.byType(destino.pantalla),
           findsOneWidget,
@@ -148,40 +155,41 @@ void main() {
       }
     });
 
-    testWidgets('la guarda sí alcanza a Deudas y a Ahorro', (tester) async {
-      await estadoMes.cargar();
-      await montar(tester);
-
-      // El contraste es lo que le da sentido a la prueba de arriba: la guarda
-      // existe y funciona, pero llega hasta acá y no más (T030).
-      for (final premium in ['Deudas', 'Ahorro']) {
-        await irA(tester, premium, enElDrawer: false);
-
-        expect(
-          find.byType(PantallaPaywall),
-          findsOneWidget,
-          reason: '$premium sí es premium',
-        );
-      }
-    });
-
-    testWidgets('en Ajustes el estado de la suscripción informa, no bloquea', (
+    testWidgets('ninguna pantalla salvo Ajustes menciona pagar (SC-002)', (
       tester,
     ) async {
       await estadoMes.cargar();
       await montar(tester);
 
+      for (final destino in destinos.where(
+        (destino) => destino.etiqueta != 'Ajustes',
+      )) {
+        await irA(tester, destino.etiqueta, enElDrawer: destino.enElDrawer);
+
+        for (final palabra in palabrasDePago) {
+          expect(
+            find.textContaining(palabra),
+            findsNothing,
+            reason: '${destino.etiqueta} no debería hablar de pagos',
+          );
+        }
+      }
+    });
+
+    testWidgets('el apoyo vive en Ajustes y no bloquea nada', (tester) async {
+      await estadoMes.cargar();
+      await montar(tester);
+
       await irA(tester, 'Ajustes', enElDrawer: true);
 
-      // La ficha de FR-009 vive acá y dice "Nunca suscripto", pero Ajustes
-      // sigue siendo una pantalla gratis y completamente utilizable.
-      expect(find.text(SituacionSuscripcion.nunca.etiqueta), findsOneWidget);
-      expect(find.byType(PantallaPaywall), findsNothing);
+      // Se ofrece, pero como una fila más entre los ajustes: el resto de la
+      // pantalla sigue completo y utilizable (FR-006).
+      expect(find.text('Apoyar esta app'), findsOneWidget);
       expect(find.text('Plazo para pagos rezagados'), findsOneWidget);
     });
   });
 
-  group('sin límite de cantidad (Acceptance Scenario 2)', () {
+  group('sin límite de cantidad (Acceptance Scenario 3)', () {
     /// Volumen deliberadamente incómodo para una pantalla de teléfono.
     const cuantasObligaciones = 40;
     const cuantosGastos = 60;
@@ -222,7 +230,6 @@ void main() {
       // 40 × S/ 100.00. Que el total dé exacto es la prueba de que no se
       // recortó ninguna por el camino.
       expect(find.text('S/ 4,000.00'), findsWidgets);
-      expect(find.byType(PantallaPaywall), findsNothing);
     });
 
     testWidgets('los sesenta gastos se suman completos en el resumen', (
@@ -234,7 +241,6 @@ void main() {
 
       // 60 × S/ 10.00.
       expect(find.text('S/ 600.00'), findsWidgets);
-      expect(find.byType(PantallaPaywall), findsNothing);
     });
 
     testWidgets('recorrer un año hacia atrás no bloquea nada', (tester) async {
@@ -245,13 +251,8 @@ void main() {
         await estadoMes.irAlMesAnterior();
         await tester.pumpAndSettle();
 
-        expect(
-          find.byType(PantallaPaywall),
-          findsNothing,
-          reason: 'el mes ${estadoMes.mes} no debería pedir suscripción',
-        );
+        expect(find.byType(PantallaResumen), findsOneWidget);
       }
-      expect(find.byType(PantallaResumen), findsOneWidget);
     });
   });
 }

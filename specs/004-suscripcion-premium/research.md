@@ -1,6 +1,10 @@
 # Research: Suscripción premium
 
-Cinco decisiones técnicas, en el mismo formato que `001-gestion-sueldo-ahorro/research.md`.
+Decisiones técnicas, en el mismo formato que `001-gestion-sueldo-ahorro/research.md`.
+
+**Revisada el 2026-09-12**: la spec pasó de suscripción a propina voluntaria.
+D1 y D5 siguen vigentes; D2, D3, D4 y D6 quedaron superadas por D7, D8 y D9,
+al final de este archivo. Se conservan porque explican el diseño anterior.
 
 ---
 
@@ -22,7 +26,7 @@ Cinco decisiones técnicas, en el mismo formato que `001-gestion-sueldo-ahorro/r
 
 ---
 
-## D2 — Dónde vive la lógica de "¿está vigente el acceso premium?"
+## D2 — Dónde vive la lógica de "¿está vigente el acceso premium?" *(superada por D7)*
 
 **Decisión**: es un getter sobre el modelo `EstadoSuscripcion` (`lib/dominio/modelos/estado_suscripcion.dart`), no una función en `dominio/calculos/`.
 
@@ -32,7 +36,7 @@ Cinco decisiones técnicas, en el mismo formato que `001-gestion-sueldo-ahorro/r
 
 ---
 
-## D3 — Persistencia del estado: una fila caché, versionada igual que el resto del esquema
+## D3 — Persistencia del estado: una fila caché, versionada igual que el resto del esquema *(superada por D8 y D9)*
 
 **Decisión**: una tabla nueva `suscripcion_premium`, fila única (`id = 1`), con `situacion`, `plan`, `vigente_hasta` y `ultima_verificacion`. Se agrega en una migración incremental nueva (`Esquema.version` pasa de 1 a 2), sin tocar las tablas existentes.
 
@@ -42,7 +46,7 @@ Cinco decisiones técnicas, en el mismo formato que `001-gestion-sueldo-ahorro/r
 
 ---
 
-## D4 — Cuándo se refresca el estado contra Google Play
+## D4 — Cuándo se refresca el estado contra Google Play *(superada por D8: ya no hay estado que refrescar)*
 
 **Decisión**: al abrir la app, y cada vez que el usuario entra a una pantalla premium (Deudas, Ahorro, o el flujo de activar la captura de notificaciones) o al indicador de estado de la suscripción. El refresco es "mejor esfuerzo": si no hay conexión, se usa el último estado cacheado sin bloquear ni mostrar error (edge case ya definido en la spec).
 
@@ -64,7 +68,7 @@ Cinco decisiones técnicas, en el mismo formato que `001-gestion-sueldo-ahorro/r
 
 ---
 
-## D6 — El resumen del mes no depende de la suscripción
+## D6 — El resumen del mes no depende de la suscripción *(generalizada por D7: ahora nada de la app depende de un pago)*
 
 **Decisión**: el resumen sigue mostrando el presupuesto completo del mes —cuotas de deuda incluidas— y su desglose por categoría, esté vigente la suscripción o no. La suscripción **no entra en ningún cálculo financiero** ni oculta ninguna cifra. Lo que se bloquea es *gestionar* deudas y ahorro (crearlas, editarlas, aportar), no verlas contadas en el mes.
 
@@ -75,3 +79,117 @@ Además, el resumen es una pantalla gratis (FR-004): meter la vigencia de la sus
 **Consecuencia sobre la spec**: FR-012 estaba escrito asumiendo que el resumen "se vería afectado" por una suscripción no activa y que por lo tanto haría falta explicar la ausencia. Al implementar US4 se verificó que **nada en el resumen consulta la suscripción**: ni `lib/ui/estado/estado_mes.dart` ni `lib/ui/pantallas/resumen_mes/pantalla_resumen.dart` la mencionan, y la tarjeta de sugerencia de ahorro es informativa, sin acción que lleve a una pantalla bloqueada. FR-012 se reescribió como **garantía** (el resumen no se degrada) en vez de como aviso, y T033/T034 pasaron de "mostrar un aviso" a "fijar con una prueba que nadie meta esa dependencia más adelante". Revisado 2026-08-31.
 
 **Alternativas consideradas**: omitir las cuotas del comprometido mientras la suscripción no esté vigente y explicarlo con un aviso al estilo de `AvisoMesCerrado`. Rechazada por lo anterior: comunica bien, pero para eso primero rompe la cifra. También se consideró marcar la sugerencia de ahorro como premium y convertirla en entrada al paywall; rechazada por YAGNI, porque no es un callejón sin salida —no es tocable— y el consejo que da es cierto y gratis de dar.
+
+---
+
+# Revisión 2026-09-12 — de suscripción a propina
+
+Las decisiones D1 y D5 siguen vigentes tal como están escritas. **D2, D3, D4 y
+D6 quedan superadas** por las tres que siguen: describen un estado de
+suscripción que ya no existe. Se conservan sin borrar porque explican por qué
+el diseño anterior era como era, y una de ellas (D6) contiene el argumento que
+esta revisión termina de generalizar.
+
+---
+
+## D7 — Propina voluntaria en vez de suscripción con funciones bloqueadas
+
+**Decisión**: la app se reparte completa y gratis. El único camino de ingreso
+es una propina por única vez que el usuario deja si quiere, desde Ajustes, y
+que **no desbloquea absolutamente nada**.
+
+**Por qué**: el modelo anterior cobraba por funcionalidad que no tiene costo
+marginal —Deudas y Ahorro corren enteras en el teléfono, sin servidor— a
+cambio de una fricción muy concreta: dos de cinco pestañas cerradas en la
+primera pantalla que ve alguien que instala la app. Con el público real del
+proyecto ese bloqueo no produce ingreso y sí produce abandono. La propina
+conserva la posibilidad de ingreso sin ninguna fricción, y elimina de paso
+toda una categoría de código de riesgo: la que decide si el usuario tiene
+derecho a ver sus propios datos.
+
+**Consecuencia sobre el resto del proyecto**: desaparece T035 de esta spec (la
+guarda de suscripción en el callback headless de la spec 002), que era una de
+las dependencias cruzadas que mantenían trabadas a la vez a la 002 y a la 004.
+También queda sin objeto el paso 8 de T042 de la spec 005 ("que el premium no
+se herede del archivo restaurado"), que esperaba una suscripción real para
+poder verificarse.
+
+**Alternativas consideradas**:
+- **Publicidad (AdMob o similar)**: rechazada. Transmite identificador de
+  dispositivo y construye perfil de usuario, lo que no es una excepción
+  acotada al Principio I sino su derogación; y en una app de finanzas
+  personales destruye justo el atributo que la distingue. El ingreso esperado
+  para un público chico e hispanohablante tampoco lo justifica.
+- **App de pago en la tienda**: rechazada por decisión explícita del dueño del
+  producto ("no quiero cobrar por usar el apk").
+- **Cobrar solo lo que tenga costo marginal real** (por ejemplo, una
+  interpretación por servicio externo como la que evalúa la spec 006):
+  **no rechazada, pospuesta**. Es compatible con la propina y convive con
+  ella, pero hoy no existe ninguna función con costo por uso que cobrar, así
+  que especificarlo ahora sería violar el Principio V.
+
+---
+
+## D8 — Consumible repetible, sin estado local ni restauración
+
+**Decisión**: el producto de Google Play es un **consumible** (compra única
+repetible), no una suscripción ni un no-consumible. La app **no persiste
+nada** sobre las propinas: ni si hubo, ni cuántas, ni cuándo. No existe una
+acción de "restaurar compras".
+
+**Por qué**: restaurar compras es una exigencia de la política de Google Play
+para lo que *concede algo* — una suscripción o un desbloqueo permanente. Una
+propina no concede nada, así que no hay nada que restaurar en un dispositivo
+nuevo: el usuario no perdió ningún derecho al reinstalar. Y persistir "ya
+apoyó" solo tendría sentido para dejar de ofrecerlo o para cambiar el mensaje,
+dos comportamientos que ningún requisito pide (Principio V) y que además
+contradicen FR-007, que permite apoyar cuantas veces se quiera.
+
+Lo que **sí** sobrevive del diseño anterior es acusar recibo de la compra: una
+compra sin confirmar la reembolsa Google sola a los tres días. Como una
+propina interrumpida puede quedar pendiente entre sesiones, el repositorio
+completa las compras pendientes al consultar los montos (FR-010), no solo al
+terminar una compra recién hecha.
+
+**Alternativas consideradas**:
+- **No-consumible de una sola vez** ("apoyá el proyecto", comprable una única
+  vez): más simple de configurar, pero convierte la propina en una compra con
+  inventario, obliga a implementar restauración por política de la tienda y
+  choca con FR-007. Rechazada.
+- **Guardar la fecha de la última propina** para agradecer distinto a quien ya
+  apoyó: rechazada por YAGNI y porque reintroduce estado —y una tabla— para un
+  matiz cosmético.
+
+---
+
+## D9 — La tabla `suscripcion_premium` se elimina en una migración v4 → v5
+
+**Decisión**: subir `Esquema.version` de 4 a 5, y que el paso v4 → v5 haga
+`DROP TABLE IF EXISTS suscripcion_premium`. La tabla sale también de
+`Esquema.creacion`, así que una instalación nueva nunca la crea; su DDL se
+conserva solo como paso de la migración v3 → v4, igual que ya se hace con la
+tabla `ingreso` de la spec 001 (D-C2 de la spec 003).
+
+**Por qué**: es la única tabla del proyecto que **no contiene datos del
+usuario** — era una caché de lo que respondía Google Play. La regla de D10
+("ninguna migración destruye información del usuario") se sigue cumpliendo al
+pie de la letra, porque acá no hay información del usuario que destruir.
+Dejarla como tabla muerta sería peor: código y esquema que nadie lee, que el
+respaldo tiene que seguir vaciando y que el próximo que llegue tendría que
+investigar para descubrir que no significa nada.
+
+**Efecto colateral buscado sobre el respaldo (spec 005)**: la lista
+`_tablasQueNoViajan` pierde `suscripcion_premium` y queda solo con
+`notificacion_diagnostico`, y desaparece el descarte de la suscripción
+heredada al restaurar. Un respaldo hecho con la v4 que se restaure sobre la v5
+pasa por esta migración y pierde la tabla ahí, que es exactamente el
+comportamiento que antes se programaba a mano: el archivo deja de poder
+conceder un acceso que ya no existe porque el acceso ya no existe.
+
+**Alternativas consideradas**:
+- **Dejar la tabla sin usar**, sin migración: evita tocar el esquema, pero
+  deja esquema muerto, mantiene el vaciado en el respaldo y obliga a explicar
+  para siempre por qué está ahí. Rechazada.
+- **Reutilizar la tabla para guardar las propinas**: rechazada por D8 (no hay
+  nada que guardar) y porque reutilizar una tabla para algo distinto de lo que
+  su nombre dice es la clase de deuda que este proyecto evita por escrito.

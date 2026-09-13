@@ -187,13 +187,13 @@ void main() {
     });
   });
 
-  group('la suscripción no cambia ni una cifra del resumen (FR-012, D6)', () {
-    /// Ojo con `montar`: el árbol de estas pruebas **no tiene**
-    /// `EstadoSuscripcionPremium` por ningún lado. Si alguien hiciera que el
-    /// resumen consultara la suscripción, esto no fallaría por mostrar una
-    /// cifra distinta sino por un provider inexistente — que es exactamente
-    /// la alarma que se quiere. El resumen es gratis y dice la verdad
-    /// completa del mes, se pague o no se pague la app.
+  group('ningún pago cambia una cifra del resumen (FR-002, D6/D7)', () {
+    /// Ojo con `montar`: el árbol de estas pruebas **no tiene** nada de la
+    /// spec 004 por ningún lado. Si alguien hiciera que el resumen consultara
+    /// si el usuario pagó algo, esto no fallaría por mostrar una cifra
+    /// distinta sino por un provider inexistente — que es exactamente la
+    /// alarma que se quiere. El resumen dice la verdad completa del mes,
+    /// haya apoyado el usuario o no.
     testWidgets('la cuota de deuda se cuenta en el comprometido', (
       tester,
     ) async {

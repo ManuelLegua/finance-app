@@ -36,13 +36,16 @@ final class RepositorioRespaldoSqlite implements RepositorioRespaldo {
 
   /// Lo que se vacía **en la copia** antes de entregarla (D4).
   ///
-  /// `suscripcion_premium` porque un archivo editado a mano no puede ser una
-  /// vía para fabricarse acceso pagado (FR-003), y
-  /// `notificacion_diagnostico` porque no es dato que el usuario haya
-  /// cargado y puede contener el texto crudo de notificaciones bancarias: el
-  /// archivo está pensado para salir del teléfono.
+  /// `notificacion_diagnostico` porque no es dato que el usuario haya cargado
+  /// y puede contener el texto crudo de notificaciones bancarias: el archivo
+  /// está pensado para salir del teléfono.
+  ///
+  /// Acá también figuraba `suscripcion_premium`, para que un archivo editado a
+  /// mano no fuera una vía para fabricarse acceso pagado. Salió junto con la
+  /// tabla: la spec 004 se revisó a propina voluntaria, ya no hay acceso que
+  /// fabricarse, y la migración v4 → v5 borra la tabla incluso si viene dentro
+  /// de un respaldo viejo.
   static const List<String> _tablasQueNoViajan = <String>[
-    'suscripcion_premium',
     'notificacion_diagnostico',
   ];
 
@@ -117,9 +120,12 @@ final class RepositorioRespaldoSqlite implements RepositorioRespaldo {
       await _baseDatos.borrarSidecars();
 
       // Paso 5: reabrir. Si el respaldo venía de una versión anterior, las
-      // migraciones que ya existen corren solas acá (D1, FR-010).
-      final conexion = await _baseDatos.abrir();
-      await _descartarSuscripcionHeredada(conexion);
+      // migraciones que ya existen corren solas acá (D1, FR-010) — incluida
+      // la v4 → v5, que borra la tabla de suscripción que pueda traer un
+      // archivo viejo. Antes ese descarte se hacía a mano justo acá; ahora lo
+      // hace la migración, que además cubre el caso de restaurar sin abrir
+      // esta pantalla.
+      await _baseDatos.abrir();
 
       // Paso 6: recién ahora se puede soltar la red de seguridad.
       await _borrarSiExiste(rutaPrevia);
@@ -186,15 +192,6 @@ final class RepositorioRespaldoSqlite implements RepositorioRespaldo {
       versionDelArchivo: versionDelArchivo,
       versionSoportada: Esquema.version,
     );
-  }
-
-  /// Descarta la fila de suscripción que venga en el archivo restaurado (D4).
-  ///
-  /// **El acceso premium nunca sale de un archivo local**: si alguien la puso
-  /// a mano, restaurar no se la concede. El estado real se vuelve a consultar
-  /// contra Google Play, que es la única fuente válida (SC-004).
-  static Future<void> _descartarSuscripcionHeredada(Database conexion) async {
-    await conexion.delete('suscripcion_premium');
   }
 
   /// Deja todo como estaba antes de intentar el reemplazo, y la base abierta

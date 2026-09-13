@@ -2,10 +2,8 @@ import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
-import 'package:finanzas/ui/estado/estado_suscripcion.dart';
+import 'package:finanzas/ui/pantallas/ajustes/seccion_apoyo.dart';
 import 'package:finanzas/ui/pantallas/ajustes/seccion_respaldo.dart';
-import 'package:finanzas/ui/pantallas/suscripcion/boton_restaurar_suscripcion.dart';
-import 'package:finanzas/ui/pantallas/suscripcion/ficha_estado_suscripcion.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -19,9 +17,10 @@ import 'package:provider/provider.dart';
 /// La regla de ahorro y su porcentaje sí son del ahorro, y quedan en la
 /// pantalla de esa historia (US5).
 ///
-/// El estado de la suscripción también vive acá: FR-009 pide un lugar fijo
-/// donde consultarlo, y Ajustes es el único que no depende de tener acceso a
-/// lo que se compró.
+/// El apoyo voluntario también vive acá, y **solo acá** (spec 004 revisada,
+/// FR-006): es el único lugar de la app donde se menciona pagarle algo al
+/// que la hizo, y se llega por decisión del usuario. Ninguna otra pantalla
+/// lo nombra.
 class PantallaAjustes extends StatefulWidget {
   const PantallaAjustes({super.key});
 
@@ -37,23 +36,11 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
   void initState() {
     super.initState();
     _cargar();
-    _refrescarSuscripcion();
   }
 
   Future<void> _cargar() async {
     final config = await context.read<RepositorioConfiguracion>().obtener();
     if (mounted) setState(() => _config = config);
-  }
-
-  /// Entrar a Ajustes es entrar a ver el estado de la suscripción, así que se
-  /// vuelve a preguntar a Google Play (D4): el usuario pudo comprar, cancelar
-  /// o dejar vencer fuera de la app, y una ficha desactualizada acá sería
-  /// peor que no tenerla.
-  ///
-  /// Es de mejor esfuerzo: sin conexión se sigue mostrando lo último
-  /// conocido, sin bloquear la pantalla ni avisar de nada.
-  void _refrescarSuscripcion() {
-    context.read<EstadoSuscripcionPremium>().refrescar();
   }
 
   Future<void> _cambiarDiasDeGracia(int dias) async {
@@ -91,10 +78,8 @@ class _PantallaAjustesState extends State<PantallaAjustes> {
         ),
         const _Seccion(titulo: 'Respaldo'),
         const SeccionRespaldo(),
-        const _Seccion(titulo: 'Suscripción'),
-        const FichaEstadoSuscripcion(),
-        const SizedBox(height: Espaciado.chico),
-        const Center(child: BotonRestaurarSuscripcion()),
+        const _Seccion(titulo: 'Apoyar el proyecto'),
+        const SeccionApoyo(),
       ],
     );
   }

@@ -51,8 +51,10 @@ void main() {
           // Spec 003: cobros parciales de ingreso. `ingreso` (v1) no aparece
           // acá: una instalación nueva ya no la crea (D-C5 de research.md).
           'cobro_ingreso',
-          // Spec 004: suscripción premium.
-          'suscripcion_premium',
+          // La spec 004 no aporta ninguna tabla: se revisó a propina
+          // voluntaria y una propina no deja estado (D8). La
+          // `suscripcion_premium` que agregaba en la v4 la borra la v5, así
+          // que una instalación nueva ya no la crea.
         ]),
       );
     });

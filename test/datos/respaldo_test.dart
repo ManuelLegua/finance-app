@@ -143,17 +143,17 @@ void main() {
       },
     );
 
-    test('la suscripción y el diagnóstico viajan vacíos', () async {
-      // FR-003 y D4: un respaldo editado a mano no puede ser una vía para
-      // fabricarse acceso pagado, y el texto crudo de las notificaciones no
-      // tiene por qué salir del teléfono.
+    test('el diagnóstico viaja vacío', () async {
+      // D4: el texto crudo de las notificaciones bancarias no tiene por qué
+      // salir del teléfono. Acá también se comprobaba que viajara vacía
+      // `suscripcion_premium`, para que nadie se fabricara acceso pagado
+      // editando el archivo; esa tabla ya no existe (spec 004 revisada, D9).
       await montarBase(conDatos: true);
 
       final copia = await abrirArchivoGenerado(
         (await repoRespaldo.exportar()).ruta,
       );
 
-      expect(await filasEn(copia, 'suscripcion_premium'), 0);
       expect(await filasEn(copia, 'notificacion_diagnostico'), 0);
 
       // Lo demás sí viaja: vaciar de más sería peor que no exportar.
@@ -171,13 +171,12 @@ void main() {
     test('no modifica la base viva', () async {
       // La mitad fácil de olvidar de D4: se vacía **la copia**, nunca el
       // original. Si esto se rompe, exportar le borraría al usuario su
-      // suscripción y su diagnóstico sin avisar.
+      // diagnóstico sin avisar.
       await montarBase(conDatos: true);
       final viva = baseDatos.conexionActual!;
 
       await repoRespaldo.exportar();
 
-      expect(await filasEn(viva, 'suscripcion_premium'), 1);
       expect(await filasEn(viva, 'notificacion_diagnostico'), 1);
       expect(await filasEn(viva, 'obligacion'), 1);
       expect(await filasEn(viva, 'cobro_ingreso'), 1);
@@ -255,8 +254,7 @@ void main() {
 
         final restaurada = baseDatos.conexionActual!;
         expect(await restaurada.getVersion(), Esquema.version);
-        // La tabla que agregó la v4 existe, y lo que traía la v3 sigue ahí.
-        expect(await filasEn(restaurada, 'suscripcion_premium'), 0);
+        // Lo que traía la v3 sigue ahí después de cruzar dos migraciones.
         final cobros = await restaurada.query('cobro_ingreso');
         expect(cobros, hasLength(1));
         expect(cobros.first['monto_centavos'], 250000);
@@ -308,30 +306,6 @@ void main() {
         expect(await filasEn(baseDatos.conexionActual!, 'obligacion'), 1);
       },
     );
-
-    test('un respaldo con suscripción puesta a mano no concede premium', () async {
-      // SC-004: el acceso pagado nunca sale de un archivo local. Se vuelve a
-      // consultar contra Google Play, que es la única fuente válida.
-      await montarBase(conDatos: true);
-      final respaldo = await repoRespaldo.exportar();
-
-      final adulterado = await databaseFactoryFfi.openDatabase(
-        respaldo.ruta,
-        options: OpenDatabaseOptions(singleInstance: false),
-      );
-      await sembrarSuscripcionPremium(adulterado);
-      expect(await filasEn(adulterado, 'suscripcion_premium'), 1);
-      await adulterado.close();
-
-      await repoRespaldo.restaurar(respaldo.ruta);
-
-      expect(
-        await filasEn(baseDatos.conexionActual!, 'suscripcion_premium'),
-        0,
-      );
-      // Y el resto del respaldo sí se restauró: no es que haya fallado entero.
-      expect(await filasEn(baseDatos.conexionActual!, 'obligacion'), 1);
-    });
 
     test(
       'un fallo a mitad del reemplazo deja la base como estaba y usable',

@@ -7,9 +7,9 @@ import 'package:finanzas/dominio/modelos/cobro_ingreso.dart';
 import 'package:finanzas/dominio/modelos/configuracion.dart';
 import 'package:finanzas/dominio/modelos/consumo_pendiente.dart';
 import 'package:finanzas/dominio/modelos/deuda.dart';
-import 'package:finanzas/dominio/modelos/estado_suscripcion.dart';
 import 'package:finanzas/dominio/modelos/notificacion_diagnostico.dart';
 import 'package:finanzas/dominio/modelos/obligacion.dart';
+import 'package:finanzas/dominio/modelos/propina.dart';
 import 'package:finanzas/dominio/modelos/respaldo.dart';
 import 'package:finanzas/dominio/modelos/resumen_pendientes.dart';
 import 'package:finanzas/dominio/modelos/tarjeta.dart';
@@ -22,8 +22,8 @@ import 'package:finanzas/dominio/repositorios/repositorio_deudas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_diagnostico.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_pendientes.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_propinas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_respaldo.dart';
-import 'package:finanzas/dominio/repositorios/repositorio_suscripcion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/dominio/repositorios/servicio_escucha_notificaciones.dart';
@@ -658,87 +658,58 @@ final class RepositorioAsociacionesEnMemoria
   }
 }
 
-/// Suscripción premium en memoria (spec 004).
+/// Propinas en memoria (spec 004 revisada).
 ///
 /// Sustituye a Google Play Billing en las pruebas: la interfaz
-/// `RepositorioSuscripcion` es el punto de sustitución correcto (D5 de
+/// `RepositorioPropinas` es el punto de sustitución correcto (D5 de
 /// research.md), así que nada de la suite toca el plugin real.
 ///
-/// Replica los comportamientos que la UI observa:
-///  - `estadoCacheado` nunca falla por falta de conexión;
-///  - `refrescar` sin conexión devuelve el cacheado sin cambios;
-///  - `ofertasDisponibles` sin conexión **sí** falla, porque mostrar un
-///    precio viejo sería engañoso;
-///  - cancelar una compra devuelve el estado sin cambios, no un error.
-final class RepositorioSuscripcionEnMemoria implements RepositorioSuscripcion {
-  RepositorioSuscripcionEnMemoria({
-    EstadoSuscripcion? inicial,
-    DateTime? ultimaVerificacion,
-    this.ofertas = const <OfertaSuscripcion>[
-      OfertaSuscripcion(
-        plan: PlanSuscripcion.mensual,
-        precioFormateado: 'S/ 19.90',
-        duracionPruebaDias: 30,
+/// Replica los dos comportamientos que la pantalla de apoyo observa:
+///  - sin tienda disponible, consultar los montos **falla**, porque mostrar
+///    un precio viejo sería engañoso (FR-011);
+///  - cancelar una compra devuelve `cancelada`, no un error (FR-008).
+final class RepositorioPropinasEnMemoria implements RepositorioPropinas {
+  RepositorioPropinasEnMemoria({
+    this.ofertas = const <OfertaPropina>[
+      OfertaPropina(
+        id: 'propina_cafe',
+        titulo: 'Un café',
+        precioFormateado: 'S/ 5.00',
       ),
-      OfertaSuscripcion(
-        plan: PlanSuscripcion.anual,
-        precioFormateado: 'S/ 179.90',
-        duracionPruebaDias: 30,
+      OfertaPropina(
+        id: 'propina_menu',
+        titulo: 'Un menú',
+        precioFormateado: 'S/ 15.00',
       ),
     ],
-  }) : _actual =
-           inicial ??
-           EstadoSuscripcion.nunca(
-             ultimaVerificacion: ultimaVerificacion ?? DateTime(2026, 8, 30),
-           );
-
-  EstadoSuscripcion _actual;
+  });
 
   /// Lo que la tienda ofrece. Vacío simula un producto mal configurado.
-  List<OfertaSuscripcion> ofertas;
+  List<OfertaPropina> ofertas;
 
   /// Con `false`, la tienda no responde: es el modo avión de las pruebas.
-  bool hayConexion = true;
+  bool hayTienda = true;
 
-  /// Qué estado deja una compra completada. Si es `null`, la compra se
-  /// entiende como cancelada por el usuario (FR-008): no cambia nada.
-  EstadoSuscripcion? resultadoDeComprar;
+  /// Cómo termina la próxima compra. Por defecto se completa.
+  ResultadoPropina resultadoDeApoyar = ResultadoPropina.completada;
 
-  /// Qué encuentra `restaurar()`. `null` = esta cuenta no tiene ninguna
-  /// suscripción (FR-015).
-  EstadoSuscripcion? resultadoDeRestaurar;
-
-  /// Cuántas veces se pidió comprar, para verificar que un doble toque no
+  /// Cuántas veces se pidió apoyar, para verificar que un doble toque no
   /// dispara dos compras.
-  int vecesQueSeCompro = 0;
+  int vecesQueSeApoyo = 0;
 
-  /// Si se fija, `comprar()` no responde hasta que se complete. Es la única
+  /// Con qué ofertas se llamó a `apoyar`, en orden.
+  final List<OfertaPropina> apoyos = <OfertaPropina>[];
+
+  /// Si se fija, `apoyar()` no responde hasta que se complete. Es la única
   /// forma de dejar una compra a medias en una prueba y ver qué muestra la
   /// pantalla mientras Google confirma.
   Completer<void>? confirmacionPendiente;
 
-  /// Si se fija, la próxima escritura falla con este error.
-  Object? errorEnLaProximaEscritura;
-
-  /// Fija el estado sin pasar por la tienda, para armar el escenario de una
-  /// prueba (suscripción ya vencida, ya activa, etc.).
-  void fijar(EstadoSuscripcion estado) => _actual = estado;
-
   @override
-  Future<EstadoSuscripcion> estadoCacheado() async => _actual;
-
-  @override
-  Future<EstadoSuscripcion> refrescar() async {
-    if (!hayConexion) return _actual;
-    _fallarSiCorresponde();
-    return _actual;
-  }
-
-  @override
-  Future<List<OfertaSuscripcion>> ofertasDisponibles() async {
-    if (!hayConexion) {
+  Future<List<OfertaPropina>> ofertasDisponibles() async {
+    if (!hayTienda) {
       throw ErrorPersistencia.alLeer(
-        'los planes de suscripción',
+        'los montos para apoyar',
         StateError('Google Play no está disponible'),
       );
     }
@@ -746,33 +717,11 @@ final class RepositorioSuscripcionEnMemoria implements RepositorioSuscripcion {
   }
 
   @override
-  Future<EstadoSuscripcion> comprar(PlanSuscripcion plan) async {
-    vecesQueSeCompro++;
+  Future<ResultadoPropina> apoyar(OfertaPropina oferta) async {
+    vecesQueSeApoyo++;
+    apoyos.add(oferta);
     await confirmacionPendiente?.future;
-    if (!hayConexion) return _actual;
-    _fallarSiCorresponde();
-    final resultado = resultadoDeComprar;
-    // Sin resultado, el usuario canceló: no se toca nada y no se lanza.
-    if (resultado == null) return _actual;
-    _actual = resultado.copiaCon(plan: plan);
-    return _actual;
-  }
-
-  @override
-  Future<EstadoSuscripcion> restaurar() async {
-    if (!hayConexion) return _actual;
-    _fallarSiCorresponde();
-    _actual =
-        resultadoDeRestaurar ??
-        EstadoSuscripcion.nunca(ultimaVerificacion: _actual.ultimaVerificacion);
-    return _actual;
-  }
-
-  void _fallarSiCorresponde() {
-    final error = errorEnLaProximaEscritura;
-    if (error == null) return;
-    errorEnLaProximaEscritura = null;
-    throw error;
+    return resultadoDeApoyar;
   }
 }
 

@@ -59,13 +59,16 @@ Future<BaseDatos> abrirBaseEnArchivo(Directory directorio) async {
 }
 
 /// Crea en [ruta] una base con el esquema de la **versión 3** (specs 001, 002
-/// y 003), es decir el actual menos `suscripcion_premium`.
+/// y 003).
 ///
 /// Sirve para probar que un respaldo viejo restaurado en la app de hoy queda
-/// migrado (FR-010). Mismo criterio que `migracion_004_test.dart`: el paso a
-/// la v4 es puramente aditivo, así que "la versión 3" es el esquema actual
-/// menos esa tabla, y reproducir a mano su DDL solo agregaría una copia que
-/// se desincroniza.
+/// migrado (FR-010).
+///
+/// Es `Esquema.creacion` entero, sin excepciones: la v4 agregó
+/// `suscripcion_premium` y la v5 la borró (spec 004 revisada, D9), así que el
+/// conjunto de tablas de la v3 y el de hoy terminaron siendo el mismo. Lo que
+/// cambia entre una y otra es solo el `user_version`, que es lo que dispara
+/// las migraciones al restaurar.
 Future<void> crearBaseEnVersion3(
   String ruta, {
   required Future<void> Function(Database conexion) sembrar,
@@ -77,7 +80,6 @@ Future<void> crearBaseEnVersion3(
       onCreate: (conexion, version) async {
         final lote = conexion.batch();
         for (final sentencia in Esquema.creacion) {
-          if (sentencia == Esquema.suscripcionPremium) continue;
           lote.execute(sentencia);
         }
         await lote.commit(noResult: true);
@@ -88,8 +90,8 @@ Future<void> crearBaseEnVersion3(
   await conexion.close();
 }
 
-/// Siembra una fila en cada tabla que el usuario carga, más las dos que **no**
-/// viajan en el respaldo (D4), para poder comprobar que se vacían.
+/// Siembra una fila en cada tabla que el usuario carga, más la que **no**
+/// viaja en el respaldo (D4), para poder comprobar que se vacía.
 ///
 /// Los montos son centavos enteros, como en toda la app (Principio II).
 Future<void> sembrarDatosDeEjemplo(Database conexion) async {
@@ -146,25 +148,12 @@ Future<void> sembrarDatosDeEjemplo(Database conexion) async {
     'captura_notificaciones_activa': 0,
   });
 
-  // Las dos que no viajan (D4). Se siembran justamente para comprobar que la
-  // copia sale sin ellas y que el original las conserva.
+  // La que no viaja (D4). Se siembra justamente para comprobar que la copia
+  // sale sin ella y que el original la conserva.
   await conexion.insert('notificacion_diagnostico', <String, Object?>{
     'origen_paquete': 'com.bcp.innovacxion.yapeapp',
     'motivo': 'formato_no_reconocido',
     'texto_crudo': 'Pagaste S/ 45.50 en TOTTUS',
     'fecha': '2026-09-03',
   });
-  await sembrarSuscripcionPremium(conexion);
 }
-
-/// Una fila de suscripción vigente. Aparte de [sembrarDatosDeEjemplo] porque
-/// también hace falta ponerla **a mano dentro de un respaldo**, para probar
-/// que restaurarlo no concede acceso pagado (SC-004).
-Future<void> sembrarSuscripcionPremium(Database conexion) =>
-    conexion.insert('suscripcion_premium', <String, Object?>{
-      'id': 1,
-      'situacion': 'activa',
-      'plan': 'mensual',
-      'vigente_hasta': '2026-10-15',
-      'ultima_verificacion': '2026-09-15',
-    });

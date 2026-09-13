@@ -90,8 +90,8 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
 | `specs/002-captura-notificaciones-bancarias/` | **En curso: 52 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
 | `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
-| `specs/004-suscripcion-premium/` | **En curso: 40 de 46 tareas.** Suscripción paga (Deudas + Ahorro + captura de notificaciones) vía Google Play Billing (Principio I enmendado a v2.0.0) |
-| `specs/005-respaldo-exportacion-datos/` | **Implementada (42 de 43 tareas; falta el paso 8 de T042).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
+| `specs/004-suscripcion-premium/` | **Revisada el 2026-09-12 y reimplementada: de suscripción paga a propina voluntaria** (68 de 70 tareas). La app se reparte completa y gratis; apoyar no desbloquea nada. La carpeta conserva su nombre viejo para no romper los enlaces del historial (Principio I enmendado a v2.0.0, sin enmienda nueva) |
+| `specs/005-respaldo-exportacion-datos/` | **Implementada (43 de 43).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
 
 Antes de proponer un cambio de diseño, leer `research.md`: es probable que la alternativa ya se haya evaluado y rechazado por escrito.
 
@@ -170,9 +170,9 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 001 completa (108/108)**, validada en emulador y en un Android real (T107).
 **Spec 002 en curso (52/62)** — el tramo que falta dejó de ser solo insumo manual: ver el hallazgo del 2026-09-12 más abajo.
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
-**Spec 004 en curso (40/46)** — lo que falta es todo manual (Play Console, dispositivo) salvo T035, bloqueada por la spec 002.
-**Spec 005 implementada (42/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. Solo falta el paso 8 de T042 (que el premium no se herede del archivo), que necesita una suscripción real.
-**552 pruebas, todas en verde.** La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
+**Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
+**504 pruebas, todas en verde.** Bajaron de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -275,19 +275,37 @@ Solo falta la validación manual (T033) para dar la spec 003 por cerrada del tod
 
 ### Dónde retomar la spec 004
 
-| Spec 004 · Fase | Estado |
+| Spec 004 · Fase (tras la revisión del 2026-09-12) | Estado |
 |---|---|
-| Setup + Foundational (T001–T016) | ✅ esquema v3→v4, `RepositorioSuscripcion`/`RepositorioSuscripcionBilling`, `EstadoSuscripcionPremium`, guarda del cascarón |
-| US1 · descubrir qué se desbloquea (T017–T019) | ✅ paywall con precio y prueba gratis antes de tocar nada |
-| US2 · elegir plan y desbloquear al instante (T020–T028) | ✅ código; **T027/T028 [MANUAL] pendientes** — producto en Play Console y cuenta de prueba, sin lo cual ninguna compra real funciona |
-| US3 · lo gratis sin límite (T029–T030) | ✅ |
-| US4 · la suscripción vence o se cancela (T031–T036) | ✅ — D6 de research.md: el resumen del mes **no** depende de la suscripción, las cuotas se siguen contando siempre |
-| US5 · restaurar la suscripción (T037–T039) | ✅ `restaurar()`, botón en paywall y Ajustes; **T040 [MANUAL] pendiente** |
-| Polish (T041–T043, T045 hechas; T044 [MANUAL] y T046 pendientes) | en curso |
+| T001–T046 · la suscripción | ⚰️ implementada y **descartada**. Se conservan en `tasks.md` porque explican por qué existió ese código |
+| Documentación de la revisión (T047–T052) | ✅ spec, research (D7/D8/D9), data-model, plan, contrato y quickstart reescritos |
+| Pruebas primero (T053–T055) | ✅ `todo_gratis_test.dart`, `pantalla_propina_test.dart`, `migracion_005_test.dart` |
+| Dominio y datos (T056–T062) | ✅ `OfertaPropina`, `RepositorioPropinas(Billing)`, esquema v5 y respaldo con una tabla menos |
+| Interfaz (T063–T067) | ✅ pantalla de apoyo, entrada en Ajustes, y borrado del paywall y de la guarda del cascarón |
+| T068, T069 [MANUAL] | pendientes — crear los tres consumibles en Play Console y recorrer `quickstart.md` en un dispositivo |
 
-**Lo único de código que sigue bloqueado**: T035 (que el callback headless descarte notificaciones nuevas si la suscripción no está vigente) depende de que exista el parser genérico de la spec 002 (T042), que a su vez espera insumo manual del teléfono. Quedó documentado en `lib/datos/notificaciones/callback_headless.dart` dónde va la guarda.
+**Qué cambió y por qué**: cobrar por Deudas, Ahorro y la captura ponía una
+barrera a funcionalidad que no tiene costo marginal —corre entera en el
+teléfono— a cambio de dos de cinco pestañas cerradas en la primera pantalla.
+Ahora la app se reparte completa y el ingreso es una propina que **no
+desbloquea nada** (research.md D7).
 
-Todo lo demás que falta es manual: **T027/T028** (crear el producto `premium` en Play Console — el `applicationId` ya dejó de ser obstáculo: es `io.github.manuellegua.finanzas` desde el 2026-09-12), **T040** y **T044** (recorrer `quickstart.md` contra la pista de pruebas internas), y **T046** (este párrafo, una vez que lo manual también esté cerrado).
+**Tres cosas fáciles de romper sin querer:**
+
+- **`test/ui/todo_gratis_test.dart` está escrito en negativo**: verifica que
+  ninguna condición de acceso exista. Si alguien vuelve a condicionar un
+  destino, falla ahí, y esa es su única razón de ser.
+- **`EstadoPropinas` no vive en el árbol de providers de `main.dart`**: lo crea
+  la ruta que abre la pantalla de apoyo (`seccion_apoyo.dart`) y muere con
+  ella. Subirlo al árbol volvería posible que otra pantalla consulte si el
+  usuario pagó, que es justo lo que FR-002 prohíbe.
+- **Los productos de Play Console tienen que ser consumibles**, no compras
+  únicas: de eso depende poder apoyar más de una vez (FR-007).
+
+**Dos bloqueos que se disolvieron con la revisión**: T035 de esta spec (la
+guarda de suscripción en el callback headless de la spec 002) ya no existe
+porque no hay nada que guardar, y el paso 8 de T042 de la spec 005 (que el
+premium no se herede del archivo restaurado) quedó sin objeto.
 
 ### Dónde retomar la spec 005
 
@@ -299,13 +317,13 @@ Todo lo demás que falta es manual: **T027/T028** (crear el producto `premium` e
 | US3 · no perder datos por error (T031–T037) | ✅ aviso de reemplazo con confirmación aparte, motivo concreto de rechazo, vuelta atrás |
 | Polish (T038–T041, T043) | ✅ |
 | T019, T030 [MANUAL] | ✅ verificadas en emulador: la hoja de compartir entrega `finanzas-respaldo-AAAA-MM-DD.db`, y tras `adb shell pm clear` el respaldo devuelve los datos idénticos |
-| T042 [MANUAL] | pasos 6 y 7 ✅ (confirmación aparte al reemplazar, rechazo de un archivo cualquiera con su motivo); **falta el paso 8**, que el premium no se herede del archivo — necesita una suscripción real, bloqueada por Play Console (spec 004) |
+| T042 [MANUAL] | ✅ pasos 6 y 7 verificados (confirmación aparte al reemplazar, rechazo de un archivo cualquiera con su motivo). El paso 8 —que el premium no se herede del archivo— quedó **sin objeto** el 2026-09-12: la spec 004 se revisó a propina y ya no existe acceso pagado que heredar |
 
 **Esta feature no toca el esquema**: `Esquema.version` sigue en 4. Es la primera del proyecto que no agrega ni altera tablas — opera sobre el archivo entero, no sobre sus filas.
 
 Dos cosas fáciles de romper sin querer, las dos con prueba propia en `test/datos/respaldo_test.dart`:
 
-- **Lo que no viaja se vacía en la copia, nunca en el original** (D4). `suscripcion_premium` y `notificacion_diagnostico` se borran del archivo exportado; si alguien invirtiera el orden, exportar le borraría al usuario su suscripción.
+- **Lo que no viaja se vacía en la copia, nunca en el original** (D4). Hoy es solo `notificacion_diagnostico`: se borra del archivo exportado, y si alguien invirtiera el orden, exportar le borraría al usuario su diagnóstico. `suscripcion_premium` estaba en esa lista hasta la revisión de la spec 004, que borró la tabla entera en la migración v4 → v5.
 - **Los `-wal`/`-shm` viejos se borran al reemplazar** (D3). Un sidecar huérfano junto a un archivo principal distinto es corrupción silenciosa, no un error visible.
 
-Y una consecuencia en `main.dart`: restaurar cierra y reabre la base, así que la conexión anterior queda muerta. El árbol de providers cuelga de una `key` con la conexión viva y se reconstruye entero al restaurar — que es también lo que hace que `EstadoSuscripcionPremium` vuelva a preguntarle a Google Play en vez de heredar el estado del archivo (SC-004).
+Y una consecuencia en `main.dart`: restaurar cierra y reabre la base, así que la conexión anterior queda muerta. El árbol de providers cuelga de una `key` con la conexión viva y se reconstruye entero al restaurar.

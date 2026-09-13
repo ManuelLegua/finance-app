@@ -1,103 +1,79 @@
-# Quickstart — Validar la feature 004
+# Quickstart: Apoyo voluntario (propina)
 
-**Feature**: 004-suscripcion-premium | **Fecha**: 2026-08-29
-
-Guía para levantar el proyecto y comprobar que la suscripción premium hace lo
-que dice la spec. A diferencia de 001, buena parte de esta feature **no se
-puede probar solo con `flutter test`**: comprar, restaurar y vencer una
-suscripción real solo se verifican contra Google Play. Esta guía cubre ambos
-frentes.
+**Revisado 2026-09-12.** El recorrido anterior validaba comprar una
+suscripción, ver Deudas desbloquearse y restaurarla en otro dispositivo. Nada
+de eso existe ya: no hay nada que desbloquear ni que restaurar.
 
 ---
 
-## Requisitos previos
-
-- Lo mismo que la feature 001 (Flutter 3.47.1 en el `PATH` de la sesión,
-  emulador o dispositivo Android).
-- **Una app subida a Google Play Console**, al menos a la pista de **pruebas
-  internas** (no hace falta publicarla en producción). Google Play Billing no
-  funciona contra un `flutter run` de depuración sin que la app exista en la
-  Play Console con el mismo `applicationId` y la misma firma de subida.
-- **El producto de suscripción creado en Play Console**: un ID de producto
-  (ej. `premium`) con dos planes base (`mensual`, `anual`) y una oferta de
-  prueba de un mes en cada uno (FR-006, FR-006a). Se crea en Play Console →
-  Monetizar → Productos → Suscripciones.
-- **Una cuenta de prueba de licencias** (Play Console → Configuración → Prueba
-  de licencias): sin esto, cualquier intento de compra sale con el propio
-  usuario real, con dinero real.
-
----
-
-## Puesta en marcha
+## Lo que la suite automatizada sí cubre
 
 ```powershell
-flutter pub get
+$env:PATH = "C:\Users\manue\dev\flutter\bin;$env:PATH"
+flutter test test/ui/todo_gratis_test.dart        # ningún destino está bloqueado
+flutter test test/ui/pantalla_propina_test.dart   # montos, error sin conexión, cancelar
+flutter test test/datos/migracion_005_test.dart   # la tabla se va sin perder datos
 flutter analyze
-flutter test
-flutter run
 ```
 
----
+La garantía central de esta feature —que **ningún** destino esté condicionado a
+un pago— está fijada por `todo_gratis_test.dart`, no por este recorrido: es una
+propiedad que una prueba puede verificar mejor que un par de ojos.
 
-## Validación automática
+## Lo que solo se puede validar a mano
 
-Cubre todo lo que no depende de hablar con Google Play de verdad.
+El flujo de compra real no se puede automatizar (research.md D5). Necesita la
+app publicada en la pista de pruebas internas de Google Play Console y una
+cuenta con licencia de prueba.
 
-```powershell
-flutter test test/dominio/suscripcion_test.dart   # vigencia por cada situación
-flutter test test/ui/pantalla_paywall_test.dart   # el paywall bloquea/desbloquea según EstadoSuscripcion
-flutter test test/pureza_test.dart                # el dominio sigue sin importar el plugin de facturación
-```
+### Antes de empezar
 
-| Qué se comprueba | Dónde | Requisito |
-|---|---|---|
-| `enPrueba`, `activa`, `enGracia` conceden acceso; `vencida`, `cancelada`, `nunca` no | `test/dominio/suscripcion_test.dart` | FR-001 – FR-003, FR-010 |
-| Deudas/Ahorro muestran el paywall sin suscripción, y la pantalla real con ella | `test/ui/pantalla_paywall_test.dart` | FR-001, FR-002 |
-| Los datos de Deudas/Ahorro no se tocan al cambiar el estado de suscripción | `test/ui/pantalla_paywall_test.dart` | FR-011 |
-| El dominio no importa el paquete `in_app_purchase` | `test/pureza_test.dart` | Principio III |
+1. Los tres productos **consumibles** creados y activos en Play Console:
+   `propina_cafe`, `propina_menu`, `propina_generosa` (T068). Consumibles, no
+   suscripciones: de eso depende poder apoyar más de una vez.
+2. El APK subido a la pista de pruebas internas, con el mismo
+   `applicationId` (`io.github.manuellegua.finanzas`) y firmado con la misma
+   clave que se subirá después.
+3. La cuenta de Google del dispositivo dada de alta como probador de licencias,
+   para que las compras no cobren de verdad.
 
----
+### Recorrido
 
-## Validación manual por historia de usuario
+1. **Nada está bloqueado.** Recorrer los cinco destinos de la barra inferior y
+   todos los del menú lateral. Ninguno debe pedir pagar ni sustituir su
+   contenido. En particular: Deudas y Ahorro muestran sus datos, y "Captura"
+   arranca el flujo del permiso sin pedir nada antes. **Si algo pide pagar, la
+   revisión está incumplida, no incompleta.**
+2. **El apoyo se encuentra, pero no se cruza.** Ajustes es el único lugar donde
+   aparece. Verificar que no hay ningún banner, diálogo ni distintivo de apoyo
+   en ninguna otra pantalla (FR-006, SC-002).
+3. **Los precios son los de la tienda.** Abrir "Apoyar esta app": los tres
+   montos con el precio que devuelve Google Play, y el texto que dice que no
+   desbloquea nada. Ningún precio escrito a mano en la app (FR-004, FR-005).
+4. **Cancelar no duele.** Elegir un monto, abrir el diálogo de Google y
+   cerrarlo. No debe aparecer ningún error ni reproche, y no debe cobrarse
+   nada (FR-008).
+5. **Apoyar funciona.** Completar una compra. La app tiene que agradecer de
+   forma visible (FR-012).
+6. **Nada cambió.** Volver a recorrer Deudas, Ahorro, Resumen y Ajustes: todo
+   igual que en el paso 1. Este paso es el que verifica SC-003 y es el más
+   fácil de saltearse por obvio.
+7. **Se puede apoyar de nuevo.** Volver a la pantalla y completar una segunda
+   compra del mismo monto. Si Google la rechaza por "ya lo tenés", el producto
+   quedó creado como no consumible en Play Console: corregirlo ahí (FR-007).
+8. **Sin conexión se dice, no se inventa.** Poner el dispositivo en modo avión
+   y abrir la pantalla de apoyo: tiene que explicar que no pudo consultar los
+   montos y ofrecer reintentar, sin mostrar ningún precio (FR-011, SC-005).
+9. **Una compra interrumpida no se pierde.** Iniciar una compra y cerrar la app
+   antes de que Google confirme. Volver a abrir la pantalla de apoyo: la compra
+   pendiente tiene que quedar acusada, sin cobrar de nuevo (FR-010, SC-004).
+   Este es el paso que evita el peor resultado posible de esta feature —que
+   alguien pague y Google le devuelva la plata a los tres días por falta de
+   confirmación.
 
-Con una cuenta de prueba de licencias configurada, y usando las **tarjetas de
-prueba de Google Play** (Play Console permite pagos de prueba instantáneos y
-también "renovar/cancelar/expirar ahora" sobre una suscripción de prueba, sin
-esperar un mes real):
+### Sin Google Play
 
-1. **US1 — Descubrir el paywall**. Sin haberte suscrito, entrá a Deudas.
-   Tenés que ver la explicación de qué se desbloquea, el precio mensual, el
-   anual, y que el primer mes es gratis en cualquiera de los dos. Repetí en
-   Ahorro.
-2. **US2 — Suscribirse**. Elegí el plan mensual, completá la compra de
-   prueba. Sin salir de la app, Deudas y Ahorro tienen que quedar accesibles.
-   Consultá el estado: tiene que decir "en prueba gratis" y la fecha del
-   primer cobro.
-3. **US2 (cobro)** — Desde Play Console, sobre esa suscripción de prueba,
-   usá la opción de simular el fin del período de prueba. El estado en la
-   app (al refrescar) tiene que pasar a "activa".
-4. **US3 — Lo gratis sigue gratis**. Sin ninguna suscripción (otra cuenta de
-   prueba, o cancelá y esperá a que venza), recorré Presupuesto, Resumen y
-   Gastos: ninguna debe mostrar avisos de pago.
-5. **US4 — Vencimiento sin pérdida de datos**. Con una deuda y un aporte de
-   ahorro ya cargados, cancelá la suscripción de prueba desde Play Console
-   (o simulá el vencimiento). Deudas y Ahorro vuelven a mostrar el paywall.
-   Volvé a suscribirte (o restaurá): la deuda y el aporte tienen que
-   reaparecer exactamente iguales.
-6. **US5 — Restaurar**. Desinstalá y reinstalá la app (o instalala en otro
-   dispositivo/emulador) con la misma cuenta de prueba ya suscripta. Usá la
-   opción de restaurar: el acceso premium tiene que volver sin pedir pago.
-7. **Sin conexión**. Con una suscripción activa ya verificada al menos una
-   vez, poné el dispositivo en modo avión y entrá a Deudas: tiene que seguir
-   accesible, usando el último estado conocido.
-
----
-
-## Qué queda fuera de esta guía
-
-- El monto exacto de cada plan y si el precio final es mensual/anual se
-  configuran en Play Console, no en el código (ver `research.md` y
-  `Assumptions` de la spec).
-- Publicar la app en producción, más allá de la pista de pruebas internas,
-  es una decisión aparte del usuario del proyecto, no parte de esta
-  validación.
+En un emulador sin servicios de Google, el paso 3 debe mostrar que el apoyo no
+está disponible **sin romper Ajustes**: el resto de la pantalla (días de
+gracia, respaldo) tiene que seguir funcionando. Es el caso más probable en
+desarrollo diario y conviene verificarlo antes que ningún otro.

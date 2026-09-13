@@ -11,8 +11,8 @@ import 'package:finanzas/datos/repositorios/repositorio_diagnostico_sqlite.dart'
 import 'package:finanzas/datos/repositorios/repositorio_meses_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_obligaciones_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_pendientes_sqlite.dart';
+import 'package:finanzas/datos/repositorios/repositorio_propinas_billing.dart';
 import 'package:finanzas/datos/repositorios/repositorio_respaldo_sqlite.dart';
-import 'package:finanzas/datos/repositorios/repositorio_suscripcion_billing.dart';
 import 'package:finanzas/datos/repositorios/repositorio_tarjetas_sqlite.dart';
 import 'package:finanzas/datos/repositorios/repositorio_transacciones_sqlite.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_ahorro.dart';
@@ -24,7 +24,7 @@ import 'package:finanzas/dominio/repositorios/repositorio_diagnostico.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_meses.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_obligaciones.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_pendientes.dart';
-import 'package:finanzas/dominio/repositorios/repositorio_suscripcion.dart';
+import 'package:finanzas/dominio/repositorios/repositorio_propinas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_tarjetas.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_transacciones.dart';
 import 'package:finanzas/shared/estilos/tema.dart';
@@ -37,7 +37,6 @@ import 'package:finanzas/ui/estado/estado_diagnostico.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
 import 'package:finanzas/ui/estado/estado_pendientes.dart';
 import 'package:finanzas/ui/estado/estado_respaldo.dart';
-import 'package:finanzas/ui/estado/estado_suscripcion.dart';
 import 'package:finanzas/ui/estado/estado_tarjetas.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -121,11 +120,6 @@ class _ArranqueState extends State<_Arranque> {
         // antes queda cerrada y cada repositorio de abajo tiene que rehacerse
         // con la nueva. La `key` del árbol es lo que fuerza esa
         // reconstrucción, sin reiniciar la app (spec 005).
-        //
-        // Es también lo que cumple la otra mitad de D4: al rehacerse,
-        // `EstadoSuscripcionPremium` vuelve a llamar a `cargar()`, que
-        // consulta Google Play. El acceso premium nunca sale del archivo
-        // restaurado — de ahí ya se descartó la fila.
         return ChangeNotifierProvider<EstadoRespaldo>(
           create: (_) => EstadoRespaldo(
             repoRespaldo: RepositorioRespaldoSqlite(_baseDatos),
@@ -192,15 +186,15 @@ class _ArranqueState extends State<_Arranque> {
             EstadoTarjetas(repoTarjetas: contexto.read<RepositorioTarjetas>())
               ..cargar(),
       ),
-      Provider<RepositorioSuscripcion>(
-        create: (_) => RepositorioSuscripcionBilling(conexion),
-      ),
-      // La suscripción se carga al abrir la app (D4): el usuario pudo
-      // comprar, vencer o restaurar fuera de acá.
-      ChangeNotifierProvider<EstadoSuscripcionPremium>(
-        create: (contexto) => EstadoSuscripcionPremium(
-          repoSuscripcion: contexto.read<RepositorioSuscripcion>(),
-        )..cargar(),
+      // El repositorio de propinas se provee, pero su `EstadoPropinas` **no**:
+      // ese lo crea la ruta que abre la pantalla de apoyo y muere con ella
+      // (`seccion_apoyo.dart`). Así ninguna otra pantalla puede leer nada
+      // sobre el apoyo, que es lo que vuelve estructuralmente cierto el
+      // FR-002 de la spec 004 revisada: nada de la app cambia según si el
+      // usuario apoyó. El `create` es perezoso, así que en un dispositivo que
+      // nunca abre Ajustes la Billing Library ni se instancia.
+      Provider<RepositorioPropinas>(
+        create: (_) => RepositorioPropinasBilling(),
       ),
       ChangeNotifierProvider<EstadoAhorro>(
         // El mismo mes inicial que EstadoMes (hoy): así la tarjeta de

@@ -1,6 +1,6 @@
-# Implementation Plan: Suscripción premium
+# Implementation Plan: Apoyo voluntario (propina)
 
-**Branch**: `004-suscripcion-premium` | **Date**: 2026-08-29 | **Spec**: [spec.md](./spec.md)
+**Branch**: `004-suscripcion-premium` | **Date**: 2026-08-29 · **Revisado**: 2026-09-12 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `specs/004-suscripcion-premium/spec.md`
 
@@ -108,3 +108,120 @@ test/
 ## Complexity Tracking
 
 Sin violaciones que justificar: el Constitution Check pasa completo antes y después del diseño.
+
+---
+
+# Revisión 2026-09-12 — plan de la propina
+
+Todo lo de arriba describe el plan de la suscripción, que se implementó hasta
+T046 y se descarta acá. Se conserva por trazabilidad. **Lo que vale desde esta
+línea es lo que sigue.**
+
+## Summary (revisado)
+
+La app se reparte completa y gratis: ningún destino, acción ni dato queda
+condicionado a un pago. El único camino de ingreso es una propina por única
+vez, repetible, que el usuario deja desde Ajustes a través de Google Play. No
+desbloquea nada, no se persiste nada y no aparece en ninguna otra pantalla.
+Se conserva la dependencia de facturación y el patrón de repositorio; se borra
+todo lo que bloqueaba.
+
+## Technical Context (lo que cambia)
+
+**Primary Dependencies**: las mismas. `in_app_purchase` +
+`in_app_purchase_android` siguen siendo la vía, ahora usando
+`buyConsumable` en vez de `buyNonConsumable` y sin la extensión de
+suscripciones.
+
+**Storage**: **ninguno**. Esta feature deja de persistir. Además le quita una
+tabla al esquema: `Esquema.version` pasa de 4 a 5 para borrar
+`suscripcion_premium` (research.md D9, data-model.md §3).
+
+**Testing**: se acaba la prueba de dominio, porque se acabó el dominio — no
+queda ninguna regla que decidir. Lo que se prueba es la UI con un doble en
+memoria (que la pantalla de apoyo muestre los montos, que sin conexión no
+invente precios, que cancelar no produzca error) y, sobre todo, **que ningún
+destino de la app esté bloqueado**, que es la garantía central de la revisión
+(SC-001).
+
+**Performance Goals**: desaparece la exigencia de leer un estado cacheado
+antes de abrir una pantalla: ya no hay nada que consultar. La única latencia de
+red de la app sigue siendo la de una acción explícita del usuario, ahora solo
+en la pantalla de apoyo.
+
+**Constraints**: ninguna pantalla MUST consultar la facturación para
+construirse. `EstadoPropinas` solo lo conoce la pantalla de apoyo; el resto de
+la app no sabe que existe.
+
+**Scale/Scope**: tres historias, 12 requisitos funcionales (FR-001 a FR-012),
+una pantalla nueva y una entrada en Ajustes. Cero entidades persistidas.
+
+## Constitution Check (revisado)
+
+| Principio | Cómo lo cumple el plan revisado | Estado |
+|---|---|---|
+| **I. Datos locales y privados** *(enmendado v2.0.0)* | El tráfico de red **se reduce**: se consultan los montos y se paga, y desaparecen el refresco periódico de vigencia y la restauración de compras. Ningún tipo del dominio financiero entra en esas llamadas (FR-009). La revisión no necesita enmienda nueva porque no amplía nada. | PASS |
+| **II. Exactitud monetaria** | `OfertaPropina.precioFormateado` es un texto que informa Google Play y se muestra tal cual; no se parsea, no se opera y no se guarda. Ningún `Dinero` participa de esta feature. | PASS |
+| **III. Lógica financiera pura y probada** | No queda ninguna regla financiera que probar: apoyar no calcula nada. La prueba de entrada que sí exige esta revisión es la inversa y se escribe antes de tocar el cascarón — que **ningún** destino esté condicionado (SC-001). El SDK de facturación sigue confinado a `lib/datos/`, verificado por `test/pureza_test.dart`. | PASS |
+| **IV. Claridad sobre sofisticación** | La pantalla de apoyo dice con todas las letras que no desbloquea nada, y muestra el precio antes de tocar nada. Sin conexión lo dice, en vez de mostrar un precio viejo. El resto de la app queda **más** clara: se va un candado de dos pestañas. | PASS |
+| **V. Alcance individual, sin especulación** | La revisión borra más de lo que agrega: se van una tabla, cuatro tipos de dominio, tres widgets y una guarda de navegación. No se persiste nada "por si acaso" (D8). | PASS |
+
+**Restricciones técnicas**: la migración v4 → v5 borra una tabla, y es la
+primera del proyecto que lo hace. Queda justificado por escrito en research.md
+D9: la regla de D10 protege *información del usuario*, y esa tabla solo
+guardaba la respuesta de Google Play. Ningún dato cargado por el usuario se
+toca.
+
+**Flujo de desarrollo**: el cambio de alcance se refleja primero en la spec
+(hecho), después en research/data-model/plan (hecho), después en tasks, y
+recién entonces en el código — que es justamente lo que la constitución exige
+y lo que esta revisión respeta.
+
+## Project Structure (revisada)
+
+```text
+lib/
+├── shared/constantes/
+│   └── propinas.dart                     # NUEVO · ids de producto, Dart puro
+├── dominio/
+│   ├── modelos/
+│   │   ├── propina.dart                  # NUEVO · OfertaPropina, ResultadoPropina
+│   │   └── estado_suscripcion.dart       # BORRADO
+│   └── repositorios/
+│       ├── repositorio_propinas.dart     # NUEVO · ofertas(), apoyar()
+│       └── repositorio_suscripcion.dart  # BORRADO
+├── datos/
+│   ├── esquema.dart                      # v5; suscripcion_premium sale de creacion
+│   ├── migraciones.dart                  # + paso v4 → v5 (DROP TABLE)
+│   └── repositorios/
+│       ├── repositorio_propinas_billing.dart      # NUEVO
+│       ├── repositorio_suscripcion_billing.dart   # BORRADO
+│       └── repositorio_respaldo_sqlite.dart       # una tabla menos que vaciar
+└── ui/
+    ├── cascaron.dart                     # se va AccesoDestino y la guarda
+    ├── estado/
+    │   ├── estado_propinas.dart          # NUEVO
+    │   └── estado_suscripcion.dart       # BORRADO
+    └── pantallas/
+        ├── propina/
+        │   └── pantalla_propina.dart     # NUEVO · única pantalla de la feature
+        ├── suscripcion/                  # BORRADA entera (3 archivos)
+        ├── ajustes/pantalla_ajustes.dart # entrada "Apoyar esta app"
+        └── captura/pantalla_activacion.dart # se va la guarda premium
+
+test/
+├── ui/
+│   ├── pantalla_propina_test.dart        # NUEVO
+│   ├── todo_gratis_test.dart             # RENOMBRADO de gratis_sin_limite_test.dart
+│   ├── pantalla_paywall_test.dart        # BORRADO
+│   ├── ficha_estado_suscripcion_test.dart# BORRADO
+│   ├── restaurar_suscripcion_test.dart   # BORRADO
+│   └── vencimiento_suscripcion_test.dart # BORRADO
+├── dominio/suscripcion_test.dart         # BORRADO
+└── datos/migracion_005_test.dart         # NUEVO · la tabla se va sin tocar el resto
+```
+
+**Structure Decision (revisada)**: la feature pasa de atravesar toda la app a
+vivir en una sola pantalla. Esa es la señal de que la revisión va en la
+dirección correcta: una forma de monetizar que no toca ninguna otra pantalla es
+una que no puede degradar el producto.
