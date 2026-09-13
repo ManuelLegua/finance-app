@@ -77,6 +77,16 @@ class _TarjetaSituacion extends StatelessWidget {
         estado: estado,
         onDesactivar: estadoCaptura.desactivar,
       ),
+      // El sistema detuvo el servicio (D-N13). Se comunica como un problema,
+      // con ícono de advertencia, y la salida es reactivar acá mismo: el
+      // permiso sigue concedido, así que no hay que mandar a nadie a los
+      // ajustes de Android.
+      SituacionCaptura.detenida => _Explicacion(
+        motivo: estado.motivo,
+        etiquetaBoton: 'Reactivar captura',
+        icono: Icons.warning_amber_rounded,
+        onTocar: estadoCaptura.activar,
+      ),
       SituacionCaptura.inactivaEnApp => _Explicacion(
         motivo: estado.motivo,
         etiquetaBoton: 'Activar captura',

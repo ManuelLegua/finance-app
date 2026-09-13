@@ -172,7 +172,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
-**504 pruebas, todas en verde.** Bajaron de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**525 pruebas, todas en verde.** Bajaron de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -325,15 +325,18 @@ decisión de alcance cambie:
 1. **La app nunca pide `POST_NOTIFICATIONS`.** Desde Android 13 un servicio en
    primer plano está obligado a publicar una notificación; sin ese permiso
    Android lo mata con ANR (`Context.startForegroundService() did not then call
-   Service.startForeground()`) y la captura no corre nunca. En el teléfono de
-   referencia hubo que concederlo a mano por `adb` para que funcionara.
+   Service.startForeground()`). Conceder el permiso **no alcanzó** por sí solo:
+   hizo falta además que `activar()` corriera con el servicio ya vinculado, que
+   es lo único que termina de inicializar el motor de Flutter del plugin. Dos
+   defectos que se manifestaban igual. **Arreglado (T063)** con
+   `permission_handler` (D-N14).
 2. **"Desactivar" puede dejar la feature inutilizable.** El plugin deshabilita
    el componente del servicio a nivel de sistema; Android entonces revoca el
    acceso a notificaciones y saca la app de la lista de ajustes — justo la
    lista adonde la propia app te manda a arreglarlo. Sin salida por interfaz:
    hay que desinstalar. Solo la app puede reactivar ese componente, `adb` no
    (da `SecurityException`).
-3. **`EstadoCaptura` miente.** "Captura activa" se deriva del permiso más el
+3. **`EstadoCaptura` miente.** **Arreglado (T065)**. "Captura activa" se deriva del permiso más el
    interruptor guardado, sin comprobar que el servicio exista. Se vio la
    pantalla diciendo "activa" con el servicio muerto. Es el más grave de los
    tres: un usuario creería que sus consumos se están capturando mientras no se

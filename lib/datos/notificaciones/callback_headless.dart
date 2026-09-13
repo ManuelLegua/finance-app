@@ -109,10 +109,8 @@ void _anotar(String texto) {
 
   // Vía 3: el archivo, que no depende de ninguna decisión del fabricante.
   try {
-    File(_rutaDelVolcado).writeAsStringSync(
-      '$fechado\n',
-      mode: FileMode.append,
-    );
+    File(_rutaDelVolcado)
+        .writeAsStringSync('$fechado\n', mode: FileMode.append);
   } on Object {
     return;
   }

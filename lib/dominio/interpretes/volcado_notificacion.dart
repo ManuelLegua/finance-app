@@ -37,9 +37,7 @@ const String marcaDeVolcado = 'FINANZAS-VOLCADO';
 /// dispositivo de referencia (hallazgo del 2026-09-12): las apps de BCP, Yape
 /// y Sip solo mandan push del dinero entrante. Agregar un paquete acá es
 /// decidir a conciencia volcar el contenido de sus notificaciones.
-const Set<String> paquetesBajoObservacion = <String>{
-  'com.google.android.gm',
-};
+const Set<String> paquetesBajoObservacion = <String>{'com.google.android.gm'};
 
 /// Las claves de `raw` que pueden traer texto, en el orden en que se muestran.
 ///

@@ -112,6 +112,96 @@ void main() {
     });
   });
 
+  group('el permiso del aviso persistente (D-N13, T063)', () {
+    testWidgets('activar lo pide antes de arrancar nada', (tester) async {
+      // Sin este permiso Android mata el servicio apenas nace, así que
+      // pedirlo es parte de activar, no un paso aparte que se pueda olvidar.
+      servicio.permiso = true;
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.text('Activar captura'));
+      await tester.pumpAndSettle();
+
+      expect(servicio.vecesQuePidioAvisoPersistente, 1);
+      expect(find.text('Captura activa'), findsOneWidget);
+    });
+
+    testWidgets('si el usuario lo rechaza, no se enciende y se explica', (
+      tester,
+    ) async {
+      servicio.permiso = true;
+      servicio.concedeAvisoPersistente = false;
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.text('Activar captura'));
+      await tester.pumpAndSettle();
+
+      // Lo peor sería encenderla igual: quedaría diciendo "activa" con una
+      // captura que Android va a matar enseguida.
+      expect(find.text('Captura activa'), findsNothing);
+      expect(find.textContaining('mostrar una notificación'), findsOneWidget);
+    });
+  });
+
+  group('el sistema detuvo el servicio (D-N13)', () {
+    setUp(() async {
+      // El caso observado en dispositivo: permiso concedido, interruptor
+      // encendido, y Android mató el servicio.
+      servicio.permiso = true;
+      await servicio.activar();
+      servicio.corriendo = false;
+    });
+
+    testWidgets('no dice que está activa, porque no lo está', (tester) async {
+      await estado.cargar();
+      await montar(tester);
+
+      expect(find.text('Captura activa'), findsNothing);
+      expect(find.textContaining('dejó de funcionar'), findsOneWidget);
+    });
+
+    testWidgets('dice que los consumos no se están registrando', (
+      tester,
+    ) async {
+      // Lo que el usuario necesita entender no es que un servicio se cayó,
+      // sino que sus gastos no se están capturando.
+      await estado.cargar();
+      await montar(tester);
+
+      expect(find.textContaining('no se están registrando'), findsOneWidget);
+    });
+
+    testWidgets('ofrece reactivar acá mismo, sin mandar a ajustes', (
+      tester,
+    ) async {
+      // El permiso sigue concedido: mandar al usuario a los ajustes de
+      // Android sería hacerle buscar algo que ya está.
+      await estado.cargar();
+      await montar(tester);
+
+      expect(find.text('Reactivar captura'), findsOneWidget);
+      expect(find.text('Ir a ajustes de Android'), findsNothing);
+
+      await tester.tap(find.text('Reactivar captura'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Captura activa'), findsOneWidget);
+      expect(servicio.vecesQueAbrioAjustes, 0);
+    });
+
+    testWidgets('no despliega la lista de orígenes cubiertos', (tester) async {
+      // El texto explicativo sí nombra "bancos y billeteras"; lo que no puede
+      // aparecer es el desplegable que los enumera, porque ahora mismo no se
+      // está cubriendo ninguno.
+      await estado.cargar();
+      await montar(tester);
+
+      expect(find.byType(ExpansionTile), findsNothing);
+    });
+  });
+
   group('la captura no depende de ningún pago (spec 004 revisada)', () {
     // Acá vivía el grupo que verificaba lo contrario: sin suscripción
     // vigente, esta pantalla mostraba el paywall en vez del flujo de permiso.

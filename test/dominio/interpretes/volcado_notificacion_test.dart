@@ -41,23 +41,26 @@ void main() {
   });
 
   group('qué se vuelca de una notificación bajo observación', () {
-    test('incluye bigText y textLines, que son la razón de existir de esto', () {
-      final volcado = volcadoDeTexto(
-        paquete: gmail,
-        crudo: <Object?, Object?>{
-          'title': 'Banco',
-          'text': 'Realizaste un consumo por S/ 45.50 en ESVI…',
-          'bigText':
-              'Realizaste un consumo por S/ 45.50 en ESVISALUD SAC el '
-              '12/09/2026 con tu tarjeta terminada en 1234.',
-          'textLines': <String>['Primera línea', 'Segunda línea'],
-        },
-      );
+    test(
+      'incluye bigText y textLines, que son la razón de existir de esto',
+      () {
+        final volcado = volcadoDeTexto(
+          paquete: gmail,
+          crudo: <Object?, Object?>{
+            'title': 'Banco',
+            'text': 'Realizaste un consumo por S/ 45.50 en ESVI…',
+            'bigText':
+                'Realizaste un consumo por S/ 45.50 en ESVISALUD SAC el '
+                '12/09/2026 con tu tarjeta terminada en 1234.',
+            'textLines': <String>['Primera línea', 'Segunda línea'],
+          },
+        );
 
-      expect(volcado, contains('ESVISALUD SAC'));
-      expect(volcado, contains('[0] Primera línea'));
-      expect(volcado, contains('[1] Segunda línea'));
-    });
+        expect(volcado, contains('ESVISALUD SAC'));
+        expect(volcado, contains('[0] Primera línea'));
+        expect(volcado, contains('[1] Segunda línea'));
+      },
+    );
 
     test('nunca incluye binarios, aunque vengan en el mapa', () {
       // El ícono grande viaja como bytes dentro de `raw`. Volcarlo llenaría
@@ -126,7 +129,10 @@ void main() {
       // presentes daría un veredicto falso.
       final volcado = volcadoDeTexto(
         paquete: gmail,
-        crudo: <Object?, Object?>{'text': 'Realizaste un consumo', 'bigText': ''},
+        crudo: <Object?, Object?>{
+          'text': 'Realizaste un consumo',
+          'bigText': '',
+        },
       );
 
       expect(volcado, contains('no hay bigText'));

@@ -2,6 +2,7 @@ import 'package:finanzas/datos/notificaciones/callback_headless.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/servicio_escucha_notificaciones.dart';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Envoltorio de `flutter_notification_listener` (D-N1).
 ///
@@ -19,9 +20,50 @@ final class ServicioEscuchaNotificacionesAndroid
   Future<bool> permisoConcedido() async =>
       await NotificationsListener.hasPermission ?? false;
 
+  /// En Android 12 y anteriores `Permission.notification` ya viene concedido
+  /// y esto devuelve `true` sin mostrar nada: no hay diálogo que pedir.
   @override
-  Future<void> abrirAjustesDePermiso() =>
-      NotificationsListener.openPermissionSettings();
+  Future<bool> pedirPermisoDelAvisoPersistente() async {
+    final estado = await Permission.notification.request();
+    return estado.isGranted;
+  }
+
+  @override
+  Future<bool> estaCorriendo() async =>
+      await NotificationsListener.isRunning ?? false;
+
+  /// Abre la pantalla de Android donde se concede el permiso, **después de
+  /// asegurarse de que la app aparezca en ella** (D-N13).
+  ///
+  /// El arranque del servicio va primero a propósito, y no es una repetición
+  /// de [activar]: al arrancar, el plugin deshabilita y vuelve a habilitar el
+  /// componente del servicio para forzar que Android lo revincule. Ese
+  /// segundo paso es el que repara el caso en que desactivar la captura dejó
+  /// el componente deshabilitado — y un componente deshabilitado **no figura
+  /// en la lista de acceso a notificaciones**, así que sin esto se mandaba al
+  /// usuario a conceder un permiso en una pantalla donde la app no estaba.
+  ///
+  /// No toca el interruptor de la app: pedir el permiso no es activar la
+  /// captura.
+  ///
+  /// Si arrancar falla, se abre igual la pantalla: es preferible que el
+  /// usuario llegue y no encuentre la app —el estado de hoy— a que no llegue.
+  @override
+  Future<void> abrirAjustesDePermiso() async {
+    try {
+      await NotificationsListener.initialize(
+        callbackHandle: alRecibirNotificacion,
+      );
+      await NotificationsListener.startService(
+        foreground: true,
+        title: 'Captura de consumos activa',
+        description: 'Finanzas está leyendo tus notificaciones bancarias.',
+      );
+    } on Object {
+      // Se sigue: abrir la pantalla es lo que el usuario pidió.
+    }
+    await NotificationsListener.openPermissionSettings();
+  }
 
   @override
   Future<void> activar() async {

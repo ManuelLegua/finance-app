@@ -186,11 +186,16 @@ pendiente, no darlos por hechos.
 
 1. **Falta pedir `POST_NOTIFICATIONS` en tiempo de ejecución.** Desde Android
    13 un servicio en primer plano está obligado a publicar una notificación;
-   sin ese permiso Android lo mata con ANR
-   (`Context.startForegroundService() did not then call Service.startForeground()`)
-   y el motor de Flutter del plugin nunca termina de inicializar, así que los
-   eventos se encolan y no llegan nunca a Dart. Hubo que concederlo a mano por
-   `adb` para que la captura funcionara por primera vez.
+   sin ese permiso Android lo mata con ANR, y el log del dispositivo lo dijo
+   con todas las letras nombrando el servicio del plugin:
+   `Context.startForegroundService() did not then call Service.startForeground()`.
+
+   **Precisión sobre la causalidad**, porque importa: conceder el permiso
+   **no alcanzó** para que la captura funcionara. Hizo falta además que
+   `activar()` se ejecutara con el servicio ya vinculado, porque el motor de
+   Flutter del plugin solo termina de inicializar por esa vía y hasta entonces
+   los eventos se encolan sin llegar a Dart. El permiso es necesario, no
+   suficiente: son dos defectos que se manifestaban igual.
 2. **"Desactivar" puede dejar la feature inutilizable.** El plugin deshabilita
    el componente del servicio a nivel de sistema (`setComponentEnabledSetting`);
    Android entonces revoca el acceso a notificaciones y saca la app de la lista
@@ -208,3 +213,35 @@ pendiente, no darlos por hechos.
 permiso **y** hacer el ciclo Desactivar → Activar, porque el identificador de
 callback que Android guarda apunta al build anterior. Sin eso el callback no
 corre y no hay ninguna señal visible de que algo ande mal.
+
+
+---
+
+## D-N14 — `permission_handler` para el único permiso que la app pide *(2026-09-13)*
+
+**Decisión**: usar `permission_handler` (MIT, Baseflow, 13.0.2) para pedir
+`POST_NOTIFICATIONS` en tiempo de ejecución, en vez de escribir un canal de
+plataforma propio.
+
+**Por qué**: es el único permiso que esta app pide desde su propio código —el
+de leer notificaciones se concede en los ajustes de Android, no con un
+diálogo—, y resolverlo a mano significa código Kotlin en `MainActivity` más un
+`MethodChannel` más el puente del resultado asincrónico de
+`onRequestPermissionsResult`. Son unas sesenta líneas nativas, en un proyecto
+que hasta hoy no tiene ninguna, para reproducir algo que un paquete mantenido
+hace en tres líneas de Dart.
+
+Frente a las Restricciones Técnicas de la constitución: está activamente
+mantenido, es MIT, y **no abre ninguna conexión** — solo habla con el
+`PackageManager` del propio dispositivo, así que no roza el Principio I.
+
+**Alternativas consideradas**:
+- **Canal de plataforma propio**: control total y cero dependencias, pero
+  introduce código nativo que hay que mantener y probar sin poder cubrirlo con
+  `flutter test`. Rechazada por desproporcionada frente a un solo permiso.
+- **No pedirlo y activar igual**: es el estado anterior, y es justamente el
+  defecto D-N13.1. Rechazada.
+- **`flutter_local_notifications`**, que también sabe pedirlo: trae un
+  paquete mucho más grande para usar una sola función suya, y la app no
+  publica notificaciones propias fuera del aviso del servicio. Rechazada por
+  Principio V.

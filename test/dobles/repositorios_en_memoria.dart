@@ -472,10 +472,30 @@ final class ServicioEscuchaNotificacionesEnMemoria
   /// Ajustable desde la prueba.
   bool permiso = false;
 
+  /// Si el servicio está corriendo. Arranca apagado y lo enciende [activar],
+  /// igual que en el dispositivo; una prueba puede apagarlo a mano para
+  /// simular que Android lo mató (D-N13).
+  bool corriendo = false;
+
+  /// Si el usuario concede el permiso del aviso persistente cuando se le
+  /// pide. En un dispositivo real Android 12 o anterior siempre lo concede.
+  bool concedeAvisoPersistente = true;
+
   int vecesQueAbrioAjustes = 0;
+
+  int vecesQuePidioAvisoPersistente = 0;
 
   @override
   Future<bool> permisoConcedido() async => permiso;
+
+  @override
+  Future<bool> pedirPermisoDelAvisoPersistente() async {
+    vecesQuePidioAvisoPersistente++;
+    return concedeAvisoPersistente;
+  }
+
+  @override
+  Future<bool> estaCorriendo() async => corriendo;
 
   @override
   Future<void> abrirAjustesDePermiso() async {
@@ -483,10 +503,16 @@ final class ServicioEscuchaNotificacionesEnMemoria
   }
 
   @override
-  Future<void> activar() => _guardarInterruptor(activa: true);
+  Future<void> activar() async {
+    corriendo = true;
+    await _guardarInterruptor(activa: true);
+  }
 
   @override
-  Future<void> desactivar() => _guardarInterruptor(activa: false);
+  Future<void> desactivar() async {
+    corriendo = false;
+    await _guardarInterruptor(activa: false);
+  }
 
   Future<void> _guardarInterruptor({required bool activa}) async {
     final config = await _repoConfiguracion.obtener();

@@ -5,12 +5,42 @@
 /// la UI y el estado dependan de esta abstracción, nunca del plugin. Fuera
 /// de Android no se instancia ninguna implementación (D-N8, FR-007).
 abstract interface class ServicioEscuchaNotificaciones {
-  /// El permiso real del sistema, leído en cada llamada — nunca cacheado
-  /// (FR-003).
+  /// El permiso de **leer** las notificaciones de otras apps, leído en cada
+  /// llamada — nunca cacheado (FR-003). Es el permiso central de esta
+  /// feature, el que se concede desde los ajustes de Android.
   Future<bool> permisoConcedido();
+
+  /// Pide el permiso de **mostrar** notificaciones propias, y devuelve si
+  /// quedó concedido.
+  ///
+  /// No confundir con [permisoConcedido]: aquel es para leer las de los
+  /// bancos, este es para que la app pueda mostrar **una sola**, el aviso
+  /// persistente que todo servicio en primer plano está obligado a publicar.
+  ///
+  /// Sin él, desde Android 13 el sistema mata el servicio apenas arranca
+  /// (`Context.startForegroundService() did not then call
+  /// Service.startForeground()`) y la captura no corre nunca — que es
+  /// exactamente lo que pasaba antes de D-N13. En versiones anteriores de
+  /// Android no hay nada que pedir y devuelve `true`.
+  Future<bool> pedirPermisoDelAvisoPersistente();
+
+  /// Si el servicio de escucha está corriendo ahora mismo, preguntado al
+  /// sistema.
+  ///
+  /// **No se deduce del permiso ni del interruptor de la app**: Android mata
+  /// el servicio por su cuenta, y tras reinstalar queda registrado contra el
+  /// build anterior. Sin esta consulta la app informaba "Captura activa" sin
+  /// capturar nada (D-N13 de research.md).
+  Future<bool> estaCorriendo();
 
   /// Dirige al usuario a la pantalla de Android donde se concede o revoca el
   /// permiso de acceso a notificaciones (FR-002).
+  ///
+  /// La implementación **debe dejar la app visible en esa lista antes de
+  /// abrirla**: desactivar la captura puede deshabilitar el componente del
+  /// servicio, y un componente deshabilitado no aparece ahí — mandando al
+  /// usuario a conceder un permiso en una pantalla donde la app no figura
+  /// (D-N13).
   Future<void> abrirAjustesDePermiso();
 
   /// Enciende el interruptor de la app y arranca el servicio de escucha en
