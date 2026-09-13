@@ -242,3 +242,17 @@ Cada incremento deja la app usable y no rompe 001.
 - Las pruebas de reglas financieras y del parser genérico no son opcionales: son requisito de entrada por constitución, con la salvedad de D-N9.
 - Commitear por tarea o por grupo coherente, referenciando el id de la tarea.
 - Cualquier desviación de un principio se justifica por escrito en plan.md, no en silencio durante la implementación.
+
+---
+
+## Fase 9: Defectos encontrados el 2026-09-13 (D-N13)
+
+**Propósito**: hoy la captura **no corre en ningún teléfono con Android 13 o
+superior**. Estas tres son independientes del parser y del alcance: valen igual
+si la feature sigue por notificaciones de Gmail (D-N12) o si se cierra.
+
+- [ ] T063 Pedir `POST_NOTIFICATIONS` antes de activar la captura, en el flujo de `PantallaActivacion`/`EstadoCapturaNotificaciones`. Sin ese permiso el servicio en primer plano no puede publicar su notificación obligatoria y Android lo mata con ANR, así que la captura nunca corre (D-N13.1). Incluye explicar para qué se pide, como ya se explica el de notificaciones (FR-001)
+- [ ] T064 Evitar que desactivar la captura deje la feature inutilizable (D-N13.2): el plugin deshabilita el componente del servicio y Android revoca el acceso a notificaciones, dejando a la app fuera de la lista de ajustes adonde ella misma manda al usuario. Hay que reactivar el componente al volver a activar, o no llegar nunca a ese estado
+- [ ] T065 Que `EstadoCaptura` no informe "activa" sin verificar que el servicio exista (D-N13.3). Hoy deriva la situación del permiso más el interruptor guardado, y se observó la pantalla diciendo "Captura activa" con el servicio muerto: el usuario creería que sus consumos se capturan mientras no se captura nada
+- [ ] T066 [MANUAL] Capturar un **consumo con tarjeta** real con el instrumento de volcado, y anotarlo en `test/dominio/interpretes/fixtures/notificacion-gmail-capturada.md`. Es lo único que falta para cerrar T034 y para poder decidir D-N12: los tres correos capturados hasta ahora son movimientos entre cuentas, no consumos
+- [ ] T067 Borrar el instrumento temporal de volcado (`lib/dominio/interpretes/volcado_notificacion.dart`, su prueba y el cuerpo de `callback_headless.dart`) una vez que T066 esté cerrada

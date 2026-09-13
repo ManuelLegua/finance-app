@@ -125,3 +125,86 @@ Sin cambios. FR-007 sigue exigiendo que la funcionalidad se omita por completo d
 | BBVA | "BBVA Perú" | "Abono recibido por S/ [monto] en tu Cuenta [Tipo]" | entrante |
 
 Confirma la estructura de tres campos (título, cuerpo, y a veces `subText`) y da un primer borrador razonable para las palabras clave de dirección: **saliente** → "consumo", "realizaste un consumo", "yapeaste" / "acabas de yapear"; **entrante** → "recibiste", "te yapeó", "te envió", "abono recibido", "transferencia recibida". El borrador se ajusta contra los fixtures reales de T034, no se fija acá.
+
+---
+
+## D-N12 — Gmail como origen: el evento sí trae el correo completo *(2026-09-13)*
+
+**Estado**: hallazgo verificado, **decisión de alcance todavía abierta**. Falta
+un consumo con tarjeta real para cerrarla (ver "Lo que falta" al final).
+
+**Qué se verificó**: `NotificationEvent.text` expone únicamente `EXTRA_TEXT` —el
+preview que Gmail trunca justo sobre el comercio, lo que el 2026-09-12 parecía
+matar esta feature—, pero el lado Android del plugin reenvía además
+`EXTRA_BIG_TEXT` y `EXTRA_TEXT_LINES`, que llegan a Dart en `evento.raw`. Medido
+en el teléfono de referencia: `bigText` trajo **301 y 1024 caracteres** contra
+**24 y 79** del preview. Los volcados completos están en
+`test/dominio/interpretes/fixtures/notificacion-gmail-capturada.md`, capturados
+por la propia app y no transcritos a mano.
+
+**Por qué importa**: la salida que el hallazgo del 2026-09-12 dejaba planteada
+—"reconocer Gmail como origen y filtrar por remitente"— **es técnicamente
+viable y no saca un solo dato del teléfono**. La alternativa que obligaba a
+mandar el insumo a un servicio externo (spec 006) deja de ser la única.
+
+**Cuatro consecuencias sobre el diseño del parser**, ninguna anticipable sin
+estas capturas:
+
+1. **El filtro por paquete de D-N10 no alcanza.** Para Gmail el `packageName`
+   es siempre `com.google.android.gm`; el remitente viene en `title` (`BCP
+   Notificaciones`, `Operaciones Sip`, `YAPE Notificaciones`). El filtro tiene
+   que ser por remitente, no por paquete — lo que convierte a
+   `origenesReconocidos` en una lista de remitentes, no de apps.
+2. **Gmail publica dos notificaciones por correo**: una agrupada (`textLines`
+   con un renglón por correo, sin `bigText`) y una individual por correo (con
+   `bigText`). Procesar ambas duplicaría cada consumo. Regla de descarte:
+   `bigText == null && textLines != null`.
+3. **El monto va en su propia línea**, separado de la etiqueta que lo nombra.
+   Un parser que busque `S/` en el mismo renglón que "Monto" falla en los dos
+   correos capturados.
+4. **`bigText` se corta a los 1024 caracteres exactos**, a mitad de palabra.
+
+**Riesgo abierto**: si un correo de consumo pone el comercio después del
+carácter 1024, se pierde. En lo capturado el dato útil entraba en los primeros
+200, pero ninguno de los tres es un consumo con tarjeta.
+
+**Lo que falta para decidir**: capturar un consumo real. Los tres correos
+obtenidos son movimientos entre cuentas (un yapeo enviado, uno recibido y un
+aviso), y FR-012/FR-013 mandan ignorar todo lo entrante. Hasta tenerlo, T034
+sigue abierta: lo que hay prueba que el mecanismo funciona y cómo viene armado,
+no que el dato que la spec necesita esté ahí.
+
+---
+
+## D-N13 — La captura no corre en Android 13+ tal como está implementada *(2026-09-13)*
+
+**Hallazgo, no decisión**: durante el recorrido de D-N12 se descubrió que la
+captura **nunca había funcionado** en el teléfono de referencia, por tres
+defectos de implementación independientes del parser. Se documentan acá porque
+cualquier decisión de alcance sobre esta spec tiene que contarlos como trabajo
+pendiente, no darlos por hechos.
+
+1. **Falta pedir `POST_NOTIFICATIONS` en tiempo de ejecución.** Desde Android
+   13 un servicio en primer plano está obligado a publicar una notificación;
+   sin ese permiso Android lo mata con ANR
+   (`Context.startForegroundService() did not then call Service.startForeground()`)
+   y el motor de Flutter del plugin nunca termina de inicializar, así que los
+   eventos se encolan y no llegan nunca a Dart. Hubo que concederlo a mano por
+   `adb` para que la captura funcionara por primera vez.
+2. **"Desactivar" puede dejar la feature inutilizable.** El plugin deshabilita
+   el componente del servicio a nivel de sistema (`setComponentEnabledSetting`);
+   Android entonces revoca el acceso a notificaciones y saca la app de la lista
+   de ajustes — la misma lista adonde la app te manda a arreglarlo. No hay
+   salida por interfaz: hay que desinstalar. Solo la propia app puede
+   reactivar el componente; `adb` responde `SecurityException`.
+3. **`EstadoCaptura` informa un estado que no verifica.** "Captura activa" se
+   deriva del permiso más el interruptor guardado, sin comprobar que el
+   servicio exista. Se observó la pantalla diciendo "activa" con el servicio
+   muerto. Es el más grave: un usuario creería que sus consumos se capturan
+   mientras no se captura nada — exactamente la confianza que el Principio IV
+   protege.
+
+**Además, de operación**: tras reinstalar el APK hay que volver a conceder el
+permiso **y** hacer el ciclo Desactivar → Activar, porque el identificador de
+callback que Android guarda apunta al build anterior. Sin eso el callback no
+corre y no hay ninguna señal visible de que algo ande mal.

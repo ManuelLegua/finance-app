@@ -16,10 +16,15 @@ decir: el insumo que T034 pide **no existe en este dispositivo**, y eso es un
 hallazgo de diseño, no una captura fallida. Ver la decisión pendiente al pie.
 
 **Advertencia de uso**: el cuerpo que se ve en la barra es el *preview* que arma
-Gmail, y está **truncado** (`...`) justo donde suele estar el comercio. No está
-verificado si el `NotificationEvent` que recibe `flutter_notification_listener`
-trae el cuerpo completo (`bigText`) o solo este preview. **Esa verificación es
-el primer paso de cualquier decisión.**
+Gmail, y está **truncado** (`...`) justo donde suele estar el comercio.
+
+**Verificado el 2026-09-13 — y la respuesta cambia la decisión**: el
+`NotificationEvent` **sí trae el cuerpo completo**, en `raw['bigText']` (301 y
+1024 caracteres, contra 24 y 79 del preview). El truncamiento era un artefacto
+de leer solo `NotificationEvent.text`. Los volcados reales, capturados por la
+propia app en vez de transcritos a mano, están en
+[notificacion-gmail-capturada.md](./notificacion-gmail-capturada.md), junto con
+las cuatro cosas que dejan decididas sobre cómo tendría que ser el parser.
 
 ---
 

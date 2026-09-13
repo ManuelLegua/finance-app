@@ -250,7 +250,100 @@ justo sobre el comercio, y sin comercio no hay categorización aprendida (US3).
 Hasta entonces la captura está construida de punta a punta salvo el tramo
 notificación → pendiente: el callback headless
 (`lib/datos/notificaciones/callback_headless.dart`) existe y está registrado,
-pero su cuerpo está vacío a propósito hasta T042.
+pero **no interpreta ni guarda nada** — mientras siga así, FR-020 ("nunca en
+silencio") se cumple solo, porque no hay ninguna ruta desde ahí hasta una
+`Transaccion`.
+
+**Instrumento temporal para desbloquear T034/T041 (2026-09-12).** El cuerpo del
+callback, que estaba vacío, ahora **solo escribe al log del dispositivo**, para
+responder la pregunta más barata que dejó abierta el hallazgo: si la
+notificación de Gmail trae el correo del banco completo o el mismo preview
+truncado. `NotificationEvent.text` expone solo `EXTRA_TEXT`, pero el lado
+Android del plugin reenvía además `EXTRA_BIG_TEXT` y `EXTRA_TEXT_LINES`, que
+llegan a Dart en `evento.raw['bigText']` y `raw['textLines']` y que nadie miró
+nunca. La lógica es pura y está probada en
+`lib/dominio/interpretes/volcado_notificacion.dart`, que además calcula el
+veredicto en una línea en vez de dejar la comparación al ojo.
+
+La raya de privacidad está puesta a propósito: de **toda** notificación se
+registra solo el nombre del paquete (que es lo que T041 necesita y no revela
+contenido), y el texto completo **solo** de los paquetes de
+`paquetesBajoObservacion`, que hoy es únicamente Gmail. Volcar el cuerpo de
+cada notificación del teléfono a un log sería una fuga hacia adentro, y el
+Principio I no deja de aplicar porque el destino sea local.
+
+Cómo leerlo, con el teléfono conectado:
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb logcat -c                                   # limpiar el buffer
+# provocar el correo del banco, esperar la notificación
+& $adb logcat -d | Select-String "FINANZAS-VOLCADO"
+```
+
+**Este volcado se borra en cuanto termine de dar el insumo.** No es el
+principio de T042: es lo que tiene que pasar antes, porque T042 no se puede
+escribir sin saber qué texto llega realmente.
+
+### Resultado del 2026-09-13: `bigText` trae el correo completo
+
+**La vía de Gmail es viable.** El evento sí trae el cuerpo entero del correo —
+301 y 1024 caracteres contra 24 y 79 del preview— en `raw['bigText']`. El
+truncamiento que parecía matar la spec 002 era un artefacto de leer solo
+`NotificationEvent.text`. Los volcados, capturados por la propia app y no
+transcritos, están en
+[notificacion-gmail-capturada.md](test/dominio/interpretes/fixtures/notificacion-gmail-capturada.md).
+
+Cuatro cosas que quedan decididas sobre cómo tendría que ser el parser, y que
+ningún texto inventado habría anticipado:
+
+1. **El remitente viene en `title`**, no en el paquete: para Gmail el
+   `packageName` siempre es `com.google.android.gm`, así que el filtro por
+   paquete de D-N10 no alcanza. Hay que filtrar por `title` (`BCP
+   Notificaciones`, `Operaciones Sip`, `YAPE Notificaciones`).
+2. **Gmail publica dos notificaciones por correo**: una agrupada ("3 mensajes
+   nuevos", con `textLines` y sin `bigText`) y una individual por correo (con
+   `bigText`). Tomar las dos contaría cada consumo dos veces. La regla para
+   descartar la agrupada es `bigText == null && textLines != null`.
+3. **El monto está en su propia línea**, separado de la etiqueta que lo nombra.
+   Un parser que busque `S/` en la misma línea que "Monto" falla en los dos
+   correos capturados.
+4. **`bigText` se corta a los 1024 caracteres exactos**, a mitad de palabra. En
+   lo capturado el dato útil entra en los primeros 200, pero un consumo que
+   ponga el comercio más abajo lo perdería. Sin verificar.
+
+**Lo que falta**: los tres capturados son movimientos entre cuentas, no
+consumos con tarjeta — lo único que la spec registra. Falta un consumo real
+para cerrar T034.
+
+### Tres bugs de la spec 002 que salieron de este mismo recorrido
+
+Son independientes del parser y hoy hacen que **la captura no funcione en
+ningún teléfono con Android 13 o superior**. Hay que arreglarlos aunque la
+decisión de alcance cambie:
+
+1. **La app nunca pide `POST_NOTIFICATIONS`.** Desde Android 13 un servicio en
+   primer plano está obligado a publicar una notificación; sin ese permiso
+   Android lo mata con ANR (`Context.startForegroundService() did not then call
+   Service.startForeground()`) y la captura no corre nunca. En el teléfono de
+   referencia hubo que concederlo a mano por `adb` para que funcionara.
+2. **"Desactivar" puede dejar la feature inutilizable.** El plugin deshabilita
+   el componente del servicio a nivel de sistema; Android entonces revoca el
+   acceso a notificaciones y saca la app de la lista de ajustes — justo la
+   lista adonde la propia app te manda a arreglarlo. Sin salida por interfaz:
+   hay que desinstalar. Solo la app puede reactivar ese componente, `adb` no
+   (da `SecurityException`).
+3. **`EstadoCaptura` miente.** "Captura activa" se deriva del permiso más el
+   interruptor guardado, sin comprobar que el servicio exista. Se vio la
+   pantalla diciendo "activa" con el servicio muerto. Es el más grave de los
+   tres: un usuario creería que sus consumos se están capturando mientras no se
+   captura nada.
+
+**Y una cuarta cosa, que es de operación y no de código**: tras una
+reinstalación hay que volver a conceder el permiso de notificaciones **y**
+hacer el ciclo Desactivar → Activar, porque el identificador del callback que
+Android guarda apunta al build anterior. Sin eso el callback no corre y no hay
+ninguna señal de que algo ande mal.
 
 **Nota para cuando se retome T042**: la propuesta de categoría de US3 (FR-030)
 ya no necesita resolverse ahí. `EstadoPendientes.cargar()` le busca la
