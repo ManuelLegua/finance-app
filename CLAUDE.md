@@ -92,6 +92,27 @@ Para Play Store el formato es `appbundle` (`.aab`), no `apk`. El APK sigue
 sirviendo para instalar a mano y para los probadores que no pasan por la
 tienda.
 
+## Política de privacidad
+
+Vive en [docs/politica-de-privacidad.md](docs/politica-de-privacidad.md).
+Google Play exige una URL pública para publicar cualquier app, y con más razón
+para una que pide acceso a notificaciones.
+
+**La política describe el comportamiento previsto, y hay una condición que hay
+que cumplir antes de publicar**: el instrumento temporal de volcado
+(`lib/dominio/interpretes/volcado_notificacion.dart` y el cuerpo de
+`callback_headless.dart`) escribe el texto de las notificaciones de Gmail al
+log del dispositivo y a un archivo local. Eso **contradice** lo que la política
+promete sobre no guardar el contenido de las notificaciones. **T067 de la spec
+002 tiene que estar cerrada antes de subir nada a Play.**
+
+Dos cosas más antes de publicarla:
+
+- Completar el correo de contacto, que está como marcador de posición.
+- Cualquier salida de datos nueva se documenta acá **antes** de publicar la
+  versión que la introduce, no después. Es la misma regla que el Principio I
+  aplica a la constitución.
+
 ## Recorrido de prueba manual
 
 Lo que la suite no puede verificar: si la pantalla se entiende de un vistazo (Principio IV). Los tres defectos de layout que aparecieron hasta ahora — etiquetas más largas que su contenedor, la última vez "Presupuesto" partido en dos líneas en un teléfono real — salieron de acá, no de las pruebas: `flutter test` no carga tipografía real ni mide en anchos de pantalla reales, así que este tipo de desborde no es reproducible en la suite (ver `lib/shared/estilos/tema.dart`).
