@@ -154,6 +154,12 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 
   **Es grave**: un consumo capturado que no aparece en la bandeja es un consumo perdido en silencio, que es justo lo que FR-020 y toda la feature existen para evitar. Reproducir con el teléfono a mano antes de publicar
 
+- [ ] T061b [US1] **Sin verificar: que la captura se reanude después de reconceder el permiso desde los ajustes de Android.** El paso 6 del quickstart tiene dos mitades; la primera quedó verificada el 2026-09-14 —al revocar, la app lo detecta y lo explica con ícono y texto, distinguiendo "te lo quitaron" de "nunca se pidió" (FR-004)— y **la segunda no**. Tras volver a conceder el permiso por `adb` (`cmd notification allow_listener`), con el servicio corriendo, el proceso vivo, el permiso concedido y ningún componente deshabilitado, **no llegó ni una notificación más**. Es la misma familia que D-N13.2: la vinculación no vuelve sola.
+
+  **Puede ser un artefacto de la herramienta**: conceder por `adb` no es el camino del usuario, y tocar el interruptor en la pantalla de Android quizá sí revincule — que es lo que hace funcionar a `abrirAjustesDePermiso()`. Hay que repetirlo **por la interfaz real** antes de concluir nada. Si se confirma que tampoco revincula, la pantalla le está prometiendo al usuario algo que no ocurre: "la captura dejó de funcionar hasta que lo concedas de nuevo"
+
+- [ ] T061c [US2] **Paso 7 del quickstart (modo avión) sin recorrer.** No lo puede hacer un agente conectado por depuración inalámbrica: activar modo avión corta el Wi-Fi y con él la propia conexión de `adb`. Queda para el usuario o para una sesión por cable
+
 **Checkpoint**: US1 + US2 son el MVP de esta spec. Un consumo real de cualquiera de los orígenes con `packageName` verificado se captura con la app cerrada, aparece en la bandeja, y confirmarlo lo deja como transacción del mes correcto.
 
 ---
