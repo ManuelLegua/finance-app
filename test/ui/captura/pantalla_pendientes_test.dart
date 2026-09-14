@@ -80,6 +80,33 @@ void main() {
     await estadoTarjetas.cargar();
   });
 
+  group('las tarjetas todavía sin cargar', () {
+    testWidgets('el interruptor de cuotas aparece igual', (tester) async {
+      // El provider de `EstadoTarjetas` es lazy y su carga es asíncrona. Si
+      // esta pantalla es la primera que pide las tarjetas —abrir la app y
+      // tocar Pendientes, sin pasar por Tarjetas ni Deudas— la lista todavía
+      // está vacía cuando se arma el diálogo, y el interruptor "fue una
+      // compra en cuotas" simplemente no aparece: US4 queda inalcanzable sin
+      // ninguna señal de que falte algo.
+      //
+      // Reproducido en dispositivo el 2026-09-14. La suite no lo veía porque
+      // el `setUp` carga las tarjetas antes de montar, que es justo lo que un
+      // arranque real no garantiza.
+      final repoTarjetas = RepositorioTarjetasEnMemoria();
+      await repoTarjetas.insertar(TarjetaBuilder().build());
+      estadoTarjetas = EstadoTarjetas(repoTarjetas: repoTarjetas);
+
+      await repoPendientes.insertar(pendiente(notificacionId: 'sin-cargar'));
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.byType(ListTile).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fue una compra en cuotas'), findsOneWidget);
+    });
+  });
+
   group('sin pendientes', () {
     testWidgets('invita a esperar, no muestra una lista vacía', (tester) async {
       await estado.cargar();

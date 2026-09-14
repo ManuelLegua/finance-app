@@ -233,7 +233,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
 **Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
-**564 pruebas, todas en verde (2026-09-14).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**565 pruebas, todas en verde (2026-09-14).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -713,6 +713,28 @@ cuándo no molestar.
 - **Aparece solo con la captura ya funcionando.** Antes de eso no hay servicio
   al que matar, y sumar un permiso a la pantalla donde el usuario todavía está
   decidiendo si quiere la feature solo la vuelve más difícil de aceptar.
+
+
+### El primer bug que encontró el recorrido manual (T055a)
+
+Preparando T061 apareció algo que ninguna prueba veía: **el interruptor "fue
+una compra en cuotas" no aparecía en un arranque limpio de la app**, y con él
+US4 entera quedaba inalcanzable sin ninguna señal de que faltara algo — el
+usuario concluiría que la app no sabe registrar compras en cuotas.
+
+`PantallaPendientes` leía `EstadoTarjetas` con `context.read` al abrir el
+diálogo, pero **ese provider es lazy y su `cargar()` es asíncrono**: si esa
+pantalla era la primera en pedir las tarjetas —abrir la app y tocar Pendientes,
+sin pasar por Tarjetas ni Deudas— la lista todavía estaba vacía, y el formulario
+oculta el interruptor cuando no hay tarjetas de crédito. Visitar Tarjetas antes
+lo hacía aparecer, que es lo que lo volvía tan fácil de no ver.
+
+**Por qué la suite no lo atrapaba**: `pantalla_pendientes_test.dart` cargaba las
+tarjetas en su `setUp`. La prueba estaba escrita sobre la condición que el bug
+rompe, así que no podía fallar. La prueba nueva monta el estado **sin** cargar.
+
+Es exactamente el tipo de defecto que el recorrido manual existe para
+encontrar, y el primero que sale de mirar la pantalla y no la base.
 
 ### Tres bugs de la spec 002 que salieron de este mismo recorrido
 

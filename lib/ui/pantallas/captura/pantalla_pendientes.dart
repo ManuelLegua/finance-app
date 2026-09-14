@@ -20,7 +20,22 @@ class PantallaPendientes extends StatelessWidget {
     EstadoPendientes estado,
     ConsumoPendiente pendiente,
   ) async {
-    final tarjetasDeCredito = context.read<EstadoTarjetas>().deCredito;
+    final estadoTarjetas = context.read<EstadoTarjetas>();
+    // **Esperar la carga no es opcional.** Las tarjetas se piden al arrancar
+    // la app, pero su provider es lazy y `cargar()` es asíncrono: si esta
+    // pantalla es la primera que las lee —abrir la app y tocar Pendientes, sin
+    // pasar por Tarjetas ni Deudas— la lista todavía está vacía. El formulario
+    // entonces oculta el interruptor "fue una compra en cuotas" y US4 queda
+    // inalcanzable **sin ninguna señal** de que falte algo; el usuario cree que
+    // la app no sabe hacerlo. Reproducido en dispositivo el 2026-09-14.
+    //
+    // Se vuelve a pedir siempre y no solo cuando está vacía: una tabla de unas
+    // pocas filas no justifica llevar una bandera de "ya cargué", y de paso
+    // recoge una tarjeta agregada en otra pantalla.
+    await estadoTarjetas.cargar();
+    if (!context.mounted) return;
+
+    final tarjetasDeCredito = estadoTarjetas.deCredito;
     final datos = await showDialog<DatosConfirmacion>(
       context: context,
       builder: (_) => FormularioConfirmarPendiente(
