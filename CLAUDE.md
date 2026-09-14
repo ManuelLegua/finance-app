@@ -233,7 +233,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
 **Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
-**554 pruebas, todas en verde (2026-09-13).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**556 pruebas, todas en verde (2026-09-13).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -253,7 +253,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 | Setup + Foundational (T001–T010) | ✅ esquema v2, migración probada, `OrigenReconocido` |
 | US1 · activar la captura (T011–T019) | ✅ permiso, 4 estados, servicio en foreground |
 | US2 · bandeja de pendientes (T020–T033) | ✅ confirmar/corregir/descartar, deduplicación, diagnóstico |
-| US2 · parser genérico (T034–T043) | ✅ **el parser existe y pasa** (T034, T038, T038a, T039, T041a). Quedan T041 (paquetes de los orígenes que falten), T042 (callback) y T043 (arranque del servicio) |
+| US2 · parser genérico (T034–T043) | ✅ **completo**. La captura anda de punta a punta: filtro, parser, callback y arranque del servicio. Queda T043a, un hueco de D-N4 (ver abajo) |
 | US3 · categorización aprendida (T044–T051) | ✅ normalizador de comercio, `RepositorioAsociaciones`, propuesta y aprendizaje en `EstadoPendientes`, pantalla "Comercios" |
 | US4 · consumos en cuotas (T052–T055) | ✅ `EstadoPendientes.confirmar(comoDeuda:)`, interruptor "fue una compra en cuotas" en el formulario (oculto sin tarjetas de crédito) |
 | Polish (T056–T058 hechas; T060–T061 [MANUAL] esperan al parser + dispositivo; T062 al cierre) | en curso |
@@ -539,6 +539,50 @@ o en el medio (`231 PVEA VENTANILLA`, `IKF 982 PV VENTANILLA`). Dos sucursales
 de la misma cadena normalizan distinto y FR-032 termina aprendiendo una
 categoría por sucursal. No se arregló acá porque no es gratis: recortar un
 número inicial rompería un comercio que legítimamente empiece con dígitos.
+
+
+### La captura, cerrada de punta a punta (2026-09-13, noche)
+
+**T067, T042, T041 y T043.** El tramo notificación → pendiente, que estuvo
+abierto desde que se registró el callback, ya existe.
+
+- **T067**: borrado el instrumento de volcado. La app dejó de escribir texto de
+  notificaciones al log y al archivo local, que era lo único que contradecía la
+  política de privacidad — y el último requisito que faltaba para publicar.
+- **T042**: la decisión vive en `lib/dominio/interpretes/decision_captura.dart`,
+  Dart puro y con 11 pruebas; el callback quedó como pegamento que solo
+  persiste lo que esa función resuelve. **Si aparece un `if` con una regla de
+  negocio en el callback, está en el lugar equivocado.** Dos cosas que no son
+  obvias: llama a `DartPluginRegistrant.ensureInitialized()` —sin eso `sqflite`
+  no tiene canal en el isolate headless y abrir la base falla— y abre y cierra
+  su propia conexión, porque el isolate puede quedar vivo entre notificaciones
+  y sostener una conexión contra la misma base que usa la app es pedir un
+  bloqueo.
+- **T041**: los paquetes salieron de `adb shell pm list packages`, mucho más
+  simple que provocar una notificación por app. Verificados los cuatro que hay
+  instalados. **Sip es la Tarjeta Oh! renombrada** —por eso el paquete dice
+  `tarjetaoh` y los correos firman `Sip`— y la app de Falabella es la del
+  banco, no la de la tienda; las dos cosas confirmadas con el usuario, no
+  deducidas.
+- **T043**: ya estaba satisfecho. `activar()` arranca en foreground con
+  notificación discreta, el manifiesto declara `foregroundServiceType`
+  `specialUse` con la `property` que Android 14+ exige, y el receptor de
+  arranque cubre `BOOT_COMPLETED`, `LOCKED_BOOT_COMPLETED`,
+  `QUICKBOOT_POWERON` y `REBOOT`.
+
+**Lo que sí falta, y no tenía tarea: T043a.** D-N4 dice que la activación "pide
+excluir la app de la optimización de batería del fabricante", y **nada en el
+código lo pide** — ni el permiso está en el manifiesto. Sin eso, T060 no se
+puede verificar tal como está escrita. No se implementó sobre la marcha porque
+Google Play restringe `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` a casos de uso
+acotados y exige justificarlo, y la app está por publicarse: conviene decidir
+primero si se pide y con qué argumento.
+
+**Lo que la captura hace hoy, y lo que no.** Un consumo con tarjeta que llegue
+por correo de un origen reconocido se interpreta y aparece en la bandeja. No
+hay ninguna ruta que registre un gasto sin que el usuario lo confirme (FR-020),
+y de un correo ajeno no queda rastro de ningún tipo (FR-008c). Falta el
+recorrido en dispositivo real: T060 y T061.
 
 ### Tres bugs de la spec 002 que salieron de este mismo recorrido
 
