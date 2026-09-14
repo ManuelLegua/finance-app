@@ -233,7 +233,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
 **Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
-**565 pruebas, todas en verde (2026-09-14).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**565 pruebas, todas en verde (2026-09-14).** Subieron de 525 con el tramo del parser de la spec 002 (T038/T038a, T039, T041a, T042, T064b) y los dos bugs que encontró el recorrido manual (T055a, T061a). Habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción y sumó las de la propina; la que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -253,10 +253,10 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 | Setup + Foundational (T001–T010) | ✅ esquema v2, migración probada, `OrigenReconocido` |
 | US1 · activar la captura (T011–T019) | ✅ permiso, 4 estados, servicio en foreground |
 | US2 · bandeja de pendientes (T020–T033) | ✅ confirmar/corregir/descartar, deduplicación, diagnóstico |
-| US2 · parser genérico (T034–T043) | ✅ **completo**. La captura anda de punta a punta: filtro, parser, callback y arranque del servicio. Queda T043a, un hueco de D-N4 (ver abajo) |
+| US2 · parser genérico (T034–T043) | ✅ **completo**. La captura anda de punta a punta: filtro, parser, callback y arranque del servicio |
 | US3 · categorización aprendida (T044–T051) | ✅ normalizador de comercio, `RepositorioAsociaciones`, propuesta y aprendizaje en `EstadoPendientes`, pantalla "Comercios" |
 | US4 · consumos en cuotas (T052–T055) | ✅ `EstadoPendientes.confirmar(comoDeuda:)`, interruptor "fue una compra en cuotas" en el formulario (oculto sin tarjetas de crédito) |
-| Polish (T056–T058 hechas; T060–T061 [MANUAL] esperan al parser + dispositivo; T062 al cierre) | en curso |
+| Polish (T056–T058, T043a, T064a, T064b hechas; T062 al cierre) | ⚠️ **T060/T061 recorridos en parte el 2026-09-14** — ver "Dónde retomar el recorrido manual" más abajo |
 
 **El bloqueo (D-N9 de research.md):** no existe documentación pública del formato
 de las notificaciones de ningún banco peruano, así que el parser genérico no se
@@ -570,13 +570,8 @@ abierto desde que se registró el callback, ya existe.
   arranque cubre `BOOT_COMPLETED`, `LOCKED_BOOT_COMPLETED`,
   `QUICKBOOT_POWERON` y `REBOOT`.
 
-**Lo que sí falta, y no tenía tarea: T043a.** D-N4 dice que la activación "pide
-excluir la app de la optimización de batería del fabricante", y **nada en el
-código lo pide** — ni el permiso está en el manifiesto. Sin eso, T060 no se
-puede verificar tal como está escrita. No se implementó sobre la marcha porque
-Google Play restringe `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` a casos de uso
-acotados y exige justificarlo, y la app está por publicarse: conviene decidir
-primero si se pide y con qué argumento.
+**Lo que faltaba de D-N4 y no tenía tarea era T043a**, la exención de
+optimización de batería — **hecha el 2026-09-14**, ver su sección más abajo.
 
 **Lo que la captura hace hoy, y lo que no.** Un consumo con tarjeta que llegue
 por correo de un origen reconocido se interpreta y aparece en la bandeja. No
@@ -734,7 +729,8 @@ tarjetas en su `setUp`. La prueba estaba escrita sobre la condición que el bug
 rompe, así que no podía fallar. La prueba nueva monta el estado **sin** cargar.
 
 Es exactamente el tipo de defecto que el recorrido manual existe para
-encontrar, y el primero que sale de mirar la pantalla y no la base.
+encontrar, y el primero que sale de mirar la pantalla y no la base. El
+segundo fue T061a — ver "Dónde retomar el recorrido manual".
 
 ### Tres bugs de la spec 002 que salieron de este mismo recorrido
 
@@ -775,6 +771,102 @@ asociación aprendida a cualquier pendiente que llegue sin `categoriaPropuesta`
 headless real o un doble de prueba — así que T042 solo necesita escribir el
 `ConsumoPendiente` crudo que sale del parser, sin consultar
 `RepositorioAsociaciones` por su cuenta.
+
+### Dónde retomar el recorrido manual (2026-09-14)
+
+Seis de los nueve pasos del [quickstart](specs/002-captura-notificaciones-bancarias/quickstart.md)
+quedaron recorridos en un Honor CRT-LX3 con Android 14, conduciendo el teléfono
+por `adb` (capturas de pantalla con `exec-out screencap`, toques con `input
+tap`, y la base leída con `exec-out run-as ... cat`). **Encontró dos bugs que
+ninguna prueba veía**, los dos ya arreglados: T055a y T061a.
+
+| Paso | | Qué quedó probado |
+|---|---|---|
+| 3 | ✅ | El pendiente aparece con monto, comercio y fecha; el total suma bien |
+| 4 | ✅ | Confirmar pide categoría por comercio nuevo (FR-033), crea la transacción con la **fecha del consumo** y aprende la asociación |
+| 5 | ✅ | El segundo consumo del mismo comercio llega con la categoría ya propuesta |
+| 6 | ⚠️ | **La mitad**: al revocar, la app avisa bien. Que se reanude al reconceder no se pudo verificar — ver T061b |
+| 7 | ⛔ | Modo avión, sin recorrer — ver T061c |
+| 8 | ✅ | **Tras reiniciar el teléfono y sin abrir la app, el consumo se capturó igual**: el servicio vuelve solo por `BOOT_COMPLETED` (D-N4, FR-011) |
+| 9 | ✅ | Un texto con monto y sin dirección clara va a diagnóstico, nunca a pendiente con datos inventados |
+
+**Y FR-008c verificado en un teléfono real**, que era la promesa más fuerte de la
+feature: un mensaje personal con `S/ 300.00` adentro **no dejó rastro de ningún
+tipo** — ni pendiente, ni diagnóstico.
+
+#### El bug grave que salió de acá: T061a
+
+**Capturar un consumo con la app abierta dejaba la base inutilizable para la
+interfaz.** La bandeja mostraba "Nada esperando confirmación" con las filas
+presentes en el archivo, y no se recuperaba hasta reiniciar la app.
+
+La causa era el `cerrar()` del callback headless, introducido en T042:
+**`sqflite` comparte el handle nativo por ruta entre isolates del mismo
+proceso**, así que cerrar desde el isolate de fondo le cierra la conexión a la
+interfaz. El comentario que justificaba ese cierre —"sostener una conexión
+abierta en segundo plano es pedir un bloqueo"— estaba exactamente al revés, y
+el comentario nuevo lo dice para que nadie lo reintroduzca.
+
+**Lo que costó fue atribuirlo, no arreglarlo.** El Resumen seguía mostrando
+cifras correctas y eso parecía descartar la hipótesis — pero venían de memoria:
+la transacción la había escrito la propia interfaz al confirmar. Lo que lo
+destrabó fue comprobar que **reiniciar la app devolvía los pendientes
+intactos**, o sea que el dato nunca estuvo en riesgo, solo la conexión.
+
+#### Cómo conducir el teléfono desde acá, que cuesta acertar
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb connect <IP>:<puerto>          # la depuración inalámbrica se apaga al reiniciar
+& $adb -s <serie> exec-out screencap -p > captura.png
+& $adb -s <serie> shell input tap <x> <y>
+& $adb -s <serie> exec-out run-as io.github.manuellegua.finanzas cat databases/finanzas.db > db.db
+```
+
+Cuatro cosas que hicieron perder tiempo y no son obvias:
+
+- **`exec-out`, nunca `shell ... cat`**, para sacar binarios: `shell` traduce
+  saltos de línea y corrompe el archivo (la base salía con 84 bytes de más).
+- **Una captura de pantalla justo después de un toque sale a destiempo**: se ve
+  el cuadro de la animación, no el resultado. Hay que pedirla en una llamada
+  aparte, y aun así el primer intento puede mostrar la pantalla anterior.
+- **`screencap` devolviendo 0 bytes no es el teléfono**: es la conexión
+  inalámbrica degradándose. Se arregla reconectando, no reiniciando.
+- **Git Bash convierte `/sdcard/...` en una ruta de Windows.** Anteponer
+  `MSYS_NO_PATHCONV=1` cuando haga falta una ruta del dispositivo.
+
+#### En qué estado quedó el teléfono
+
+- **La captura quedó sin vincular**, por haber revocado y reconcedido el permiso
+  por `adb`. Se repara con **Captura → Desactivar → Activar** en la app, que es
+  lo que arregló T064a.
+- Quedaron **5 pendientes de prueba** en la bandeja (`PRUEBA CON APP ABIERTA`,
+  `PRUEBA TRAS REINICIO`, `SUPERMERCADO EJEMPLO`, el yapeo real de S/ 1.00 y
+  uno más) y **dos filas en el diagnóstico**. Se descartan desde la app.
+- Hay varias notificaciones de prueba en la barra, publicadas con
+  `cmd notification post`.
+
+#### Lo que queda abierto de la spec 002
+
+Todo el código está escrito. Lo que falta es verificación y una decisión:
+
+- **T061b** — que la captura **se reanude** tras reconceder el permiso. La
+  primera mitad del paso 6 quedó probada; esta no. Reconcedido por `adb`, con
+  el servicio corriendo, el proceso vivo, el permiso concedido y ningún
+  componente deshabilitado, no volvió a llegar nada. **Puede ser un artefacto
+  de conceder por `adb`**, que no es el camino del usuario: hay que repetirlo
+  tocando el interruptor en la pantalla de Android. Si tampoco revincula, la
+  app le está prometiendo algo que no ocurre ("la captura dejó de funcionar
+  hasta que lo concedas de nuevo"), y es la misma familia que D-N13.2.
+- **T061c** — el paso 7, modo avión. **No lo puede hacer un agente conectado
+  por depuración inalámbrica**: activarlo corta el Wi-Fi y con él la propia
+  conexión de `adb`. Queda para el usuario, o para una sesión por cable.
+- **T040a** — el hueco del normalizador con códigos de tienda. No urge: mejora
+  sola a medida que aparezcan más ejemplos reales.
+- **T062** — actualizar este archivo al cerrar la spec.
+
+Con T067 hecha, **no queda nada que impida publicar** salvo la decisión sobre
+T061b.
 
 ### Dónde retomar la spec 003
 
