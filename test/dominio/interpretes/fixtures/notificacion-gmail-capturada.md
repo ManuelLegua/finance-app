@@ -66,7 +66,7 @@ remitente.
 paquete:     com.google.android.gm
 title:       "Operaciones Sip"              (15 caracteres)
 text:        "Realizaste una operación"     (24 caracteres)
-bigText:     301 caracteres
+bigText:     301 caracteres (el bloque de abajo transcribe 254 — ver la auditoría al final)
 textLines:   (ausente)
 subText:     "manublieydark@gmail.com"
 ```
@@ -103,7 +103,7 @@ renglones propios. El monto va en una línea sola, separado de su etiqueta.
 paquete:     com.google.android.gm
 title:       "BCP Notificaciones"           (18 caracteres)
 text:        "Constancia de recepción de Yapeo a celular BCP - Servicio de Notificaciones BCP"  (79 caracteres)
-bigText:     1024 caracteres
+bigText:     1024 caracteres (el bloque de abajo transcribe 706 — ver la auditoría al final)
 textLines:   (ausente)
 subText:     "manublieydark@gmail.com"
 ```
@@ -263,8 +263,8 @@ completo sirve de desempate si alguna vez hiciera falta: el del resumen lleva
    G4 y `13 de septiembre de 2026` en G3, el mismo día y desde el mismo
    remitente. El parseo de fecha tiene que aceptar las dos grafías.
 8. **Hay un identificador de operación** (`Número de operación: 0000510200`),
-   candidato bastante mejor que monto+fecha para la deduplicación de D-N7. No
-   resuelve el caso del traspaso entre cuentas propias que D-N7 tampoco
+   candidato bastante mejor que monto+fecha para la deduplicación de D-N5. No
+   resuelve el caso del traspaso entre cuentas propias que D-N5 tampoco
    relaciona, pero sí el doble registro del mismo movimiento.
 9. **El pie del correo envenena las palabras clave de D-N11.** Después del
    dato útil, el BCP agrega boilerplate fijo que contiene *“¿Problemas con tus
@@ -301,6 +301,189 @@ Queda entonces **un renglón abierto de T034**: falta un consumo con tarjeta
 moneda extranjera, no el otro.
 
 ---
+
+---
+
+## G5 — Sip, **consumo con tarjeta de crédito EN SOLES** — capturado el 2026-09-13 21:10
+
+**El que faltaba para cerrar T034.** Un consumo con tarjeta de crédito, en
+soles, con comercio y monto legibles. Llega por correo vía Gmail como los
+cuatro anteriores — la app de Sip tampoco mandó push por este consumo.
+
+```
+paquete:     com.google.android.gm
+title:       "Sip"                            (3 caracteres)
+text:        "Sip, realizaste un consumo con tu Tarjeta de Crédito Sip"  (56 caracteres)
+bigText:     667 caracteres (medido: 667 — **coincide**, no está truncado)
+textLines:   (ausente)
+subText:     "manublieydark@gmail.com"
+```
+
+Cuerpo completo de `bigText`:
+
+```
+Sip, realizaste un consumo con tu Tarjeta de Crédito Sip
+Hola, MANUEL.
+Has realizado una transacción 
+con tu Tarjeta de Crédito Sip.
+Tarjeta Titular:
+XXXXXXXXXXXX2145
+Establecimiento:
+IKF 982 PV VENTANILLA
+Monto:
+S/. 37.70
+Fecha de operación:
+13/09/2026 a las 21:09
+Si no reconoces la operación, comunícate de inmediato al (01) 619-3100.
+Para tu seguridad: 
+Sip jamás solicitará el número, fecha de 
+vencimiento, CVV o claves de tu tarjeta, ni 
+pedirá que la entregues mediante visitas.
+Este correo electrónico fue enviado por: InFinance XP S.A.
+Avenida Aviación 2405 Piso 9, Lima, Lima, San Borja Peru 
+Privacy Policy 
+Update Profile Manage Subscriptions Unsubscribe
+```
+
+---
+
+## G6 — Sip, **consumo con tarjeta de crédito EN SOLES** — capturado el 2026-09-13 21:14
+
+Cuatro minutos después del anterior, en el mismo comercio de la misma zona.
+Sirve de segundo ejemplo del mismo formato y, sobre todo, **de par para probar
+la deduplicación**: dos consumos distintos, de montos distintos, con la misma
+tarjeta y a minutos de distancia.
+
+```
+paquete:     com.google.android.gm
+title:       "Sip"                            (3 caracteres)
+text:        "Sip, realizaste un consumo con tu Tarjeta de Crédito Sip"  (56 caracteres)
+bigText:     665 caracteres (medido: 665 — **coincide**, no está truncado)
+textLines:   (ausente)
+subText:     "manublieydark@gmail.com"
+```
+
+Cuerpo completo de `bigText`:
+
+```
+Sip, realizaste un consumo con tu Tarjeta de Crédito Sip
+Hola, MANUEL.
+Has realizado una transacción 
+con tu Tarjeta de Crédito Sip.
+Tarjeta Titular:
+XXXXXXXXXXXX2145
+Establecimiento:
+231 PVEA VENTANILLA
+Monto:
+S/. 15.90
+Fecha de operación:
+13/09/2026 a las 21:14
+Si no reconoces la operación, comunícate de inmediato al (01) 619-3100.
+Para tu seguridad: 
+Sip jamás solicitará el número, fecha de 
+vencimiento, CVV o claves de tu tarjeta, ni 
+pedirá que la entregues mediante visitas.
+Este correo electrónico fue enviado por: InFinance XP S.A.
+Avenida Aviación 2405 Piso 9, Lima, Lima, San Borja Peru 
+Privacy Policy 
+Update Profile Manage Subscriptions Unsubscribe
+```
+
+---
+
+## Lo que G5 y G6 cambian *(2026-09-13, noche)*
+
+Son el primer consumo con tarjeta en soles, así que cierran T034 — pero además
+contradicen cuatro cosas que se habían dado por decididas con los cuatro
+primeros. Ninguna se podía anticipar sin un correo de un emisor distinto al BCP.
+
+1. **El remitente de Sip no es `Operaciones Sip`: es `Sip`, tres caracteres.**
+   Un mismo emisor usa **más de un nombre de remitente** según el tipo de
+   correo — `Operaciones Sip` para un envío de dinero (G2), `Sip` para un
+   consumo con tarjeta. Un origen no puede tener un único remitente: necesita
+   un conjunto. Tal como quedó sembrada la lista tras T041a, **estos dos
+   consumos se descartaban por origen no reconocido**.
+
+2. **El símbolo del sol se escribe `S/.` con punto.** El BCP escribe `S/ 23.60`
+   y Sip escribe `S/. 37.70`. Una expresión regular del tipo `S/\s*([\d,]+\.\d{2})`
+   —la que propone D-N3 como ejemplo— **no reconoce el monto de Sip**. El punto
+   después de la barra es opcional y hay que contemplarlo.
+
+3. **La regla de acotar el pie en el primer renglón que empieza con `¿` no
+   generaliza.** Es una particularidad del BCP. El pie de Sip arranca con *"Si
+   no reconoces la operación, comunícate de inmediato al…"*, sin signo de
+   apertura en ningún lado: el `bigText` de G5 no contiene un solo `¿`. Un
+   parser que dependa de ese corte lee el pie de Sip entero.
+
+4. **Las etiquetas no coinciden entre emisores.** Sip escribe `Monto:` y
+   `Establecimiento:` con dos puntos; el BCP escribe `Monto` y `Empresa` sin
+   ellos. El valor sigue yendo en el renglón siguiente en los dos casos, que es
+   lo único que sí se mantiene.
+
+**Una salida que estas capturas hacen visible**: el campo `text` —el asunto del
+correo— dice la operación en una línea corta y **sin pie que lo contamine**:
+"Realizaste un consumo con tu Tarjeta de Crédito BCP", "Sip, realizaste un
+consumo con tu Tarjeta de Crédito Sip". Clasificar la dirección por el asunto y
+usar el `bigText` solo para extraer los datos evitaría el problema del punto 3
+sin depender de cómo cada banco separa su pie. No alcanza para todo —el asunto
+de G2 es "Realizaste una operación", que no dice la dirección— pero como primera
+fuente es mucho más limpio que el cuerpo.
+
+**Un detalle para `normalizarComercio`**: los establecimientos vienen con código
+de tienda pegado al nombre — `IKF 982 PV VENTANILLA` y `231 PVEA VENTANILLA`.
+El segundo es una tienda de Plaza Vea. Dos compras en el mismo comercio con
+códigos distintos tienen que normalizar igual, o FR-032 aprende una categoría
+por sucursal.
+
+**Procedencia**: leídos con `adb logcat` desde el teléfono conectado por Wi-Fi,
+no transcritos. Los dos cuerpos miden exactamente lo que el volcado declaró
+(667 y 665), así que no les falta nada — a diferencia de G2 y G3, ver la
+auditoría de largos más arriba. El build instalado sigue siendo anterior a
+`5fa0148`, así que cada línea aparece dos veces en el log; y como es un build
+de **release**, `run-as` no pudo leer el archivo local y el log fue la única
+vía.
+
+---
+
+## Auditoría de los largos declarados *(2026-09-13)*
+
+Al extraer estos cuerpos a `textos_capturados.dart` se midieron los bloques y
+**dos de los tres no coinciden con el largo que declara su ficha**:
+
+| | Declarado | Transcrito | Diferencia |
+|---|---|---|---|
+| G2 | 301 | 254 | −47 |
+| G3 | 1024 | 706 | **−318** |
+| G4 | 1024 | 1024 | — |
+
+**El número declarado es el correcto y el que falla es la transcripción**, al
+menos en G3, y se puede demostrar sin volver a capturar nada. G3 y G4 son los
+dos correos del BCP y comparten el mismo pie fijo, que empieza con *"El BCP
+nunca te solicitará datos confidenciales…"*:
+
+- En **G4** el pie arranca en el carácter 826 y el bloque termina en 1024: son
+  198 caracteres de pie.
+- En **G3** el pie arranca mucho antes, en el 551 —el bloque de datos de un
+  yapeo recibido es más corto que el de un consumo con tarjeta—, así que si
+  Android hubiera cortado también en 1024 tendría que haber **473** caracteres
+  de pie. Tiene 155.
+
+Un corte en 1024 no puede producir *menos* pie en el correo que llega antes al
+pie. La explicación que queda es que al bloque de G3 le faltan unos 318
+caracteres del final del pie, perdidos al reconstruirlo a mano del log —
+recordar que G2 y G3 se capturaron con el build anterior a `5fa0148`, que
+duplicaba cada línea y obligaba a rearmarlas.
+
+**Por qué no importa para el parser, y por qué se anota igual.** Lo que falta es
+boilerplate legal, después del renglón que empieza con `¿` donde el parser
+tiene que dejar de leer (punto 3 de D-N12): ningún dato útil está ahí. Pero un
+fixture que declara un largo que su propio bloque no tiene es una trampa para
+quien venga a probar el corte de los 1024 caracteres contra estos textos — ese
+riesgo solo se puede probar contra **G4**, que es el único íntegro.
+
+De G2 no se puede decidir cuál de los dos números es el bueno: termina en una
+fecha, sin corte a la vista, así que los 47 caracteres que faltan podrían ser
+una línea de cierre perdida o un largo mal anotado. Queda como está, anotado.
 
 ## Procedencia y condiciones de la captura
 

@@ -58,6 +58,13 @@ Sin cambios. Ver la versión original: el servicio corre en modo *foreground* y 
 
 ## D-N5 — Deduplicación: por identidad nativa de la notificación, no por contenido
 
+> **Afinada por D-N12 (2026-09-13)**: los correos del BCP traen un `Número de
+> operación`, mejor clave que monto+fecha para el caso del mismo movimiento
+> avisado dos veces. Sigue sin resolver el traspaso entre cuentas propias, que
+> genera dos notificaciones opuestas por el mismo monto. **Esta es la decisión
+> de deduplicación**: `CLAUDE.md` y el fixture la llamaban "D-N7" por error de
+> arrastre; D-N7 es la normalización de comercio.
+
 Sin cambios. Cada `ConsumoPendiente` guarda el identificador nativo de la notificación que lo originó. Una notificación reeditada con el mismo identificador no genera un segundo pendiente (FR-015); dos notificaciones distintas — mismo monto y comercio o no — siempre generan pendientes distintos (FR-016). Esto es independiente de si el texto se interpretó con un parser por banco o genérico.
 
 ---
@@ -92,6 +99,14 @@ Sin cambios. FR-007 sigue exigiendo que la funcionalidad se omita por completo d
 
 ## D-N10 — Lista de orígenes reconocidos: datos, no código
 
+> **Enmendada por D-N12 (2026-09-13)**: el mecanismo de filtrado ya **no es
+> solo por paquete de Android**. Los consumos llegan por correo y para todo
+> correo el paquete es `com.google.android.gm`, así que el filtro pasó a tener
+> dos modos —paquete **o** remitente (el `title`)—. El fundamento de esta
+> sección sigue en pie sin cambios: lista cerrada, datos y no código, y agregar
+> un origen no exige escribir interpretación nueva. Leer D-N12 antes de tocar
+> `origenesReconocidos`.
+
 **Decisión**: una constante `List<OrigenReconocido>` (paquete de Android + nombre para mostrar), sembrada con los emisores peruanos que la app ya conoce por `EntidadesPeru` de 001 (BCP, Interbank, BBVA, Scotiabank, Falabella, Ripley, Pichincha, BanBif, Mibanco, Banco de la Nación, Caja Arequipa, Caja Huancayo, Oh!/SIP) más Yape y Plin. El servicio de escucha (`datos/notificaciones/servicio_escucha.dart`) descarta de entrada cualquier notificación cuyo paquete no esté en esta lista — nunca llega al parser genérico ni se guarda en ningún lado (edge case "app no reconocida en absoluto").
 
 **Rationale**: el usuario pidió que agregar un banco no exija código nuevo, no que la app escuche literalmente cualquier notificación de cualquier app del teléfono. Sin esta lista, el parser genérico tendría que decidir "¿esto es una notificación bancaria?" mirando *cualquier* texto del sistema — WhatsApp, un juego, una app de compras — con mucho más riesgo de generar pendientes ruidosos (FR-017 prohíbe datos inventados, pero un falso positivo que sí matchea el patrón de monto igual sería un pendiente basura, y una bandeja llena de basura rompe SC-002 aunque nada se registre mal). Acotar por paquete conocido es la diferencia entre "genérico dentro de las apps financieras que ya identificamos" y "genérico sin límite", y es lo que de verdad resuelve la pregunta original del usuario ("si agrego una tarjeta, ¿la lee?"): sí, para cualquier banco ya sembrado en esta lista — que cubre los 15 emisores que la app ya conoce — sin escribir nada nuevo; para un banco fuera de esa lista, agregarlo es una línea de datos (paquete + nombre), no una tarea de desarrollo.
@@ -106,6 +121,18 @@ Sin cambios. FR-007 sigue exigiendo que la funcionalidad se omita por completo d
 ---
 
 ## D-N11 — Detectar si el dinero salió o entró: palabras clave, no la app de origen
+
+> **Ampliada por D-N15 (2026-09-13)**: las palabras de **salida** de esta
+> sección se escribieron pensando en compras con tarjeta y dejaban afuera los
+> envíos de dinero, que también son consumos. Ver D-N15 para la lista ampliada
+> y para el falso positivo que introduce.
+>
+> **Acotada por D-N12 (2026-09-13)**: las palabras clave **no se buscan en todo
+> el texto**. El pie fijo del correo del BCP contiene "compras", "rechazada" y
+> "tarjeta de débito o crédito", y un clasificador que lea el `bigText` entero
+> encuentra señales contradictorias y manda a diagnóstico un consumo
+> inequívoco. La zona que se lee termina en el primer renglón que empieza con
+> `¿`. Ver el punto 3 de D-N12.
 
 **Decisión**: el parser genérico clasifica cada notificación como saliente o entrante buscando palabras clave en el texto, no asumiéndolo por la app (FR-008b). Palabras que indican salida: "consumo", "compra", "cargo", "pagaste", "pago realizado". Palabras que indican entrada: "abono", "depósito", "te enviaron", "recibiste", "ingreso", "transferencia recibida". Una notificación sin ninguna de las dos listas, o con señales de ambas, no se interpreta como consumo — pasa a diagnóstico (FR-017: mejor no capturar que inventar la dirección del dinero).
 
@@ -128,51 +155,171 @@ Confirma la estructura de tres campos (título, cuerpo, y a veces `subText`) y d
 
 ---
 
-## D-N12 — Gmail como origen: el evento sí trae el correo completo *(2026-09-13)*
+## D-N12 — Gmail como origen: el consumo entra por correo, no por push *(2026-09-13, cerrada)*
 
-**Estado**: hallazgo verificado, **decisión de alcance todavía abierta**. Falta
-un consumo con tarjeta real para cerrarla (ver "Lo que falta" al final).
+**Estado**: **decidida**, y ampliada la noche del 2026-09-13 con dos capturas
+de un segundo emisor (G5 y G6, Sip) que corrigieron el punto 3 y agregaron los
+puntos 10 a 12. El hallazgo del 2026-09-12 dejó planteada una pregunta
+de alcance —por dónde entran los consumos, si las apps de banco solo mandan push
+del dinero entrante— y las capturas de
+`test/dominio/interpretes/fixtures/notificacion-gmail-capturada.md` la
+responden. La última, G4, es un consumo con tarjeta real y es la que cierra la
+decisión.
+
+**Decisión**: **Gmail se reconoce como origen, y el filtro de orígenes pasa a
+tener dos modos en vez de uno**: por paquete de Android (las apps que sí
+notifican por su cuenta — el push de Yape dio su paquete) y por **remitente**,
+que para un correo es el `title` de la notificación de Gmail (`BCP
+Notificaciones`, `Operaciones Sip`, `YAPE Notificaciones`). Una notificación es
+de origen reconocido si calza por cualquiera de los dos modos.
+
+**Por qué el filtro de D-N10 no alcanza**: para todo correo el `packageName` es
+`com.google.android.gm`. Filtrar por paquete deja exactamente dos resultados
+posibles, los dos malos: si Gmail no está en la lista no entra ningún consumo
+—que es la situación de hoy—, y si está, entra **toda** notificación de correo
+del teléfono sin distinguir el banco de nada. El remitente es el único dato del
+evento que separa un correo del banco de uno cualquiera. Esto **enmienda D-N10**
+en su mecanismo (el filtro ya no es solo por paquete) sin tocar su fundamento:
+sigue habiendo una lista cerrada de orígenes, sigue siendo datos y no código, y
+agregar un banco sigue sin exigir escribir interpretación nueva (FR-008a).
 
 **Qué se verificó**: `NotificationEvent.text` expone únicamente `EXTRA_TEXT` —el
 preview que Gmail trunca justo sobre el comercio, lo que el 2026-09-12 parecía
 matar esta feature—, pero el lado Android del plugin reenvía además
 `EXTRA_BIG_TEXT` y `EXTRA_TEXT_LINES`, que llegan a Dart en `evento.raw`. Medido
-en el teléfono de referencia: `bigText` trajo **301 y 1024 caracteres** contra
-**24 y 79** del preview. Los volcados completos están en
-`test/dominio/interpretes/fixtures/notificacion-gmail-capturada.md`, capturados
-por la propia app y no transcritos a mano.
+en el teléfono de referencia: `bigText` trajo **301, 1024 y 1024 caracteres**
+contra **24, 79 y 84** del preview. En G4 el correo entrega el consumo entero
+—comercio, monto, fecha, últimos cuatro dígitos de la tarjeta y número de
+operación— dentro de los primeros **511** caracteres. Los volcados los capturó
+la propia app; no están transcritos a mano.
 
-**Por qué importa**: la salida que el hallazgo del 2026-09-12 dejaba planteada
-—"reconocer Gmail como origen y filtrar por remitente"— **es técnicamente
-viable y no saca un solo dato del teléfono**. La alternativa que obligaba a
-mandar el insumo a un servicio externo (spec 006) deja de ser la única.
+### La raya de privacidad, que es la parte cara de esta decisión
 
-**Cuatro consecuencias sobre el diseño del parser**, ninguna anticipable sin
-estas capturas:
+Reconocer Gmail significa que el servicio de escucha **recibe la notificación de
+todo correo que llegue al teléfono**, no solo la del banco. Android entrega
+primero y filtra después; no hay forma de suscribirse a un remitente.
 
-1. **El filtro por paquete de D-N10 no alcanza.** Para Gmail el `packageName`
-   es siempre `com.google.android.gm`; el remitente viene en `title` (`BCP
-   Notificaciones`, `Operaciones Sip`, `YAPE Notificaciones`). El filtro tiene
-   que ser por remitente, no por paquete — lo que convierte a
-   `origenesReconocidos` en una lista de remitentes, no de apps.
-2. **Gmail publica dos notificaciones por correo**: una agrupada (`textLines`
-   con un renglón por correo, sin `bigText`) y una individual por correo (con
-   `bigText`). Procesar ambas duplicaría cada consumo. Regla de descarte:
-   `bigText == null && textLines != null`.
-3. **El monto va en su propia línea**, separado de la etiqueta que lo nombra.
-   Un parser que busque `S/` en el mismo renglón que "Monto" falla en los dos
-   correos capturados.
-4. **`bigText` se corta a los 1024 caracteres exactos**, a mitad de palabra.
+Eso **no** es una salida de datos y por lo tanto **no necesita enmienda a la
+constitución**: nada sale del dispositivo, y el Principio I sigue intacto. Pero
+sí amplía lo que la app ve, así que la regla queda escrita acá y es vinculante
+para T042:
 
-**Riesgo abierto**: si un correo de consumo pone el comercio después del
-carácter 1024, se pierde. En lo capturado el dato útil entraba en los primeros
-200, pero ninguno de los tres es un consumo con tarjeta.
+1. El filtro por remitente se aplica **primero**, antes de leer `bigText`, antes
+   de interpretar y antes de escribir nada.
+2. De una notificación que no calza no se guarda **nada** — ni pendiente, ni
+   registro de diagnóstico (FR-018 cubre los orígenes reconocidos, no los
+   ajenos), ni línea de log.
+3. El registro de diagnóstico sigue siendo solo para orígenes reconocidos que no
+   se pudieron interpretar. Un correo personal nunca puede terminar ahí.
 
-**Lo que falta para decidir**: capturar un consumo real. Los tres correos
-obtenidos son movimientos entre cuentas (un yapeo enviado, uno recibido y un
-aviso), y FR-012/FR-013 mandan ignorar todo lo entrante. Hasta tenerlo, T034
-sigue abierta: lo que hay prueba que el mecanismo funciona y cómo viene armado,
-no que el dato que la spec necesita esté ahí.
+Es la misma raya que ya respeta el instrumento de volcado, que anota el texto
+completo únicamente de `paquetesBajoObservacion` y de todo lo demás solo el
+nombre del paquete.
+
+### Lo que queda decidido sobre el parser
+
+Nueve cosas, ninguna anticipable sin las capturas. El detalle largo con las
+posiciones exactas está en el fixture; acá va lo que obliga a hacer:
+
+1. **El remitente viene en `title`**, no en el paquete (ver arriba).
+2. **El resumen de grupo de Gmail se descarta por `evento.isGroup`**, nunca por
+   la forma del texto. Gmail publica dos notificaciones por correo y G4 mostró
+   que, cuando hay un solo correo sin leer, el resumen **copia el `bigText`
+   entero y no trae `textLines`**. La regla que dejaron G1–G3 —`bigText == null
+   && textLines != null`— es **falsa** y contaría cada consumo dos veces.
+   `isGroup` es un campo tipado del plugin, no una inferencia sobre el texto.
+3. **El parser tiene que acotar la zona que lee, pero `¿` no es la marca.**
+   El pie fijo del BCP dice *"¿Problemas con tus **compras**? Si tu compra fue
+   **rechazada**, cancelada o duplicada…"* y *"…número de tu **tarjeta de
+   débito o crédito**…"*. Un clasificador que recorra el `bigText` entero ve
+   señales de compra, de rechazo y de las dos clases de tarjeta a la vez y, por
+   la propia regla de D-N11 —señales contradictorias, no se interpreta—,
+   mandaría a diagnóstico un consumo que está inequívoco en sus primeros 200
+   caracteres. **El problema es real; la solución que se escribió acá el
+   2026-09-13 a la tarde no lo era.**
+
+   > **Corregido esa misma noche por G5 y G6** (los consumos con tarjeta de
+   > Sip). Se había fijado como regla "acotar hasta el primer renglón que
+   > empiece con `¿`", deducida de los dos únicos correos disponibles, los dos
+   > del BCP. **El correo de Sip no contiene un solo `¿`**: su pie arranca con
+   > *"Si no reconoces la operación, comunícate de inmediato al…"*. Un parser
+   > que dependa de ese corte lee el pie de Sip entero.
+   >
+   > **Por dónde va la salida**, sin fijarla todavía como regla: el campo
+   > `text` —el asunto del correo— dice la operación en una línea corta y sin
+   > pie que la contamine ("Realizaste un consumo con tu Tarjeta de Crédito
+   > BCP", "Sip, realizaste un consumo con tu Tarjeta de Crédito Sip").
+   > Clasificar la dirección por el asunto y usar el `bigText` solo para
+   > extraer los datos esquiva el problema sin depender de cómo cada emisor
+   > separa su pie. No alcanza para todo —el asunto de G2 es "Realizaste una
+   > operación", que no dice la dirección— así que hace falta un respaldo, pero
+   > como primera fuente es mucho más limpio que el cuerpo. **Que se haya
+   > necesitado un segundo emisor para descubrir esto es exactamente lo que
+   > D-N9 predecía**: una regla deducida de un solo banco se lee como general y
+   > no lo es.
+4. **El monto va en su propia línea**, separado de la etiqueta que lo nombra.
+   Un parser que busque la cifra en el mismo renglón que "Monto" falla en G2, G3
+   y G4. En G4 el monto aparece además dos veces: en la frase de apertura y bajo
+   `Total del consumo`.
+5. **El comercio también aparece dos veces**: en la frase (`… en ANTHROPIC*
+   CLAUDE SUB.`) y bajo la etiqueta `Empresa`. La etiqueta es la fuente
+   confiable; la frase termina en punto y habría que recortarlo.
+6. **El asterisco de `ANTHROPIC* CLAUDE SUB` es parte del nombre** tal como lo
+   manda el adquirente, no un separador. `normalizarComercio` no debe partir el
+   nombre ahí.
+7. **Hay un `Número de operación`** (`0000510200`), clave de deduplicación
+   bastante mejor que monto+fecha. Afina **D-N5**, no D-N7 — ver la nota de
+   numeración al final de esta sección.
+8. **El BCP escribe `setiembre` y `septiembre`** indistintamente, el mismo día y
+   desde el mismo remitente. El parseo de fecha tiene que aceptar las dos
+   grafías.
+9. **`subText` trae la cuenta de correo**, útil el día que haya más de una
+   configurada.
+
+**Tres más, que aportaron G5 y G6 (Sip, 2026-09-13 de noche)** y que ningún
+correo del BCP habría mostrado:
+
+10. **Un emisor usa más de un nombre de remitente.** Sip firma `Operaciones
+    Sip` un envío de dinero y `Sip` —tres caracteres— un consumo con tarjeta.
+    Un origen necesita un **conjunto** de remitentes, no uno solo: con uno solo
+    se descartaban justo los consumos, que es lo único que esta spec captura.
+11. **El sol se escribe `S/.` con punto.** El BCP escribe `S/ 23.60`, Sip
+    escribe `S/. 37.70`. La expresión regular que D-N3 propone de ejemplo
+    —`S/\s*([\d,]+\.\d{2})`— no reconoce la segunda.
+12. **Las etiquetas no coinciden entre emisores.** Sip escribe `Monto:` y
+    `Establecimiento:` con dos puntos; el BCP, `Monto` y `Empresa` sin ellos.
+    Lo único que se mantiene es que el valor va en el renglón siguiente.
+
+### Riesgos abiertos, anotados y no resueltos
+
+- **El corte a los 1024 caracteres.** En G4 lo útil entra en los primeros 511,
+  pero un comercio de nombre largo o un correo con renglones de más podría
+  empujar el bloque `Empresa` más allá del corte. Sin verificar. Mitigación
+  barata: como el comercio viene dos veces (punto 5), la frase de apertura
+  —mucho más arriba— sirve de respaldo cuando falta la etiqueta.
+- **El traspaso entre cuentas propias** genera dos notificaciones opuestas por
+  el mismo monto que la deduplicación no relaciona. Sigue abierto; el número de
+  operación no lo resuelve, porque son dos operaciones distintas de verdad.
+- **Depender de Gmail** ata la captura a que el usuario reciba los avisos del
+  banco por correo y tenga encendidas las notificaciones de Gmail. Es frágil, y
+  es la opción que hay.
+
+### Alternativas consideradas
+
+- **Activar alertas push de consumo en la app del banco**: era la salida más
+  limpia —dejaba D-N10 intacto— y se descartó porque en el teléfono de
+  referencia BCP, Yape y Sip no ofrecen ese ajuste: solo notifican dinero
+  entrante.
+- **Aceptar que la feature no se sostiene** y cerrar la spec 002: era la tercera
+  salida del hallazgo del 2026-09-12, y deja de estar justificada ahora que hay
+  un camino verificado de punta a punta.
+- **Filtrar Gmail por paquete y clasificar después por texto**: rechazada por lo
+  de la raya de privacidad — el filtro tiene que poder descartar un correo
+  personal sin haberlo leído, y por paquete no se puede.
+
+**Nota de numeración**: tanto `CLAUDE.md` como el fixture atribuyen la
+deduplicación a "D-N7". Es un error de arrastre: la deduplicación es **D-N5**;
+D-N7 es la normalización de comercio. Corregido acá y en los dos documentos.
 
 ---
 
@@ -253,3 +400,71 @@ mantenido, es MIT, y **no abre ninguna conexión** — solo habla con el
   paquete mucho más grande para usar una sola función suya, y la app no
   publica notificaciones propias fuera del aviso del servicio. Rechazada por
   Principio V.
+
+---
+
+## D-N15 — Un envío de dinero es un consumo: "sale" no quiere decir "con tarjeta" *(2026-09-13)*
+
+**Decisión**: un yapeo enviado, una transferencia a un tercero y un pago de
+servicios son **consumos** a los efectos de esta spec, igual que una compra con
+tarjeta. Lo que define un consumo es que **el dinero sale de una cuenta del
+usuario y le baja el saldo**, no el instrumento con que salió.
+
+**Estado**: aclaración, **no** cambio de alcance. La spec dice desde su primera
+línea "solo captura consumos (**dinero que sale**); nunca dinero recibido", y
+FR-008b opone "consumo" a "movimiento entrante", no a "transferencia". La
+decisión existe porque la implementación se estaba desviando de eso: las
+palabras clave de D-N11 se escribieron pensando en compras con tarjeta
+("consumo", "compra", "cargo", "pagaste") y no reconocen ninguna de las frases
+con que las billeteras anuncian un envío.
+
+**Qué lo destapó**: G2 del fixture —un envío por Sip de S/ 20.00, con las
+frases "Realizaste una operación" y "Operación realizada: Enviar a celular"— no
+calzaba con ninguna de las dos listas de D-N11 y terminaba en
+`NoInterpretable(formatoNoReconocido)`, es decir en diagnóstico. Un gasto real,
+perfectamente legible, que la app no registraba.
+
+### Consecuencias
+
+1. **Las palabras de salida de D-N11 se amplían** con las formas de envío:
+   "enviar a celular", "enviaste", "yapeaste", "acabas de yapear", "te
+   yapeaste", "transferencia realizada", "pago de servicios", "pagaste". Siguen
+   siendo un punto de partida ajustable contra fixtures, no una lista cerrada.
+2. **"Comercio" deja de significar siempre un comercio.** En un envío a una
+   persona el campo se llena con el destinatario ("Enviado a: [Nombre]"). El
+   modelo no cambia —sigue siendo una cadena que `normalizarComercio` limpia y
+   que alimenta la categorización aprendida de US3— pero el nombre del campo
+   queda más angosto que su contenido. No se renombra: renombrarlo tocaría el
+   esquema, los repositorios y la UI para ganar precisión de vocabulario, y
+   FR-032 funciona igual aprendiendo "Juan Pérez → familia" que "Plaza Vea →
+   mercado".
+3. **Aparece un falso positivo estructural: el traspaso entre cuentas propias.**
+   Es el riesgo que el fixture ya tenía anotado y que esta decisión vuelve
+   concreto — G2 y G3 son exactamente eso, el mismo usuario moviéndose S/ 20.00
+   de una cuenta a otra a las 00:29. Con esta decisión G2 pasa a proponerse como
+   gasto de S/ 20.00, y no lo es.
+
+**Por qué se acepta ese falso positivo**: no hay forma de distinguirlo en el
+texto. Las dos notificaciones son legítimas y ninguna dice "esto es tuyo": la
+única señal sería reconocer que el destinatario es el propio usuario, y la app
+no conoce su nombre ni sus números de cuenta (no pide registro — Principio I).
+Como toda captura pasa por confirmación explícita (FR-020), el costo es una fila
+de más en una bandeja que ya exige revisión humana, y el usuario la descarta de
+un toque. Es el mismo trato que D-N11 ya había aceptado para una clasificación
+errada, y sigue siendo preferible a la alternativa: perder todos los envíos
+reales para no proponer los propios.
+
+**Alternativas consideradas**:
+
+- **Dejar los envíos fuera y capturar solo consumos con tarjeta**: es lo que
+  hacía la implementación sin haberlo decidido nunca. Rechazada por el usuario
+  el 2026-09-13 — "una salida de un Yape cuenta como gasto, ya que es un pago y
+  descuenta del saldo". Además contradecía el texto de la propia spec.
+- **Relacionar las dos notificaciones de un traspaso propio y anularlas**:
+  exigiría emparejar por monto y ventana de tiempo, que es justamente lo que
+  D-N5 rechazó como clave de deduplicación por poco confiable — y anularía por
+  error dos operaciones legítimas del mismo monto en el mismo minuto. Peor
+  falla, y silenciosa.
+- **Pedirle al usuario su nombre o sus cuentas para detectar lo propio**: pedir
+  datos personales para mejorar una heurística que ya tiene confirmación humana
+  no se justifica, y la app no pide registro por diseño.

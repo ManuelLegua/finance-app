@@ -12,6 +12,10 @@
 
 **Revisión** *(2026-08-30)*: el alcance de orígenes pasó de una lista fija de cuatro bancos a un reconocimiento genérico. Ver FR-008 a FR-011 y la sección "Sobre el reconocimiento" en Assumptions — es el cambio que más afecta el diseño técnico y anula la premisa original de "un intérprete por banco".
 
+**Aclaración** *(2026-09-13)*: "consumo" significa **todo dinero que sale**, no solo una compra con tarjeta. Un yapeo enviado o una transferencia bajan el saldo igual que una compra, y siempre estuvieron dentro del alcance ("solo captura consumos —dinero que sale—" en el Input de arriba); lo que los dejaba afuera era una lista de palabras clave incompleta. Ver FR-008d y D-N15.
+
+**Revisión** *(2026-09-13)*: un origen reconocido deja de ser necesariamente una **app**. En el teléfono de referencia las apps de banco solo notifican dinero entrante, y los consumos —lo único que esta spec captura— llegan por **correo**, con la notificación de Gmail como portadora. Un origen se identifica entonces por su app **o** por su remitente. Ver FR-008a, FR-008c y D-N12 de [research.md](./research.md), que documenta las capturas reales sobre las que se decidió.
+
 ## Contexto y alcance
 
 La especificación 001 depende de que el usuario anote cada gasto a mano. Ese es
@@ -188,8 +192,10 @@ cuotas conforme a la especificación 001.
 **Captura e interpretación**
 
 - **FR-008**: El sistema MUST reconocer notificaciones de consumo de cualquier banco o billetera digital peruana en una lista de orígenes reconocidos, mediante un reconocimiento genérico de patrones — no un intérprete escrito a mano por cada banco.
-- **FR-008a**: Agregar un banco o billetera nuevo a la lista de orígenes reconocidos MUST NOT requerir escribir lógica de interpretación nueva: alcanza con identificar la app (FR-010) para que el reconocimiento genérico ya vigente empiece a aplicarle.
+- **FR-008a**: Agregar un banco o billetera nuevo a la lista de orígenes reconocidos MUST NOT requerir escribir lógica de interpretación nueva: alcanza con identificar su app **o su remitente** (FR-010) para que el reconocimiento genérico ya vigente empiece a aplicarle.
 - **FR-008b**: El sistema MUST distinguir un consumo (dinero que sale) de un movimiento entrante (dinero que se recibe) por el contenido de la notificación, sin asumirlo por la app de origen — la misma app de billetera notifica ambos casos de forma parecida.
+- **FR-008d**: Un consumo es **todo movimiento que baja el saldo del usuario**, cualquiera sea el instrumento: una compra con tarjeta, un envío de dinero a una persona, una transferencia a un tercero o un pago de servicios. El sistema MUST NOT limitar la captura a las compras con tarjeta (D-N15).
+- **FR-008c**: Cuando el origen sea un remitente y no una app —el caso del correo, donde el sistema recibe la notificación de **todo** correo que llegue al dispositivo—, el sistema MUST descartar lo que no calce con un remitente reconocido **antes** de leer su cuerpo, y MUST NOT conservar de ello ningún rastro: ni pendiente, ni registro de diagnóstico (FR-018), ni traza de ningún tipo. Un correo ajeno al banco nunca puede terminar almacenado.
 - **FR-009**: El sistema MUST extraer de cada notificación reconocida el monto, el comercio y la fecha del consumo.
 - **FR-010**: El sistema MUST registrar de qué app u origen proviene cada consumo capturado.
 - **FR-011**: El sistema MUST capturar consumos aunque la app esté cerrada o en segundo plano.
@@ -231,7 +237,7 @@ cuotas conforme a la especificación 001.
 
 ### Key Entities
 
-- **Origen de captura**: app bancaria o billetera identificada como reconocida (por su paquete de Android). No tiene lógica propia de interpretación — todas comparten el mismo reconocimiento genérico (FR-008). La lista de orígenes reconocidos es ampliable sin escribir código de interpretación nuevo (FR-008a).
+- **Origen de captura**: banco o billetera identificado como reconocido, sea **por la app que notifica** (su paquete de Android) o **por el remitente del aviso** cuando este llega por correo. No tiene lógica propia de interpretación — todas comparten el mismo reconocimiento genérico (FR-008). La lista de orígenes reconocidos es ampliable sin escribir código de interpretación nuevo (FR-008a).
 - **Consumo pendiente**: consumo detectado y aún no confirmado. Contiene monto, comercio, fecha, origen y categoría propuesta. Al confirmarse se convierte en una transacción de la especificación 001; al descartarse desaparece sin dejar registro contable.
 - **Asociación comercio-categoría**: vínculo aprendido entre el nombre de un comercio y la categoría que el usuario le asignó. Se crea y actualiza con cada confirmación.
 - **Registro de diagnóstico**: notificaciones de un origen soportado que no se pudieron interpretar, conservadas localmente para revisar por qué falló el reconocimiento. Consultable y borrable por el usuario.
@@ -266,6 +272,7 @@ cuotas conforme a la especificación 001.
 - **Un reconocimiento genérico, compartido por todos los orígenes**: en vez de un intérprete de texto por banco, un único mecanismo reconoce patrones comunes a cualquier notificación de consumo (un monto en soles, palabras que indican que el dinero salió y no entró) y una lista de apps reconocidas que acota a cuáles notificaciones prestarle atención. Agregar un banco nuevo a esa lista no exige escribir ni probar un intérprete nuevo.
 - **Se valida contra notificaciones reales de varios bancos, no de todos**: el reconocimiento genérico igual se construye y ajusta observando notificaciones reales — no hay documentación pública del formato de ningún banco —, pero alcanza con una muestra representativa de distintos bancos y billeteras para validar que el patrón generaliza, no con una muestra de cada uno.
 - **Precisión más pareja, no perfecta por banco**: un intérprete a medida por banco reconoce mejor los casos particulares de ese banco; el reconocimiento genérico prioriza cubrir bancos nuevos sin trabajo adicional, a cambio de fallar con más frecuencia en textos atípicos de cualquiera de ellos — esos casos van al registro de diagnóstico, nunca se inventan (FR-017).
+- **Un traspaso entre cuentas propias se va a proponer como gasto, y no lo es**: mover dinero entre dos cuentas del mismo usuario genera dos notificaciones —una de salida y una de entrada— y la de salida es indistinguible de un envío a un tercero. La app no conoce el nombre ni las cuentas del usuario (no pide registro), así que no puede descartarla sola. Queda como una fila más en una bandeja que ya exige confirmación explícita (FR-020), y se descarta de un toque. Ver D-N15.
 - **Cobertura parcial por diseño**: solo se capturan consumos que generan notificación **de un origen reconocido**. El efectivo, las domiciliaciones y cualquier gasto que el banco no avise — o de una app que todavía no está en la lista de orígenes reconocidos — se siguen registrando a mano. La captura reduce el registro manual, no lo elimina.
 - **El comercio es el que informa el banco**: se usa el nombre tal como aparece en la notificación, que puede ser un identificador poco legible. El usuario puede corregirlo al confirmar.
 
