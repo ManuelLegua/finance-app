@@ -145,6 +145,7 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/004-suscripcion-premium/` | **Revisada el 2026-09-12 y reimplementada: de suscripción paga a propina voluntaria** (68 de 70 tareas). La app se reparte completa y gratis; apoyar no desbloquea nada. La carpeta conserva su nombre viejo para no romper los enlaces del historial (Principio I enmendado a v2.0.0, sin enmienda nueva) |
 | `specs/005-respaldo-exportacion-datos/` | **Implementada (43 de 43).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
 | `specs/006-moneda-extranjera/` | **Draft, bloqueada.** Aceptar montos en dólares sin abandonar el sol como moneda de cuenta: la conversión ocurre una vez, con un tipo de cambio que informa el usuario, y el importe original viaja como dato adjunto. Ninguno de los 8 archivos de `lib/dominio/calculos/` cambia. Necesita una **enmienda v4.0.0** al Principio II —que hoy dice "la moneda es siempre el sol peruano"— y quedan dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030) |
+| `specs/007-ciclo-facturacion-tarjeta/` | **Draft, con 2 `[NEEDS CLARIFICATION]`.** Cada tarjeta de crédito guarda día de cierre, día de vencimiento y pago mínimo; un consumo pesa en el mes del estado de cuenta donde cae, no en el de la compra. **Hallazgo que agranda la feature**: hoy `Transaccion` no guarda con qué tarjeta se pagó —solo `Deuda` apunta a una— así que hay migración de esquema, no tres campos sueltos. El mes se deriva, nunca se persiste (misma regla que D3 y D13) |
 
 Antes de proponer un cambio de diseño, leer `research.md`: es probable que la alternativa ya se haya evaluado y rechazado por escrito.
 
@@ -232,7 +233,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
 **Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
-**525 pruebas, todas en verde.** Bajaron de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**554 pruebas, todas en verde (2026-09-13).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -252,7 +253,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 | Setup + Foundational (T001–T010) | ✅ esquema v2, migración probada, `OrigenReconocido` |
 | US1 · activar la captura (T011–T019) | ✅ permiso, 4 estados, servicio en foreground |
 | US2 · bandeja de pendientes (T020–T033) | ✅ confirmar/corregir/descartar, deduplicación, diagnóstico |
-| US2 · parser genérico (T034–T043) | ⛔ **bloqueado por insumo manual** |
+| US2 · parser genérico (T034–T043) | ✅ **el parser existe y pasa** (T034, T038, T038a, T039, T041a). Quedan T041 (paquetes de los orígenes que falten), T042 (callback) y T043 (arranque del servicio) |
 | US3 · categorización aprendida (T044–T051) | ✅ normalizador de comercio, `RepositorioAsociaciones`, propuesta y aprendizaje en `EstadoPendientes`, pantalla "Comercios" |
 | US4 · consumos en cuotas (T052–T055) | ✅ `EstadoPendientes.confirmar(comoDeuda:)`, interruptor "fue una compra en cuotas" en el formulario (oculto sin tarjetas de crédito) |
 | Polish (T056–T058 hechas; T060–T061 [MANUAL] esperan al parser + dispositivo; T062 al cierre) | en curso |
@@ -295,17 +296,14 @@ frases salientes que D-N11 no contempla (`transacción`, `pago de servicios`,
 anticipado — que Yape parte el `S/` y la cifra en líneas distintas, que el mismo
 comercio se escribe `ESVISALUD SAC` o `ESVISALUD S.A.C.` según la tarjeta, y que
 un traspaso entre cuentas propias genera dos notificaciones opuestas por el
-mismo monto que la deduplicación de D-N7 no relaciona.
+mismo monto que la deduplicación de D-N5 no relaciona.
 
-Antes de escribir una línea de parser hay que resolver, **en la spec**, por
-dónde entran los consumos. Las tres salidas evaluadas, sin decidir todavía:
-activar alertas push de consumo en los ajustes de la app del banco, si es que se
-puede; reconocer Gmail como origen y filtrar por remitente en vez de por paquete
-(que implica que la app reciba el preview de todo el correo, no solo el
-bancario); o aceptar que la feature no se sostiene en este teléfono. La primera
-pregunta a responder, y la más barata, es si el `NotificationEvent` de Gmail
-trae el correo completo o solo el preview truncado: en las capturas el corte cae
-justo sobre el comercio, y sin comercio no hay categorización aprendida (US3).
+Esa decisión de alcance **ya se tomó** — ver "D-N12, cerrada" más abajo. De las
+tres salidas evaluadas (activar alertas push en la app del banco; reconocer
+Gmail como origen y filtrar por remitente; o aceptar que la feature no se
+sostiene) quedó la segunda: la primera no existe como ajuste en este teléfono y
+la tercera dejó de estar justificada al verificarse que la vía de Gmail entrega
+el consumo entero.
 
 Hasta entonces la captura está construida de punta a punta salvo el tramo
 notificación → pendiente: el callback headless
@@ -394,7 +392,7 @@ Cinco cosas que cambian lo que hay que escribir en el parser:
    frase de apertura. `ANTHROPIC* CLAUDE SUB` — el asterisco es parte del
    nombre que manda el adquirente, y el normalizador de comercio (T040) no
    debe partirlo ahí.
-3. **Hay un `Número de operación`**, mejor clave de deduplicación (D-N7) que
+3. **Hay un `Número de operación`**, mejor clave de deduplicación (D-N5) que
    monto+fecha.
 4. **El BCP escribe `setiembre` y `septiembre`** indistintamente, el mismo día
    y desde el mismo remitente.
@@ -414,6 +412,133 @@ cambio—. Así que cierra ese camino de T038 y deja abierto el feliz: **falta u
 consumo con tarjeta en soles** para terminar de cerrar T034. Hasta entonces el
 instrumento de volcado sigue en pie y **T067 no se puede cerrar**, que es el
 requisito que falta para publicar en Play.
+
+### D-N12 cerrada (2026-09-13): el consumo entra por correo
+
+Con G4 en la mano, la decisión de alcance que el hallazgo del 2026-09-12 dejó
+planteada **ya está tomada y escrita** en `research.md`, `spec.md` y
+`tasks.md`. Lo esencial:
+
+- **Un origen reconocido deja de ser necesariamente una app.** El filtro pasa a
+  tener dos modos —paquete de Android **o** remitente (el `title` del aviso de
+  Gmail)—, porque para todo correo el paquete es `com.google.android.gm` y no
+  distingue el banco de nada. Enmienda el mecanismo de D-N10, no su fundamento.
+- **La raya de privacidad quedó escrita como requisito, FR-008c.** Reconocer
+  Gmail implica que la app recibe la notificación de *todo* correo del teléfono.
+  Lo que no calce con un remitente reconocido se descarta **antes de leer el
+  cuerpo** y no deja rastro: ni pendiente, ni diagnóstico, ni log. No hace falta
+  enmendar la constitución —nada sale del dispositivo— pero sí dejarlo atado.
+- **`OrigenReconocido` no puede expresar esto todavía**: hoy solo tiene
+  `paquete`. Es T041a, tarea nueva.
+- **T038a es nueva y ya está escrita**: todo lo que los fixtures existentes
+  cubren (entrante, moneda extranjera, el recorte del pie) sin esperar el
+  consumo en soles.
+
+**Lo que sigue bloqueado es solo el camino feliz de T038**, que necesita ese
+fixture. La decisión ya no bloquea nada.
+
+**Estado tras T038a/T041a (2026-09-13).** T041a está hecha y en verde. T038a
+está escrita y **en rojo a propósito**: `interpretar()` es un stub que lanza
+`UnimplementedError` y T039 la implementa hasta que esas 8 pruebas pasen. Es el
+rojo que pide la regla 3, no un descuido — `flutter test` va a quedar rojo hasta
+que se escriba T039, que ya no está bloqueada por nada.
+
+Tres cosas de ese tramo fáciles de romper sin querer:
+
+- **`filtrarNotificacion` no recibe el cuerpo de la notificación, y es a
+  propósito.** Es lo que hace que FR-008c sea una propiedad de la forma del
+  código y no una disciplina: quien decide si una notificación se procesa no
+  puede leer un correo personal ni queriendo. Agregarle el texto como parámetro
+  anularía la garantía sin romper ninguna prueba.
+- **El título se compara exacto, nunca con `contains`.** Un `contains` haría que
+  un correo de alguien llamado "BCP" calce como banco. Fallar por defecto
+  —capturar de menos— es la forma segura de fallar acá.
+- **`fixtures/textos_capturados.dart` se genera desde el `.md`, no se edita.**
+  D-N9 prohíbe construir el parser contra texto inventado, y esa prohibición no
+  vale nada si el texto se re-teclea al pasarlo a Dart.
+
+**Aclaración del 2026-09-13 (D-N15, FR-008d): un envío de dinero es un consumo.**
+Un yapeo enviado, una transferencia o un pago de servicios bajan el saldo igual
+que una compra con tarjeta, así que se capturan igual. Las palabras clave de
+D-N11 se habían escrito pensando solo en tarjetas y mandaban a diagnóstico un
+gasto perfectamente legible. Dos consecuencias:
+
+- **El campo `comercio` se llena con el destinatario** cuando no hay comercio.
+  No se renombró: tocaría esquema, repositorios y UI para ganar vocabulario, y
+  la categorización aprendida funciona igual con una persona que con una tienda.
+- **Un traspaso entre cuentas propias se va a proponer como gasto.** G2 y G3 del
+  fixture son exactamente eso. No se puede distinguir del texto —la app no
+  conoce el nombre ni las cuentas del usuario— y lo atrapa la confirmación de
+  FR-020. Hay una prueba que lo fija: si algún día devuelve `NoEsConsumo`,
+  alguien intentó adivinar lo que no se puede saber.
+
+### T034 cerrada la noche del 2026-09-13: dos consumos en soles
+
+Llegaron por correo vía Gmail, de **Sip**, con tarjeta de crédito: `S/. 37.70`
+en `IKF 982 PV VENTANILLA` y `S/. 15.90` en `231 PVEA VENTANILLA`. Están como
+G5 y G6 en el fixture, leídos con `adb logcat` y **no transcritos**: los dos
+cuerpos miden exactamente lo que el volcado declaró (667 y 665), así que no les
+falta nada.
+
+**Cuatro cosas que desmienten lo que se había decidido con los correos del BCP**,
+y que ningún texto inventado —ni un segundo correo del mismo banco— habría
+mostrado:
+
+1. **Un emisor usa más de un nombre de remitente.** Sip firma `Operaciones Sip`
+   un envío de dinero y **`Sip`, tres caracteres**, un consumo con tarjeta. La
+   lista que había sembrado T041a tenía solo el primero, así que **estos dos
+   consumos se descartaban por origen no reconocido**. `OrigenReconocido` pasó
+   de `remitente` a `remitentes`, un conjunto.
+2. **El sol se escribe `S/.` con punto.** El BCP escribe `S/ 23.60`; Sip,
+   `S/. 37.70`. La expresión regular de ejemplo de D-N3 —`S/\s*(...)`— no
+   reconoce la segunda.
+3. **La regla de acotar el pie en el primer `¿` no generaliza.** Era una
+   particularidad del BCP: el `bigText` de Sip **no contiene un solo `¿`**, su
+   pie arranca con "Si no reconoces la operación". Está corregido en D-N12, con
+   la salida que asoma anotada pero sin fijar: clasificar la dirección por el
+   **asunto** del correo, que es corto y no tiene pie, y usar el cuerpo solo
+   para extraer los datos.
+4. **Las etiquetas difieren**: `Monto:` y `Establecimiento:` con dos puntos en
+   Sip, `Monto` y `Empresa` sin ellos en el BCP. Lo único constante es que el
+   valor va en el renglón siguiente.
+
+El punto 3 es la moraleja de D-N9 en acción: una regla deducida de un solo banco
+se lee como general y no lo es.
+
+**Nota de operación**: el build instalado en el teléfono es de **release**, así
+que `run-as` no puede leer el archivo del volcado (`package not debuggable`) y
+`adb logcat` fue la única vía. Sigue siendo el build anterior a `5fa0148`, por
+lo que cada línea aparece dos veces en el log.
+
+
+### T039: el parser genérico, escrito y en verde (2026-09-13)
+
+`lib/dominio/interpretes/interprete.dart`. Tres decisiones que no son obvias
+leyendo el código y que conviene no deshacer sin entender:
+
+- **La dirección se clasifica primero por el asunto**, la primera línea del
+  correo, y solo si eso no alcanza se mira el cuerpo. El asunto dice la
+  operación en pocas palabras y sin nada alrededor que la contradiga; el cuerpo
+  está lleno de etiquetas que **parecen** señales y no lo son. `Operación
+  realizada` encabeza tanto un yapeo recibido como uno enviado, y `Enviado por`
+  —me lo mandaron— se parece muchísimo a `Enviado a`, que es lo contrario.
+  Preguntarle al asunto primero esquiva todas esas trampas de una vez.
+- **El pie se recorta con una lista de aperturas observadas, no con el `¿`.**
+  Ver el punto 3 de D-N12 y por qué esa regla, escrita a la tarde, era falsa
+  para la noche.
+- **El monto acepta `S/` y `S/.`**, porque el BCP escribe uno y Sip el otro.
+  Hay una prueba dedicada a que no se vuelva a escribir la expresión sin el
+  punto opcional.
+
+**El comercio sale crudo del parser**; normalizarlo es tarea de
+`EstadoPendientes` al buscar y aprender la asociación, que es donde ya estaba.
+
+**Un hueco verificado y anotado como T040a**: `normalizarComercio` recorta el
+código numérico solo al **final**, y los comercios reales lo traen al principio
+o en el medio (`231 PVEA VENTANILLA`, `IKF 982 PV VENTANILLA`). Dos sucursales
+de la misma cadena normalizan distinto y FR-032 termina aprendiendo una
+categoría por sucursal. No se arregló acá porque no es gratis: recortar un
+número inicial rompería un comercio que legítimamente empiece con dígitos.
 
 ### Tres bugs de la spec 002 que salieron de este mismo recorrido
 
