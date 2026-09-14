@@ -1,6 +1,7 @@
 import 'package:finanzas/datos/notificaciones/callback_headless.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/servicio_escucha_notificaciones.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_notification_listener/flutter_notification_listener.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -15,6 +16,13 @@ final class ServicioEscuchaNotificacionesAndroid
   ServicioEscuchaNotificacionesAndroid(this._repoConfiguracion);
 
   final RepositorioConfiguracion _repoConfiguracion;
+
+  /// El canal hacia `MainActivity.kt`, el único código nativo propio del
+  /// proyecto. Existe solo para el par desvincular/revincular; ver allá el
+  /// porqué, y [desactivar] acá abajo.
+  static const MethodChannel _canal = MethodChannel(
+    'io.github.manuellegua.finanzas/captura',
+  );
 
   @override
   Future<bool> permisoConcedido() async =>
@@ -63,6 +71,7 @@ final class ServicioEscuchaNotificacionesAndroid
         title: 'Captura de consumos activa',
         description: 'Finanzas está leyendo tus notificaciones bancarias.',
       );
+      await _canal.invokeMethod<bool>('revincularEscucha');
     } on Object {
       // Se sigue: abrir la pantalla es lo que el usuario pidió.
     }
@@ -81,12 +90,32 @@ final class ServicioEscuchaNotificacionesAndroid
       title: 'Captura de consumos activa',
       description: 'Finanzas está leyendo tus notificaciones bancarias.',
     );
+    await _canal.invokeMethod<bool>('revincularEscucha');
     await _guardarInterruptor(activa: true);
   }
 
+  /// Apaga la captura **sin deshabilitar el componente del servicio**.
+  ///
+  /// Acá está el arreglo de D-N13.2, y es por omisión: lo que **no** se llama
+  /// es `NotificationsListener.stopService()`, que apaga el servicio
+  /// deshabilitando su componente de sistema. Android entonces suelta la
+  /// vinculación del listener y no la recupera al rehabilitarlo — el usuario
+  /// queda con el permiso concedido, el servicio corriendo y la captura
+  /// muerta, sin ningún síntoma. Lo único que la devolvía era volver a
+  /// conceder el acceso a mano en los ajustes de Android.
+  ///
+  /// En su lugar se usa `requestUnbind`, que es la mitad del par que Android
+  /// diseñó para esto: suelta la escucha sin tocar el componente, se lleva el
+  /// servicio y su notificación persistente, y deja el `requestRebind` de
+  /// [activar] en condiciones de funcionar. **Los dos van juntos**: el rebind
+  /// por sí solo se probó y falla, porque Android lo rechaza para listeners
+  /// que no se soltaron así.
+  ///
+  /// Las transacciones confirmadas y las asociaciones aprendidas no se tocan
+  /// (FR-005).
   @override
   Future<void> desactivar() async {
-    await NotificationsListener.stopService();
+    await _canal.invokeMethod<bool>('desvincularEscucha');
     await _guardarInterruptor(activa: false);
   }
 

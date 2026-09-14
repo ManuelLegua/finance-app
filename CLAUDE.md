@@ -607,7 +607,7 @@ Lo que eso prueba, y que hasta acá era todo suposición:
 - `categoria_propuesta` llega en `NULL`, que es lo correcto: la resuelve
   `EstadoPendientes` al cargar.
 
-### El bug que esa prueba destapó: D-N13.2 nunca se arregló
+### El bug que esa prueba destapó, y cómo se arregló (T064a)
 
 **El ciclo Desactivar → Activar deja la captura muerta, sin ningún síntoma.**
 Reproducido con hora exacta: a las 22:52 llegaban eventos, a las 22:54 se hizo
@@ -620,24 +620,35 @@ rebind"*, pero **nunca llama a `NotificationListenerService.requestRebind()`**,
 que es la única API con la que Android vuelve a vincular un listener cuyo
 componente se deshabilitó.
 
-**T064 arregló solo la mitad**: el camino que pasa por la pantalla de ajustes
-de Android funciona porque el interruptor lo toca el usuario, y eso sí fuerza
-el rebind. El camino que la app ofrece —su propio interruptor— quedó roto. Es
-T064a, y el arreglo propuesto es un `MethodChannel` en `MainActivity.kt` (hoy
-cuatro líneas) que llame a `requestRebind`.
+**T064 había arreglado solo la mitad**: el camino que pasa por la pantalla de
+ajustes de Android funciona porque el interruptor lo toca el usuario, y eso sí
+fuerza el rebind. El camino que la app ofrece —su propio interruptor— estaba
+roto.
 
-**Mientras tanto, para desbloquear una prueba** se fuerza desde el PC:
+**Arreglado en T064a, y el arreglo es por omisión**: `desactivar()` dejó de
+llamar al `stopService` del plugin y usa `requestUnbind` en su lugar, con
+`requestRebind` al activar. Verificado en dispositivo: tras tres ciclos de
+Desactivar → Activar, cuatro notificaciones de prueba llegaron las cuatro, y el
+componente nunca quedó deshabilitado.
+
+**Dos cosas que costaron y conviene no volver a descubrir:**
+
+- **`requestRebind` por sí solo no sirve, y se probó.** Android lo rechaza para
+  listeners que no se soltaron con `requestUnbind` — su documentación dice
+  *"after a previous call to requestUnbind()"*. Los dos van juntos o no van.
+- **No hizo falta forkear el plugin.** Publica su servicio como estática
+  pública (`NotificationsHandlerService.instance`), así que se puede llamar
+  `requestUnbind()` sobre él desde un `MethodChannel` propio. `MainActivity.kt`
+  es el único código nativo del proyecto y existe solo para esto.
+
+**Si alguna vez hay que forzar el rebind a mano** (por ejemplo con un build
+viejo instalado):
 
 ```powershell
 $comp = "io.github.manuellegua.finanzas/im.zoe.labs.flutter_notification_listener.NotificationsHandlerService"
 & $adb shell cmd notification disallow_listener $comp
 & $adb shell cmd notification allow_listener $comp
 ```
-
-**Y la instrucción de operación de más arriba —"tras reinstalar, hacer
-Desactivar → Activar"— es justamente lo que rompe la captura.** Tras reinstalar
-alcanza con conceder el permiso; el ciclo hay que evitarlo hasta que T064a esté
-hecha.
 
 ### D-N16, que salió de la misma prueba (T064b, resuelta)
 
@@ -699,10 +710,10 @@ decisión de alcance cambie:
    captura nada.
 
 **Y una cuarta cosa, que es de operación y no de código**: tras una
-reinstalación hay que volver a conceder el permiso de notificaciones. ~~**y**
-hacer el ciclo Desactivar → Activar~~ — **eso último es falso y además
-dañino**: el ciclo es justamente lo que deja la captura muerta (ver T064a más
-abajo). Verificado el 2026-09-13.
+reinstalación hay que volver a conceder el permiso de notificaciones.
+~~**y** hacer el ciclo Desactivar → Activar~~ — eso último llegó a ser
+**dañino** hasta el 2026-09-13, porque el ciclo dejaba la captura muerta; con
+T064a arreglado ya no rompe nada, pero sigue sin hacer falta.
 
 **Nota para cuando se retome T042**: la propuesta de categoría de US3 (FR-030)
 ya no necesita resolverse ahí. `EstadoPendientes.cargar()` le busca la
