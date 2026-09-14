@@ -71,12 +71,22 @@ String _cuerpoDe(NotificationEvent evento) {
 String _identidadDe(NotificationEvent evento) =>
     evento.key ?? evento.uniqueId ?? '${evento.packageName}:${evento.id}';
 
-/// Abre la base, guarda y cierra.
+/// Abre la base y guarda. **No cierra, y eso es el arreglo, no un olvido.**
 ///
-/// **Conexión propia y de vida corta.** Este isolate no comparte nada con el
-/// principal, así que tiene que abrir la suya; y la cierra enseguida porque
-/// puede quedar vivo entre notificaciones, y sostener una conexión abierta en
-/// segundo plano contra la misma base que usa la app es pedir un bloqueo.
+/// La versión original de esta función cerraba la conexión al terminar,
+/// razonando que sostenerla abierta en segundo plano contra la misma base que
+/// usa la app era pedir un bloqueo. **Ese razonamiento estaba al revés.**
+/// `sqflite` comparte el handle nativo por ruta entre isolates del mismo
+/// proceso: cerrar desde acá **le cierra la conexión a la interfaz**, que
+/// queda inutilizable hasta que el usuario reinicia la app.
+///
+/// El síntoma era feo y difícil de atribuir: capturar un consumo con la app
+/// abierta dejaba la bandeja diciendo "Nada esperando confirmación" con las
+/// filas presentes en el archivo (T061a). Perder un consumo capturado en
+/// silencio es justo lo que FR-020 y esta feature entera existen para evitar.
+///
+/// Dejarla abierta no filtra nada: es la misma conexión que la app ya usa, y
+/// el proceso la cierra cuando Android lo termina.
 ///
 /// Un fallo al guardar se traga en silencio a propósito: una excepción sin
 /// capturar en un isolate headless puede tumbarlo, y con él la captura de
@@ -98,7 +108,5 @@ Future<void> _guardar(DecisionCaptura decision) async {
     }
   } on Object {
     return;
-  } finally {
-    await baseDatos.cerrar();
   }
 }
