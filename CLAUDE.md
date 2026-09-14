@@ -584,6 +584,71 @@ hay ninguna ruta que registre un gasto sin que el usuario lo confirme (FR-020),
 y de un correo ajeno no queda rastro de ningún tipo (FR-008c). Falta el
 recorrido en dispositivo real: T060 y T061.
 
+
+### La captura verificada en dispositivo (2026-09-13, 23:01)
+
+**Funciona de punta a punta.** Un yapeo enviado de S/ 1.00 en un Honor CRT-LX3
+con Android 14 produjo exactamente esto en la base:
+
+```
+consumo_pendiente      S/ 1.00 · "Manuel Alexander Legua Mendoza" · 2026-09-13
+                       origen com.google.android.gm · categoria_propuesta NULL
+notificacion_diagnostico  formato_no_reconocido · aviso informativo de Yape
+```
+
+Lo que eso prueba, y que hasta acá era todo suposición:
+
+- **El isolate headless abre y escribe la base.** Era el único tramo escrito
+  sin poder ejecutarlo, y el que fallaba en silencio si `sqflite` no quedaba
+  registrado.
+- **Una sola fila, no dos**: el descarte por `isGroup` funciona con un correo
+  real, no solo con el fixture.
+- **El correo entrante del BCP no dejó rastro** — ni pendiente ni diagnóstico.
+- `categoria_propuesta` llega en `NULL`, que es lo correcto: la resuelve
+  `EstadoPendientes` al cargar.
+
+### El bug que esa prueba destapó: D-N13.2 nunca se arregló
+
+**El ciclo Desactivar → Activar deja la captura muerta, sin ningún síntoma.**
+Reproducido con hora exacta: a las 22:52 llegaban eventos, a las 22:54 se hizo
+el ciclo, y a las 22:56 el yapeo no generó ni uno — con el permiso concedido,
+el componente habilitado y el servicio corriendo en foreground.
+
+La causa está en el plugin: al arrancar hace `disable` + `enable` del
+componente con el comentario *"and try to toggle the service to trigger
+rebind"*, pero **nunca llama a `NotificationListenerService.requestRebind()`**,
+que es la única API con la que Android vuelve a vincular un listener cuyo
+componente se deshabilitó.
+
+**T064 arregló solo la mitad**: el camino que pasa por la pantalla de ajustes
+de Android funciona porque el interruptor lo toca el usuario, y eso sí fuerza
+el rebind. El camino que la app ofrece —su propio interruptor— quedó roto. Es
+T064a, y el arreglo propuesto es un `MethodChannel` en `MainActivity.kt` (hoy
+cuatro líneas) que llame a `requestRebind`.
+
+**Mientras tanto, para desbloquear una prueba** se fuerza desde el PC:
+
+```powershell
+$comp = "io.github.manuellegua.finanzas/im.zoe.labs.flutter_notification_listener.NotificationsHandlerService"
+& $adb shell cmd notification disallow_listener $comp
+& $adb shell cmd notification allow_listener $comp
+```
+
+**Y la instrucción de operación de más arriba —"tras reinstalar, hacer
+Desactivar → Activar"— es justamente lo que rompe la captura.** Tras reinstalar
+alcanza con conceder el permiso; el ciclo hay que evitarlo hasta que T064a esté
+hecha.
+
+### Una segunda cosa que salió de la misma prueba (T064b)
+
+El aviso recurrente de Yape ("Por tu seguridad, te notificaremos por cada yapeo
+que realices") viene de un remitente reconocido y no tiene palabras de
+dirección, así que cae en `formatoNoReconocido` y **genera una fila de
+diagnóstico cada vez**. Es lo que FR-018 pide, y aun así llena de ruido el
+registro que existe para detectar consumos mal interpretados. Queda por decidir
+si hace falta una tercera salida —"aviso que no es un movimiento"— junto a
+`NoEsConsumo`.
+
 ### Tres bugs de la spec 002 que salieron de este mismo recorrido
 
 Son independientes del parser y hoy hacen que **la captura no funcione en
@@ -611,10 +676,10 @@ decisión de alcance cambie:
    captura nada.
 
 **Y una cuarta cosa, que es de operación y no de código**: tras una
-reinstalación hay que volver a conceder el permiso de notificaciones **y**
-hacer el ciclo Desactivar → Activar, porque el identificador del callback que
-Android guarda apunta al build anterior. Sin eso el callback no corre y no hay
-ninguna señal de que algo ande mal.
+reinstalación hay que volver a conceder el permiso de notificaciones. ~~**y**
+hacer el ciclo Desactivar → Activar~~ — **eso último es falso y además
+dañino**: el ciclo es justamente lo que deja la captura muerta (ver T064a más
+abajo). Verificado el 2026-09-13.
 
 **Nota para cuando se retome T042**: la propuesta de categoría de US3 (FR-030)
 ya no necesita resolverse ahí. `EstadoPendientes.cargar()` le busca la
