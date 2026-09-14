@@ -139,7 +139,7 @@ que las dos de hoy.
 
 Si tenés dudas sobre esta política o sobre cómo funciona la app, escribí a:
 
-**<correo-de-contacto@ejemplo.com>**
+**<manublieydark@gmail.com>**
 
 ---
 
