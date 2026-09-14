@@ -468,3 +468,76 @@ reales para no proponer los propios.
 - **Pedirle al usuario su nombre o sus cuentas para detectar lo propio**: pedir
   datos personales para mejorar una heurística que ya tiene confirmación humana
   no se justifica, y la app no pide registro por diseño.
+
+---
+
+## D-N16 — Sin monto no hubo movimiento: el diagnóstico es para lo que falló, no para lo que no era *(2026-09-13)*
+
+**Decisión**: si el texto de una notificación no menciona **ninguna cifra de
+dinero**, en ninguna moneda, se resuelve como `NoEsConsumo` y no deja rastro.
+No va al registro de diagnóstico.
+
+**Qué lo motivó**: la primera prueba en la que la captura funcionó de punta a
+punta dejó, además del pendiente esperado, una fila de diagnóstico con el aviso
+recurrente de Yape ("Por tu seguridad, te notificaremos por cada yapeo que
+realices"). Está transcrito como G7 en el fixture, y es el primero que no vino
+de un instrumento sino de la app trabajando.
+
+Ese correo confirma un yapeo —dice beneficiario, fecha y número de operación—
+**pero no dice de cuánto**. Sin cifra, el parser no encontraba palabras de
+dirección y devolvía `NoInterpretable(formatoNoReconocido)`.
+
+**Por qué eso estaba mal, por partida doble**:
+
+1. **Afirmaba algo falso.** El formato se entendió perfectamente; no había nada
+   que reconocer. Llamar "fallo de reconocimiento" a un texto sin dinero
+   adentro le dice al usuario que la app falló donde no falló.
+2. **Rompía el registro que existe para otra cosa.** El diagnóstico sirve para
+   encontrar consumos mal interpretados y ajustar el reconocimiento (FR-018).
+   Este aviso llega **cada vez que el usuario yapea**, así que en una semana de
+   uso normal el registro queda lleno de filas rutinarias. Un registro así se
+   deja de mirar, y entonces los fallos de verdad no los ve nadie.
+
+**Dónde se aplica**: es la primera pregunta del parser, antes de clasificar la
+dirección. Es la más barata y la que más casos descarta.
+
+### Por qué el monto y no otra señal
+
+Porque es la única condición **necesaria** de un consumo. Un movimiento puede
+no decir el comercio, puede no decir la fecha, puede redactar la dirección de
+mil formas — pero si baja el saldo, dice cuánto. La ausencia de cifra es lo más
+cerca que se puede estar de una prueba de que ahí no hubo movimiento.
+
+La contracara es igual de importante y está probada: **con una cifra y sin
+dirección clara, sí va a diagnóstico**. Si hay dinero en el texto, hubo un
+movimiento, y no haber podido clasificarlo es exactamente lo que hay que
+registrar.
+
+### Por qué no un tipo nuevo de resultado
+
+Se evaluó agregar una cuarta salida al contrato —algo como `NoEsMovimiento`—
+junto a `ConsumoExtraido`, `NoEsConsumo` y `NoInterpretable`. Se rechazó:
+
+- **El contrato ya lo cubría.** `NoEsConsumo` está documentado desde el
+  principio como "se interpretó, pero no es un consumo que registrar: dinero
+  entrante, un consumo rechazado o extornado, **una promoción**, etc.". Un
+  aviso sin monto cae ahí sin forzar nada.
+- **Nadie ramificaría por el caso nuevo.** Ni el callback ni la interfaz tratan
+  distinto un entrante de una promoción: los dos no dejan rastro. Un tipo que
+  nadie distingue es exactamente lo que el Principio V prohíbe.
+
+### El riesgo que se acepta, por escrito
+
+Si un correo de consumo llegara con el monto **más allá del corte de los 1024
+caracteres** que aplica Android, esta regla lo silenciaría en vez de dejarlo en
+diagnóstico. Es el riesgo abierto que ya anota D-N12, visto desde otro ángulo.
+
+Se acepta por dos razones. La primera es que un diagnóstico sin cifra tampoco
+permitiría entender qué pasó: se vería un texto truncado sin dinero, idéntico a
+un aviso cualquiera. La segunda es la comparación de costos — el ruido degrada
+el registro **todos los días**, y este caso es hipotético y no se ha observado
+ni una vez en los siete correos capturados.
+
+Si alguna vez aparece, la señal no será una fila de diagnóstico sino un consumo
+que el usuario esperaba y no llegó, y el arreglo será el mismo que ya reclama
+D-N12: leer más allá del corte, no volver a ensuciar el diagnóstico.

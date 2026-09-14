@@ -67,6 +67,11 @@ ResultadoInterpretacion interpretar({
 }) {
   final zona = _zonaDeLaOperacion(contenido);
 
+  // Sin una cifra en ninguna parte no hubo movimiento, y por lo tanto no hay
+  // nada que registrar ni nada que diagnosticar (D-N16). Va antes que todo lo
+  // demás porque es la pregunta más barata y la que más casos descarta.
+  if (!_mencionaAlgunMonto(zona)) return const NoEsConsumo();
+
   switch (_direccionDe(zona)) {
     case _Direccion.entrante:
       return const NoEsConsumo();
@@ -234,6 +239,27 @@ final RegExp _montoExtranjero = RegExp(
 );
 
 bool _tieneMontoExtranjero(String zona) => _montoExtranjero.hasMatch(zona);
+
+/// Si el texto menciona una cifra de dinero, en la moneda que sea.
+///
+/// **Es lo que separa "no es un movimiento" de "es un movimiento que no supe
+/// leer"** (D-N16), y esa distinción decide si algo va al registro de
+/// diagnóstico o se ignora en silencio.
+///
+/// Un aviso sin cifra —una promoción, o la confirmación de Yape que dice a
+/// quién le yapeaste pero no cuánto— no es un fallo de reconocimiento: no
+/// había nada que reconocer. Mandarlo a diagnóstico llenaba de ruido el
+/// registro que existe para encontrar consumos mal interpretados, y encima
+/// afirmaba algo falso sobre un texto que se entendió perfectamente.
+///
+/// **El riesgo asumido**: si un correo de consumo llegara con el monto más
+/// allá del corte de los 1024 caracteres de Android, esta regla lo silenciaría
+/// en vez de dejarlo en diagnóstico. Se acepta porque un diagnóstico sin cifra
+/// tampoco permitiría entender qué pasó, y porque el ruido tiene un costo
+/// peor: un registro lleno de avisos rutinarios se deja de mirar, y entonces
+/// los fallos de verdad no los ve nadie.
+bool _mencionaAlgunMonto(String zona) =>
+    _montoEnSoles.hasMatch(zona) || _montoExtranjero.hasMatch(zona);
 
 Dinero? _montoEnSolesDe(String zona) {
   final coincidencia = _montoEnSoles.firstMatch(zona);

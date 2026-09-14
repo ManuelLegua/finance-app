@@ -233,7 +233,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
 **Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
-**556 pruebas, todas en verde (2026-09-13).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**560 pruebas, todas en verde (2026-09-13).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -639,15 +639,38 @@ Desactivar → Activar"— es justamente lo que rompe la captura.** Tras reinsta
 alcanza con conceder el permiso; el ciclo hay que evitarlo hasta que T064a esté
 hecha.
 
-### Una segunda cosa que salió de la misma prueba (T064b)
+### D-N16, que salió de la misma prueba (T064b, resuelta)
 
 El aviso recurrente de Yape ("Por tu seguridad, te notificaremos por cada yapeo
-que realices") viene de un remitente reconocido y no tiene palabras de
-dirección, así que cae en `formatoNoReconocido` y **genera una fila de
-diagnóstico cada vez**. Es lo que FR-018 pide, y aun así llena de ruido el
-registro que existe para detectar consumos mal interpretados. Queda por decidir
-si hace falta una tercera salida —"aviso que no es un movimiento"— junto a
-`NoEsConsumo`.
+que realices") venía de un remitente reconocido, **no trae monto** y por eso
+caía en `formatoNoReconocido`, generando una fila de diagnóstico cada vez que
+el usuario yapea.
+
+**La regla ahora: sin ninguna cifra de dinero en el texto, no hubo movimiento**
+— se resuelve como `NoEsConsumo` y no deja rastro. Es la primera pregunta del
+parser, antes de clasificar la dirección.
+
+Estaba mal por partida doble: afirmaba algo falso —el formato se entendió
+perfectamente, no había nada que reconocer— y rompía el registro que existe
+para encontrar consumos mal interpretados. Un diagnóstico lleno de filas
+rutinarias se deja de mirar, y entonces los fallos de verdad no los ve nadie.
+
+**Por qué el monto y no otra señal**: es la única condición *necesaria* de un
+consumo. Un movimiento puede no decir el comercio ni la fecha, y puede redactar
+la dirección de mil formas, pero si baja el saldo dice cuánto.
+
+**Tres cosas fáciles de romper sin querer:**
+
+- **La contracara también está probada**: con una cifra y sin dirección clara,
+  **sí** va a diagnóstico. Si hay dinero en el texto hubo un movimiento, y no
+  haber podido clasificarlo es justo lo que hay que registrar.
+- **No se agregó un tipo nuevo de resultado.** El contrato ya cubría el caso
+  ("una promoción, etc." en `NoEsConsumo`) y nadie ramificaría por uno nuevo:
+  ni el callback ni la interfaz tratan distinto un entrante de una promoción.
+- **El riesgo asumido está escrito**: un consumo cuyo monto quede más allá del
+  corte de 1024 caracteres se silenciaría en vez de ir a diagnóstico. Se acepta
+  porque ese diagnóstico tampoco permitiría entender nada, y porque el ruido
+  degrada el registro todos los días mientras ese caso es hipotético.
 
 ### Tres bugs de la spec 002 que salieron de este mismo recorrido
 

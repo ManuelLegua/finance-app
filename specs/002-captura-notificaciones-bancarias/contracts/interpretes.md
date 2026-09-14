@@ -40,7 +40,8 @@ ResultadoInterpretacion interpretar({
 | El monto se compone con aritmética entera, nunca `double.parse` | D-N3, Principio II |
 | Clasifica la notificación como saliente o entrante por palabras clave en el texto (D-N11), nunca asumiéndolo por la app de origen | FR-008b |
 | Dinero entrante, consumo rechazado o extornado, y avisos que no son consumo son `NoEsConsumo` | FR-012, FR-013 |
-| Sin palabras clave de ninguna lista, o con señales de ambas direcciones a la vez, es `NoInterpretable(formatoNoReconocido)` — nunca se adivina la dirección | D-N11 |
+| Un texto que no menciona **ninguna cifra de dinero** es `NoEsConsumo`, no `NoInterpretable`: sin monto no hubo movimiento, y el diagnóstico es para lo que falló, no para lo que no era | D-N16 |
+| Sin palabras clave de ninguna lista, o con señales de ambas direcciones a la vez, **pero con una cifra presente**, es `NoInterpretable(formatoNoReconocido)` — nunca se adivina la dirección | D-N11, D-N16 |
 | Moneda distinta al sol es `NoInterpretable(monedaExtranjera)`, no un consumo en soles | FR-014 |
 | Un texto de formato desconocido, de cualquier origen, es `NoInterpretable(formatoNoReconocido)`, nunca lanza ni produce un `ConsumoExtraido` a medias | FR-017 |
 

@@ -165,17 +165,63 @@ void main() {
     );
   });
 
-  group('sin palabras clave de dirección — D-N11, FR-017', () {
-    test('un texto vacío no produce un consumo', () {
+  group('sin monto no hay movimiento — D-N16', () {
+    test('un aviso de Yape sin cifra no va a diagnóstico', () {
+      // G7 confirma un yapeo pero no dice de cuánto. Antes caía en
+      // `formatoNoReconocido`, que era mentira por partida doble: el formato
+      // se entendió perfectamente, y llamar "fallo de reconocimiento" a algo
+      // donde no había nada que reconocer llenaba de ruido el registro que
+      // existe para encontrar consumos mal interpretados. Llega cada vez que
+      // el usuario yapea.
+      final resultado = interpretar(
+        titulo: tituloG7Yape,
+        contenido: cuerpoG7YapeAvisoSinMonto,
+        recibidaEn: recibidaEn,
+      );
+
+      expect(resultado, isA<NoEsConsumo>());
+    });
+
+    test('una promoción sin cifra tampoco', () {
+      final resultado = interpretar(
+        titulo: tituloG3Bcp,
+        contenido: 'Conocé los beneficios de tu tarjeta. Ingresá y descubrí '
+            'todas las promociones que tenemos para vos.',
+        recibidaEn: recibidaEn,
+      );
+
+      expect(resultado, isA<NoEsConsumo>());
+    });
+
+    test('con cifra y sin dirección clara, sí va a diagnóstico', () {
+      // La contracara, y la razón de que la regla mire el monto y no otra
+      // cosa: si hay una cifra, hubo un movimiento, y no haber podido
+      // clasificarlo es exactamente lo que el diagnóstico tiene que registrar.
+      final resultado = interpretar(
+        titulo: tituloG3Bcp,
+        contenido: 'Se ha procesado una operación por S/ 80.00 en tu cuenta.',
+        recibidaEn: recibidaEn,
+      );
+
+      expect(resultado, isA<NoInterpretable>());
+      expect(
+        (resultado as NoInterpretable).motivo,
+        MotivoDiagnostico.formatoNoReconocido,
+      );
+    });
+
+    test('un texto vacío es un no-movimiento, no un fallo', () {
       final resultado = interpretar(
         titulo: tituloG3Bcp,
         contenido: '',
         recibidaEn: recibidaEn,
       );
 
-      expect(resultado, isNot(isA<ConsumoExtraido>()));
+      expect(resultado, isA<NoEsConsumo>());
     });
+  });
 
+  group('sin palabras clave de dirección — D-N11, FR-017', () {
     test('un texto con señales de las dos direcciones va a diagnóstico', () {
       final resultado = interpretar(
         titulo: tituloG3Bcp,

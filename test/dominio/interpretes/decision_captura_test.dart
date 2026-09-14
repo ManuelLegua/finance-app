@@ -187,15 +187,37 @@ void main() {
     });
 
     test('un formato irreconocible de un origen conocido va a diagnóstico', () {
+      // Con una cifra adentro: hubo un movimiento y no se supo clasificar, que
+      // es justo lo que el diagnóstico tiene que registrar. Sin cifra sería
+      // otra cosa — ver el grupo de abajo.
       final decision = decidir(
         titulo: tituloG3Bcp,
-        cuerpo: 'Algo pasó con tu cuenta pero no decimos qué.',
+        cuerpo: 'Se ha procesado una operación por S/ 80.00 en tu cuenta.',
       );
 
       expect(decision, isA<RegistrarDiagnostico>());
       expect(
         (decision as RegistrarDiagnostico).diagnostico.motivo,
         MotivoDiagnostico.formatoNoReconocido,
+      );
+    });
+  });
+
+  group('un aviso sin monto no ensucia el diagnóstico — D-N16', () {
+    test('el aviso recurrente de Yape no deja fila', () {
+      // Este es el caso real que motivó la regla: lo guardó la propia app en
+      // su diagnóstico la primera vez que la captura funcionó, y llega cada
+      // vez que el usuario yapea. Un registro lleno de avisos rutinarios se
+      // deja de mirar, y entonces los fallos de verdad no los ve nadie.
+      final decision = decidir(
+        titulo: tituloG7Yape,
+        cuerpo: cuerpoG7YapeAvisoSinMonto,
+      );
+
+      expect(decision, isA<NoRegistrarNada>());
+      expect(
+        (decision as NoRegistrarNada).motivo,
+        MotivoDeIgnorar.noEsConsumo,
       );
     });
   });

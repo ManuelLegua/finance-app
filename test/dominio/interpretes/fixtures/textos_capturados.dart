@@ -52,3 +52,14 @@ const String cuerpoG6SipConsumoSoles = 'Sip, realizaste un consumo con tu Tarjet
 /// el `Operaciones Sip` con que firma un envío de dinero. Un mismo emisor usa
 /// más de un nombre según el tipo de correo.
 const String tituloG5G6Sip = 'Sip';
+
+/// G7 — Yape, aviso de operación **sin monto**.
+///
+/// Confirma un yapeo —beneficiario, fecha, número de operación— pero no dice
+/// de cuánto. Lo guardó la propia app en su diagnóstico durante la primera
+/// prueba que funcionó de punta a punta, y es el caso que motivó D-N16: sin
+/// monto no hay nada que registrar, y llamarlo "formato no reconocido" era
+/// mentira además de ruido.
+const String cuerpoG7YapeAvisoSinMonto = 'Por tu seguridad, te notificaremos por cada yapeo que realices\nYapero\nMANUEL ALEXANDER LEGUA M.\nTu número de celular\nXXXXXXXXX992\nFecha y Hora de la operación\n13 septiembre 2026 - 11:00 p. m.\nCelular del Beneficiario\nXXXXXXXXX992\nNombre del Beneficiario\nMANUEL ALEXANDER LEGUA M.\nNº de operación\n7108364';
+
+const String tituloG7Yape = 'YAPE Notificaciones';

@@ -391,6 +391,49 @@ Update Profile Manage Subscriptions Unsubscribe
 
 ---
 
+## G7 — Yape, **aviso de operación sin monto** — capturado el 2026-09-13 23:00
+
+No lo provocó una captura manual: lo guardó la propia app en su registro de
+diagnóstico, durante la primera prueba en la que la captura funcionó de punta a
+punta. Es el primer fixture que viene de la app trabajando, no de un
+instrumento.
+
+```
+paquete:     com.google.android.gm
+title:       "YAPE Notificaciones"
+bigText:     303 caracteres
+```
+
+Cuerpo completo de `bigText`:
+
+```
+Por tu seguridad, te notificaremos por cada yapeo que realices
+Yapero
+MANUEL ALEXANDER LEGUA M.
+Tu número de celular
+XXXXXXXXX992
+Fecha y Hora de la operación
+13 septiembre 2026 - 11:00 p. m.
+Celular del Beneficiario
+XXXXXXXXX992
+Nombre del Beneficiario
+MANUEL ALEXANDER LEGUA M.
+Nº de operación
+7108364
+```
+
+**Qué tiene de particular: no trae monto.** Confirma un yapeo —dice beneficiario,
+fecha y número de operación— pero no dice de cuánto. El movimiento sí se captura,
+por el correo de Sip que llega en paralelo y ese sí lo trae (G2); este aviso es
+redundante.
+
+Es el caso que motivó D-N16: sin monto no hay nada que registrar, y tratarlo
+como "formato no reconocido" era mentira —el formato se entendió perfectamente—
+además de llenar de ruido el registro que existe para encontrar consumos mal
+interpretados. Llega cada vez que el usuario yapea.
+
+---
+
 ## Lo que G5 y G6 cambian *(2026-09-13, noche)*
 
 Son el primer consumo con tarjeta en soles, así que cierran T034 — pero además
