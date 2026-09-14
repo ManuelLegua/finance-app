@@ -1,7 +1,10 @@
 package io.github.manuellegua.finanzas
 
 import android.content.ComponentName
+import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import im.zoe.labs.flutter_notification_listener.NotificationsHandlerService
 import io.flutter.embedding.android.FlutterActivity
@@ -38,6 +41,11 @@ class MainActivity : FlutterActivity() {
                 when (llamada.method) {
                     METODO_DESVINCULAR -> respuesta.success(desvincularEscucha())
                     METODO_REVINCULAR -> respuesta.success(revincularEscucha())
+                    METODO_EXENTA -> respuesta.success(exentaDeOptimizacion())
+                    METODO_AJUSTES_BATERIA -> {
+                        abrirAjustesDeBateria()
+                        respuesta.success(null)
+                    }
                     else -> respuesta.notImplemented()
                 }
             }
@@ -71,10 +79,40 @@ class MainActivity : FlutterActivity() {
         return true
     }
 
+    /**
+     * Si Android tiene a la app exenta de la optimización de batería.
+     *
+     * **Consultarlo no exige ningún permiso**; pedirlo con un diálogo directo
+     * sí exigiría `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, que Play limita a
+     * casos de uso acotados. Por eso la app consulta acá y manda a los ajustes
+     * en [abrirAjustesDeBateria]: mismo resultado, un toque más, y nada que
+     * justificar en la ficha.
+     */
+    private fun exentaDeOptimizacion(): Boolean {
+        val energia = getSystemService(PowerManager::class.java) ?: return false
+        return energia.isIgnoringBatteryOptimizations(packageName)
+    }
+
+    /**
+     * Abre la lista del sistema donde el usuario saca a una app de la
+     * optimización de batería.
+     *
+     * Es `IGNORE_BATTERY_OPTIMIZATION_SETTINGS` —la lista— y no
+     * `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` —el diálogo directo—, porque la
+     * segunda exige el permiso restringido y esta no exige ninguno.
+     */
+    private fun abrirAjustesDeBateria() {
+        startActivity(
+            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS),
+        )
+    }
+
     private companion object {
         const val CANAL = "io.github.manuellegua.finanzas/captura"
         const val METODO_DESVINCULAR = "desvincularEscucha"
         const val METODO_REVINCULAR = "revincularEscucha"
+        const val METODO_EXENTA = "exentaDeOptimizacionDeBateria"
+        const val METODO_AJUSTES_BATERIA = "abrirAjustesDeOptimizacionDeBateria"
 
         /**
          * El nombre que declara el manifiesto. Va como cadena y no como clase

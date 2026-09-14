@@ -52,6 +52,21 @@
 
 ## D-N4 — Persistencia del servicio: modo foreground + exención de optimización de batería
 
+> **Concretada el 2026-09-14 (T043a)**: la exención se pide **mandando al
+> usuario a la lista del sistema** (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`),
+> no con el diálogo directo. El diálogo exige
+> `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, que Google Play limita a casos de uso
+> acotados y obliga a justificar en la ficha — en una app que además lee
+> notificaciones, es una segunda cosa que revisar. La lista no exige ningún
+> permiso y llega al mismo lado con un toque más, así que **el manifiesto no
+> declara nada nuevo**. Consultar si la app ya está exenta tampoco exige
+> permiso.
+>
+> **Y la exención no es condición para capturar**: sin ella se capturan
+> consumos igual, solo que el sistema puede matar el servicio con el teléfono
+> quieto. Por eso el aviso es un consejo aparte y no un `SituacionCaptura` —
+> decir "no funciona" cuando sí funciona sería peor que no avisar nada.
+
 Sin cambios. Ver la versión original: el servicio corre en modo *foreground* y la activación pide excluir la app de la optimización de batería del fabricante, porque `flutter_notification_listener` documenta que sin eso puede no reiniciar tras un reboot, y es una limitación de Android en general, no del alcance de bancos.
 
 ---

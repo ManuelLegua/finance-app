@@ -112,6 +112,67 @@ void main() {
     });
   });
 
+  group('la exención de batería (D-N4, T043a)', () {
+    testWidgets('se sugiere solo con la captura ya funcionando', (
+      tester,
+    ) async {
+      // Antes de que funcione no hay servicio al que matar, y sumar un
+      // permiso a la pantalla donde el usuario todavía está decidiendo si
+      // quiere la feature solo la vuelve más difícil de aceptar.
+      servicio.permiso = true;
+      servicio.exentaDeBateria = false;
+      await estado.cargar();
+      await montar(tester);
+
+      expect(find.text('Abrir ajustes de batería'), findsNothing);
+
+      await servicio.activar();
+      await estado.cargar();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Abrir ajustes de batería'), findsOneWidget);
+    });
+
+    testWidgets('no se sugiere si la app ya está exenta', (tester) async {
+      servicio.permiso = true;
+      servicio.exentaDeBateria = true;
+      await servicio.activar();
+      await estado.cargar();
+      await montar(tester);
+
+      expect(find.text('Captura activa'), findsOneWidget);
+      expect(find.text('Abrir ajustes de batería'), findsNothing);
+    });
+
+    testWidgets('el aviso acompaña a la captura activa, no la reemplaza', (
+      tester,
+    ) async {
+      // Es un consejo de durabilidad, no un error: la captura funciona sin la
+      // exención. Si tapara a "Captura activa" diría que algo anda mal.
+      servicio.permiso = true;
+      servicio.exentaDeBateria = false;
+      await servicio.activar();
+      await estado.cargar();
+      await montar(tester);
+
+      expect(find.text('Captura activa'), findsOneWidget);
+      expect(find.text('Para que no se apague sola'), findsOneWidget);
+    });
+
+    testWidgets('tocar el botón lleva a la lista del sistema', (tester) async {
+      servicio.permiso = true;
+      servicio.exentaDeBateria = false;
+      await servicio.activar();
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.text('Abrir ajustes de batería'));
+      await tester.pumpAndSettle();
+
+      expect(servicio.vecesQueAbrioAjustesDeBateria, 1);
+    });
+  });
+
   group('el permiso del aviso persistente (D-N13, T063)', () {
     testWidgets('activar lo pide antes de arrancar nada', (tester) async {
       // Sin este permiso Android mata el servicio apenas nace, así que

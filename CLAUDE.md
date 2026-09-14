@@ -233,7 +233,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
 **Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
-**560 pruebas, todas en verde (2026-09-13).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**564 pruebas, todas en verde (2026-09-14).** Subieron de 525: T039 cerró el parser genérico y las 14 pruebas que lo definían pasaron de rojas a verdes, escritas antes de su implementación como pide la regla 3: `flutter test` queda rojo hasta que T039 escriba el parser. La saltada reserva el camino feliz que espera el fixture en soles de T034. Antes de este tramo eran 525, todas en verde; habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción (paywall, ficha, restaurar, vencimiento, migración v4) y sumó las de la propina. La que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -682,6 +682,37 @@ la dirección de mil formas, pero si baja el saldo dice cuánto.
   corte de 1024 caracteres se silenciaría en vez de ir a diagnóstico. Se acepta
   porque ese diagnóstico tampoco permitiría entender nada, y porque el ruido
   degrada el registro todos los días mientras ese caso es hipotético.
+
+
+### La exención de batería, sin permiso restringido (T043a)
+
+D-N4 pedía que la activación ofreciera excluir la app de la optimización de
+batería, y nada lo hacía. Lo que frenaba era la sospecha de que hiciera falta
+`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, un permiso que Google Play limita a
+casos de uso acotados — mal momento para sumarlo, en una app que además lee
+notificaciones y está por publicarse.
+
+**La tensión se disolvió: Android ofrece dos caminos y solo uno exige el
+permiso.**
+
+| | Diálogo directo | Lista del sistema *(elegido)* |
+|---|---|---|
+| Intent | `ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` |
+| Permiso | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | **ninguno** |
+| Para el usuario | un toque | busca la app en una lista |
+
+**El manifiesto no cambió.** Consultar si la app ya está exenta
+(`isIgnoringBatteryOptimizations`) tampoco exige permiso, así que el aviso sabe
+cuándo no molestar.
+
+**Dos cosas de diseño fáciles de deshacer sin querer:**
+
+- **El aviso no es un `SituacionCaptura`.** La captura funciona sin la
+  exención; lo que cambia es cuánto aguanta con el teléfono quieto. Meterlo en
+  el enum haría que la pantalla dijera "no funciona" cuando sí funciona.
+- **Aparece solo con la captura ya funcionando.** Antes de eso no hay servicio
+  al que matar, y sumar un permiso a la pantalla donde el usuario todavía está
+  decidiendo si quiere la feature solo la vuelve más difícil de aceptar.
 
 ### Tres bugs de la spec 002 que salieron de este mismo recorrido
 

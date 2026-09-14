@@ -485,8 +485,22 @@ final class ServicioEscuchaNotificacionesEnMemoria
 
   int vecesQuePidioAvisoPersistente = 0;
 
+  /// Si Android tiene la app exenta de la optimización de batería. Arranca
+  /// en `false`, que es como llega una instalación nueva.
+  bool exentaDeBateria = false;
+
+  int vecesQueAbrioAjustesDeBateria = 0;
+
   @override
   Future<bool> permisoConcedido() async => permiso;
+
+  @override
+  Future<bool> exentaDeOptimizacionDeBateria() async => exentaDeBateria;
+
+  @override
+  Future<void> abrirAjustesDeOptimizacionDeBateria() async {
+    vecesQueAbrioAjustesDeBateria++;
+  }
 
   @override
   Future<bool> pedirPermisoDelAvisoPersistente() async {

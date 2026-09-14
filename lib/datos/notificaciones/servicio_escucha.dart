@@ -94,6 +94,15 @@ final class ServicioEscuchaNotificacionesAndroid
     await _guardarInterruptor(activa: true);
   }
 
+  @override
+  Future<bool> exentaDeOptimizacionDeBateria() async =>
+      await _canal.invokeMethod<bool>('exentaDeOptimizacionDeBateria') ?? false;
+
+  @override
+  Future<void> abrirAjustesDeOptimizacionDeBateria() async {
+    await _canal.invokeMethod<void>('abrirAjustesDeOptimizacionDeBateria');
+  }
+
   /// Apaga la captura **sin deshabilitar el componente del servicio**.
   ///
   /// Acá está el arreglo de D-N13.2, y es por omisión: lo que **no** se llama

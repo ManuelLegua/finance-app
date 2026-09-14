@@ -57,6 +57,8 @@ class _PantallaActivacionState extends State<PantallaActivacion>
               onCerrar: estadoCaptura.cargar,
             ),
           _TarjetaSituacion(estadoCaptura: estadoCaptura),
+          if (estadoCaptura.convieneEximirDeBateria)
+            _AvisoDeBateria(estadoCaptura: estadoCaptura),
         ],
       ),
     );
@@ -251,6 +253,76 @@ class _CapturaActiva extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Sugerencia para que Android no apague la captura por ahorrar batería.
+///
+/// **Es un consejo, no un error**, y se ve como tal: aparece debajo de la
+/// tarjeta que dice "Captura activa" y no la reemplaza. La captura funciona
+/// sin esto; lo que cambia es cuánto aguanta con el teléfono quieto.
+///
+/// Solo aparece cuando la captura ya está funcionando y la app todavía no
+/// está exenta — pedirlo antes sería sumar un permiso a una pantalla donde el
+/// usuario aún está decidiendo si quiere la feature.
+class _AvisoDeBateria extends StatelessWidget {
+  const _AvisoDeBateria({required this.estadoCaptura});
+
+  final EstadoCapturaNotificaciones estadoCaptura;
+
+  @override
+  Widget build(BuildContext context) {
+    final tipografia = Theme.of(context).textTheme;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(
+        horizontal: Espaciado.normal,
+        vertical: Espaciado.chico,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(Espaciado.normal),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Ícono además del texto: ningún estado se comunica solo por
+                // color ni solo por un dibujo.
+                const Icon(Icons.battery_saver_outlined),
+                const SizedBox(width: Espaciado.chico),
+                Expanded(
+                  child: Text(
+                    'Para que no se apague sola',
+                    style: tipografia.titleSmall,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: Espaciado.chico),
+            Text(
+              'Android puede detener la captura cuando el teléfono lleva un '
+              'rato quieto, para ahorrar batería. Si eso pasa, tus consumos '
+              'dejan de registrarse hasta que vuelvas a abrir la app.',
+              style: tipografia.bodyMedium,
+            ),
+            const SizedBox(height: Espaciado.chico),
+            Text(
+              'En la lista que se abre, buscá Finanzas y elegí que no se '
+              'optimice.',
+              style: tipografia.bodySmall,
+            ),
+            const SizedBox(height: Espaciado.entreCampos),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton(
+                onPressed: estadoCaptura.pedirExencionDeBateria,
+                child: const Text('Abrir ajustes de batería'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

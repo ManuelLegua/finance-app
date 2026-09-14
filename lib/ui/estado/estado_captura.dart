@@ -29,6 +29,7 @@ class EstadoCapturaNotificaciones extends ChangeNotifier {
   bool _permisoConcedido = false;
   bool _activaEnApp = false;
   bool _servicioCorriendo = false;
+  bool _exentaDeBateria = false;
   bool _cargando = true;
   String? _error;
 
@@ -42,6 +43,19 @@ class EstadoCapturaNotificaciones extends ChangeNotifier {
     servicioCorriendo: _servicioCorriendo,
   );
 
+  /// Si conviene sugerirle al usuario que exima la app de la optimización de
+  /// batería (D-N4).
+  ///
+  /// **Solo cuando la captura ya está funcionando.** Sugerirlo antes sería
+  /// pedir un permiso más en una pantalla donde el usuario todavía está
+  /// decidiendo si quiere la feature, y encima para un problema que no puede
+  /// tener todavía: sin captura corriendo no hay servicio al que matar.
+  ///
+  /// No es un error ni un estado de la captura: es un consejo de durabilidad.
+  /// Por eso vive acá y no en `SituacionCaptura`.
+  bool get convieneEximirDeBateria =>
+      estado.situacion == dominio.SituacionCaptura.activa && !_exentaDeBateria;
+
   Future<void> cargar() async {
     _cargando = true;
     _error = null;
@@ -54,6 +68,7 @@ class EstadoCapturaNotificaciones extends ChangeNotifier {
       // Se pregunta siempre, aunque el interruptor esté apagado: es lo que
       // distingue "encendido" de "funcionando" (D-N13).
       _servicioCorriendo = await _servicio.estaCorriendo();
+      _exentaDeBateria = await _servicio.exentaDeOptimizacionDeBateria();
     } on Object catch (error) {
       _error = _mensajeDe(error);
     } finally {
@@ -66,6 +81,11 @@ class EstadoCapturaNotificaciones extends ChangeNotifier {
   /// No recarga sola: quien la llama sabe que el usuario va a volver a la
   /// app después, momento en el que corresponde `cargar()` de nuevo.
   Future<void> pedirPermiso() => _servicio.abrirAjustesDePermiso();
+
+  /// Lleva a la lista del sistema donde se concede la exención de batería.
+  /// Como [pedirPermiso], no recarga sola: el usuario vuelve a la app después.
+  Future<void> pedirExencionDeBateria() =>
+      _servicio.abrirAjustesDeOptimizacionDeBateria();
 
   /// Enciende la captura (FR-001 a FR-003 ya cumplidos por la UI antes de
   /// llamar esto). Si el permiso de lectura todavía no está concedido,

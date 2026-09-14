@@ -49,6 +49,24 @@ abstract interface class ServicioEscuchaNotificaciones {
   /// arranca pero no va a recibir notificaciones hasta que lo esté.
   Future<void> activar();
 
+  /// Si Android tiene a la app exenta de la optimización de batería (D-N4).
+  ///
+  /// **No es condición para que la captura funcione**, y por eso no entra en
+  /// `EstadoCaptura`: sin la exención se capturan consumos igual, solo que el
+  /// sistema puede matar el servicio cuando el teléfono está quieto — y
+  /// algunos fabricantes lo hacen con ganas. Decir "no funciona" cuando sí
+  /// funciona sería peor que no avisar nada.
+  Future<bool> exentaDeOptimizacionDeBateria();
+
+  /// Lleva al usuario a la lista del sistema donde se concede esa exención.
+  ///
+  /// Va a los **ajustes** y no al diálogo directo a propósito: el diálogo
+  /// exige `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, que Google Play limita a
+  /// casos de uso acotados y obliga a justificar. La lista no exige ningún
+  /// permiso y llega al mismo lado con un toque más — el mismo trato que ya
+  /// se le da al permiso de lectura en [abrirAjustesDePermiso].
+  Future<void> abrirAjustesDeOptimizacionDeBateria();
+
   /// Apaga el interruptor de la app y detiene el servicio. Las
   /// transacciones ya confirmadas y las asociaciones aprendidas no se tocan
   /// (FR-005).
