@@ -148,6 +148,12 @@ Mismo proyecto Flutter único de 001: código en `lib/`, pruebas en `test/`, amb
 
 - [X] T055a [US4] **Bug encontrado y arreglado el 2026-09-14 durante T061**: el interruptor "fue una compra en cuotas" **no aparecía en un arranque limpio de la app**, así que US4 entera quedaba inalcanzable sin ninguna señal de que faltara algo. `PantallaPendientes` leía `EstadoTarjetas` con `context.read` en el momento de abrir el diálogo, pero ese provider es **lazy** y su `cargar()` es asíncrono: si esa pantalla era la primera en pedir las tarjetas —abrir la app y tocar Pendientes, sin pasar por Tarjetas ni Deudas— la lista todavía estaba vacía y el formulario ocultaba el interruptor. Arreglado esperando la carga antes de abrir el diálogo. **La suite no lo veía** porque `pantalla_pendientes_test.dart` cargaba las tarjetas en su `setUp`, que es justo lo que un arranque real no garantiza; la prueba nueva monta el estado sin cargar
 
+- [ ] T061a [US2] **Bug sin explicar, encontrado el 2026-09-14 durante T061: la bandeja muestra "Nada esperando confirmación" con pendientes en la base.** Observado dos veces seguidas, en dos cargas distintas de la pantalla (12:32 y 12:33), con `consumo_pendiente` conteniendo dos filas verificadas por consulta directa al archivo (`integrity_check` ok, `user_version` 5). La primera carga mostró además el aviso "No se pudieron leer los consumos pendientes"; la segunda, ya sin aviso, siguió vacía. **El resto de la app lee bien**: el Resumen reflejó en el acto la transacción confirmada (Gasto real pasó de S/ 944.69 a S/ 989.69), así que no es la conexión entera sino la lectura de pendientes.
+
+  **Contexto en el que apareció**, por si importa: la fila que no se ve la escribió el callback headless, que abre su **propia** conexión a la misma base y la cierra al terminar (T042). `sqflite` comparte el handle nativo por ruta, así que cerrar desde el isolate headless podría estar dejando inutilizable la conexión de la UI — **hipótesis sin confirmar**, y la más probable de las que se barajaron. Si se confirma, el arreglo es no cerrar esa conexión, o no abrir una segunda.
+
+  **Es grave**: un consumo capturado que no aparece en la bandeja es un consumo perdido en silencio, que es justo lo que FR-020 y toda la feature existen para evitar. Reproducir con el teléfono a mano antes de publicar
+
 **Checkpoint**: US1 + US2 son el MVP de esta spec. Un consumo real de cualquiera de los orígenes con `packageName` verificado se captura con la app cerrada, aparece en la bandeja, y confirmarlo lo deja como transacción del mes correcto.
 
 ---
