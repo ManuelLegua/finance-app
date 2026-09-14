@@ -13,13 +13,15 @@ const String _paqueteGmail = 'com.google.android.gm';
 void main() {
   group('OrigenReconocido — dos modos de identificación (D-N12)', () {
     test('un origen con remitente verificado es utilizable sin paquete', () {
-      final bcp = origenesReconocidos.firstWhere(
-        (origen) => origen.nombre == 'BCP',
+      // Banco Falabella es el caso inverso: tiene paquete y ningún remitente,
+      // porque su app sí notifica por su cuenta.
+      final falabella = origenesReconocidos.firstWhere(
+        (origen) => origen.nombre == 'Banco Falabella',
       );
 
-      expect(bcp.remitenteVerificado, isTrue);
-      expect(bcp.paqueteVerificado, isFalse);
-      expect(bcp.utilizable, isTrue);
+      expect(falabella.paqueteVerificado, isTrue);
+      expect(falabella.remitenteVerificado, isFalse);
+      expect(falabella.utilizable, isTrue);
     });
 
     test('un origen sin ninguno de los dos verificados no es utilizable', () {
@@ -44,7 +46,7 @@ void main() {
       // consumo con tarjeta (G5, G6). Con un solo remitente por origen, los
       // consumos —lo único que esta spec captura— se descartaban.
       final sip = origenesReconocidos.firstWhere(
-        (origen) => origen.nombre == 'Oh!',
+        (origen) => origen.nombre == 'Oh! / Sip',
       );
 
       expect(sip.remitentes, containsAll(<String>['Operaciones Sip', 'Sip']));
@@ -66,8 +68,8 @@ void main() {
     test('los cuatro remitentes observados el 2026-09-13 se reconocen', () {
       const observados = {
         'BCP Notificaciones': 'BCP',
-        'Operaciones Sip': 'Oh!',
-        'Sip': 'Oh!',
+        'Operaciones Sip': 'Oh! / Sip',
+        'Sip': 'Oh! / Sip',
         'YAPE Notificaciones': 'Yape',
       };
 
@@ -154,6 +156,26 @@ void main() {
   });
 
   group('filtrarNotificacion — por paquete, el caso del push', () {
+    test('los cuatro paquetes observados el 2026-09-13 se reconocen', () {
+      const observados = {
+        'com.bcp.bank.bcp': 'BCP',
+        'com.bcp.innovacxion.yapeapp': 'Yape',
+        'pe.solera.tarjetaoh': 'Oh! / Sip',
+        'com.falabella.falabellaApp': 'Banco Falabella',
+      };
+
+      for (final entrada in observados.entries) {
+        final decision = filtrarNotificacion(
+          paquete: entrada.key,
+          titulo: 'lo que sea',
+          esResumenDeGrupo: false,
+        );
+
+        expect(decision, isA<ProcesarComo>(), reason: entrada.key);
+        expect((decision as ProcesarComo).origen.nombre, entrada.value);
+      }
+    });
+
     test('el push de Yape se reconoce por su paquete', () {
       final decision = filtrarNotificacion(
         paquete: 'com.bcp.innovacxion.yapeapp',

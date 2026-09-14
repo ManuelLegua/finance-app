@@ -71,6 +71,7 @@ final class OrigenReconocido {
 final List<OrigenReconocido> origenesReconocidos = [
   const OrigenReconocido(
     nombre: 'BCP',
+    paquete: 'com.bcp.bank.bcp',
     remitentes: {'BCP Notificaciones'},
   ),
   // El único origen con los dos modos verificados: publica push por su cuenta
@@ -81,15 +82,28 @@ final List<OrigenReconocido> origenesReconocidos = [
     remitentes: {'YAPE Notificaciones'},
   ),
 
-  // El proyecto trata Oh! y Sip como un mismo origen desde D-N10 ("Oh!/SIP").
+  // Un solo origen con los dos nombres: Sip es la Tarjeta Oh! renombrada, y
+  // por eso el paquete de la app todavía se llama `tarjetaoh` mientras los
+  // correos ya firman `Sip`. El nombre lleva los dos para que el usuario
+  // reconozca el suyo venga de donde venga.
   //
   // Los dos remitentes están verificados y son del mismo emisor: firma
   // `Operaciones Sip` un envío de dinero (G2) y `Sip` un consumo con tarjeta
   // (G5, G6). Con solo el primero, los consumos con tarjeta —justo lo que esta
   // spec captura— se descartaban por origen no reconocido.
   const OrigenReconocido(
-    nombre: 'Oh!',
+    nombre: 'Oh! / Sip',
+    paquete: 'pe.solera.tarjetaoh',
     remitentes: {'Operaciones Sip', 'Sip'},
+  ),
+
+  // La app mezcla la tienda y el banco bajo el mismo paquete, así que sus
+  // avisos de consumo entran por acá junto con los de compras y promociones.
+  // El parser descarta el ruido por texto: sin palabras de dirección, un aviso
+  // de promoción no produce pendiente (FR-017).
+  const OrigenReconocido(
+    nombre: 'Banco Falabella',
+    paquete: 'com.falabella.falabellaApp',
   ),
 
   for (final nombre in _nombresSinVerificar) OrigenReconocido(nombre: nombre),
@@ -101,7 +115,6 @@ const List<String> _nombresSinVerificar = <String>[
   'Interbank',
   'BBVA',
   'Scotiabank',
-  'Banco Falabella',
   'Banco Ripley',
   'Banco Pichincha',
   'BanBif',
