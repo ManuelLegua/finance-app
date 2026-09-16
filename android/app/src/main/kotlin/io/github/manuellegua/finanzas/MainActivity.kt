@@ -6,14 +6,21 @@ import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
+import im.zoe.labs.flutter_notification_listener.FlutterNotificationListenerPlugin
 import im.zoe.labs.flutter_notification_listener.NotificationsHandlerService
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.FlutterEngineCache
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * El único código nativo propio del proyecto, y existe por una sola razón:
- * **que activar y desactivar la captura muchas veces siga funcionando.**
+ * El único código nativo propio del proyecto. Existe por dos razones, y las
+ * dos son defectos del plugin de escucha que solo se pueden tapar desde acá:
+ * **que activar y desactivar la captura muchas veces siga funcionando**, y
+ * **que abrir la app no deje la captura muerta** (ver
+ * [desalojarMotorDeLaInterfaz], T068).
+ *
+ * ## Por qué activar y desactivar rompía la escucha
  *
  * `flutter_notification_listener` apaga el servicio deshabilitando su
  * componente de sistema. Android entonces suelta la vinculación del listener
@@ -35,6 +42,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        desalojarMotorDeLaInterfaz()
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CANAL)
             .setMethodCallHandler { llamada, respuesta ->
@@ -49,6 +57,37 @@ class MainActivity : FlutterActivity() {
                     else -> respuesta.notImplemented()
                 }
             }
+    }
+
+    /**
+     * Saca el motor de Flutter **de esta pantalla** de la ranura de caché que
+     * el servicio de escucha usa para el suyo.
+     *
+     * Sin esto, abrir la app deja la captura muerta mientras ese proceso viva
+     * (T068). El plugin guarda en [FlutterEngineCache], bajo **una sola
+     * clave**, el motor al que se engancha — y se engancha a todos, incluido
+     * el de la interfaz. Cuando después el servicio pide el suyo,
+     * `getFlutterEngine` encuentra la ranura ocupada, devuelve el motor de la
+     * interfaz y **se saltea el `executeDartCallback`**, que vive solo en la
+     * rama del *miss* y es lo único que enciende el isolate de fondo. El
+     * servicio queda hablándole a un canal donde nadie registró handler, y
+     * cada notificación se pierde sin excepción ni log.
+     *
+     * Desalojando el motor acá, el servicio siempre cae en la rama del *miss*:
+     * crea **su** motor y corre el callback ahí, que es el camino headless que
+     * prometen D-N1 y FR-011 — la captura sigue viva con la app cerrada.
+     *
+     * **No le quita el motor a un servicio que ya esté andando.** El servicio
+     * se guarda su `mBackgroundChannel` directo y no lo relee de la caché;
+     * verificado en dispositivo el 2026-09-16 (prueba 5 de T068: abrir la app
+     * después de un arranque por servicio no rompe la captura).
+     *
+     * La ranura de la interfaz no le hace falta a nadie más: el único que lee
+     * esa clave es el plugin, y solo para esto.
+     */
+    private fun desalojarMotorDeLaInterfaz() {
+        FlutterEngineCache.getInstance()
+            .remove(FlutterNotificationListenerPlugin.FLUTTER_ENGINE_CACHE_KEY)
     }
 
     /**
