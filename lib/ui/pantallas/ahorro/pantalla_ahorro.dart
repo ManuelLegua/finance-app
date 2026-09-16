@@ -50,7 +50,7 @@ class _PantallaAhorroState extends State<PantallaAhorro> {
     final resultado = await showDialog<AporteAhorro>(
       context: context,
       builder: (_) => FormularioAporte(
-        fechaPorDefecto: DateTime.now(),
+        fechaPorDefecto: estadoAhorro.hoy,
         original: original,
         avisoDeCierre: (fecha) => estadoAhorro.admiteRegistrarEn(fecha)
             ? estadoAhorro.motivoDeCierreEn(fecha)

@@ -60,6 +60,14 @@ class EstadoAhorro extends ChangeNotifier {
 
   Mes get mes => _mes;
 
+  /// Hoy, según el reloj de este estado.
+  ///
+  /// La pantalla lo usa como fecha por defecto de un aporte nuevo en vez de
+  /// `DateTime.now()`: con el reloj real, una prueba de reloj fijo empieza a
+  /// fallar sola al cambiar el mes, y el aporte se guardaba en un mes
+  /// distinto del que la pantalla estaba mostrando.
+  DateTime get hoy => _ahora();
+
   ReglaAhorro get regla => _configuracion.regla;
 
   int get porcentajeBp => _configuracion.porcentajeBp;
