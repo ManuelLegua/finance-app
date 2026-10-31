@@ -98,20 +98,14 @@ Vive en [docs/politica-de-privacidad.md](docs/politica-de-privacidad.md).
 Google Play exige una URL pública para publicar cualquier app, y con más razón
 para una que pide acceso a notificaciones.
 
-**La política describe el comportamiento previsto, y hay una condición que hay
-que cumplir antes de publicar**: el instrumento temporal de volcado
-(`lib/dominio/interpretes/volcado_notificacion.dart` y el cuerpo de
-`callback_headless.dart`) escribe el texto de las notificaciones de Gmail al
-log del dispositivo y a un archivo local. Eso **contradice** lo que la política
-promete sobre no guardar el contenido de las notificaciones. **T067 de la spec
-002 tiene que estar cerrada antes de subir nada a Play.**
+**La política describe lo que la app hace hoy.** Lo único que la contradecía
+—el instrumento temporal de volcado, que escribía el texto de las
+notificaciones de Gmail al log y a un archivo local— se borró con T067 de la
+spec 002 el 2026-09-13. El correo de contacto ya está completo.
 
-Dos cosas más antes de publicarla:
-
-- Completar el correo de contacto, que está como marcador de posición.
-- Cualquier salida de datos nueva se documenta acá **antes** de publicar la
-  versión que la introduce, no después. Es la misma regla que el Principio I
-  aplica a la constitución.
+Una regla que sigue vigente: cualquier salida de datos nueva se documenta acá
+**antes** de publicar la versión que la introduce, no después. Es la misma regla
+que el Principio I aplica a la constitución.
 
 ## Recorrido de prueba manual
 
@@ -140,7 +134,7 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/data-model.md` | Entidades, derivados y el esquema SQLite completo |
 | `specs/001-gestion-sueldo-ahorro/contracts/` | API de la capa de cálculo puro y de los repositorios |
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
-| `specs/002-captura-notificaciones-bancarias/` | **En curso: 52 de 62 tareas.** Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
+| `specs/002-captura-notificaciones-bancarias/` | **En curso: 72 de 78 tareas, todo el código escrito**; falta verificación en dispositivo. Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
 | `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
 | `specs/004-suscripcion-premium/` | **Revisada el 2026-09-12 y reimplementada: de suscripción paga a propina voluntaria** (68 de 70 tareas). La app se reparte completa y gratis; apoyar no desbloquea nada. La carpeta conserva su nombre viejo para no romper los enlaces del historial (Principio I enmendado a v2.0.0, sin enmienda nueva) |
 | `specs/005-respaldo-exportacion-datos/` | **Implementada (43 de 43).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
@@ -228,12 +222,12 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 ## Estado actual
 
 **Spec 001 completa (108/108)**, validada en emulador y en un Android real (T107).
-**Spec 002 en curso (52/62)** — el tramo que falta dejó de ser solo insumo manual: ver el hallazgo del 2026-09-12 más abajo.
+**Spec 002 en curso (72/78)** — todo el código está escrito; lo que falta es recorrido en dispositivo (T060, T061, T061b, T061c), T040a y T062. Ver "Lo que queda abierto de la spec 002" más abajo.
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
 **Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
-**565 pruebas, todas en verde (2026-09-14).** Subieron de 525 con el tramo del parser de la spec 002 (T038/T038a, T039, T041a, T042, T064b) y los dos bugs que encontró el recorrido manual (T055a, T061a). Habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción y sumó las de la propina; la que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**565 pruebas, todas en verde (re-verificado el 2026-10-31; T068 no sumó ninguna porque es Kotlin).** Subieron de 525 con el tramo del parser de la spec 002 (T038/T038a, T039, T041a, T042, T064b) y los dos bugs que encontró el recorrido manual (T055a, T061a). Habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción y sumó las de la propina; la que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -785,7 +779,7 @@ ninguna prueba veía**, los dos ya arreglados: T055a y T061a.
 | 3 | ✅ | El pendiente aparece con monto, comercio y fecha; el total suma bien |
 | 4 | ✅ | Confirmar pide categoría por comercio nuevo (FR-033), crea la transacción con la **fecha del consumo** y aprende la asociación |
 | 5 | ✅ | El segundo consumo del mismo comercio llega con la categoría ya propuesta |
-| 6 | ⚠️ | **La mitad**: al revocar, la app avisa bien. Que se reanude al reconceder no se pudo verificar — ver T061b |
+| 6 | ⚠️ | **La mitad**: al revocar, la app avisa bien. Que se reanude al reconceder no se pudo verificar — la causa resultó ser T068, ya arreglada; falta repetirlo, ver T061b |
 | 7 | ⛔ | Modo avión, sin recorrer — ver T061c |
 | 8 | ✅ | **Tras reiniciar el teléfono y sin abrir la app, el consumo se capturó igual**: el servicio vuelve solo por `BOOT_COMPLETED` (D-N4, FR-011) |
 | 9 | ✅ | Un texto con monto y sin dirección clara va a diagnóstico, nunca a pendiente con datos inventados |
@@ -846,27 +840,57 @@ Cuatro cosas que hicieron perder tiempo y no son obvias:
 - Hay varias notificaciones de prueba en la barra, publicadas con
   `cmd notification post`.
 
+#### El bug que explicaba T061b: T068 (2026-09-16)
+
+**Si el proceso de la app lo creaba la interfaz, la captura quedaba muerta
+mientras ese proceso viviera** — servicio vinculado, permiso concedido, batería
+exenta, y ni una notificación llegando a Dart. Abrir la app desde el ícono
+alcanzaba para dejarla así. No tenía nada que ver con conceder el permiso por
+`adb`, que era la sospecha anotada en T061b.
+
+La causa está en el plugin: guarda en `FlutterEngineCache`, bajo **una sola
+clave**, el motor al que se engancha — y se engancha a todos, incluido el de la
+interfaz. Cuando después el servicio pide el suyo, encuentra la ranura ocupada,
+devuelve el motor de la interfaz y se saltea `executeDartCallback`, que vive
+solo en la rama del *miss* y es lo único que enciende el isolate de fondo. El
+servicio queda hablándole a un canal sin handler y cada notificación se pierde
+sin excepción ni log.
+
+**El arreglo está en `MainActivity.kt`**: `configureFlutterEngine` desaloja el
+motor de la interfaz de esa ranura, así el servicio siempre crea el suyo. No le
+quita el motor a un servicio ya andando, porque el servicio guarda su canal
+directo y no lo relee de la caché. Verificado en el Honor: seis de seis
+capturas, con la app en primer plano, en segundo plano, tras `am force-stop` y
+cerrada desde recientes. **La suite no puede ver esto** (es Kotlin y Android):
+si se toca `MainActivity.kt` o se actualiza el plugin, hay que reverificarlo en
+dispositivo.
+
+**Una observación que quedó sin tarea**: tras un `am force-stop`, Android deja
+la app en estado *stopped* y no revincula el listener hasta que la app lo pide.
+La pantalla lo detecta y ofrece Reactivar (T065), así que no se pierde en
+silencio, pero conviene mirarlo.
+
 #### Lo que queda abierto de la spec 002
 
-Todo el código está escrito. Lo que falta es verificación y una decisión:
+Todo el código está escrito. Lo que falta es verificación en dispositivo:
 
 - **T061b** — que la captura **se reanude** tras reconceder el permiso. La
-  primera mitad del paso 6 quedó probada; esta no. Reconcedido por `adb`, con
-  el servicio corriendo, el proceso vivo, el permiso concedido y ningún
-  componente deshabilitado, no volvió a llegar nada. **Puede ser un artefacto
-  de conceder por `adb`**, que no es el camino del usuario: hay que repetirlo
-  tocando el interruptor en la pantalla de Android. Si tampoco revincula, la
-  app le está prometiendo algo que no ocurre ("la captura dejó de funcionar
-  hasta que lo concedas de nuevo"), y es la misma familia que D-N13.2.
+  primera mitad del paso 6 quedó probada; la segunda falló, y la causa resultó
+  ser T068, ya arreglada. Falta repetirlo **por la interfaz real**: revocar y
+  volver a conceder tocando el interruptor en la pantalla de Android, y
+  comprobar que el siguiente consumo llega a la bandeja.
 - **T061c** — el paso 7, modo avión. **No lo puede hacer un agente conectado
   por depuración inalámbrica**: activarlo corta el Wi-Fi y con él la propia
   conexión de `adb`. Queda para el usuario, o para una sesión por cable.
 - **T040a** — el hueco del normalizador con códigos de tienda. No urge: mejora
   sola a medida que aparezcan más ejemplos reales.
+- **T060, T061** — se cierran con T061b y T061c.
 - **T062** — actualizar este archivo al cerrar la spec.
 
-Con T067 hecha, **no queda nada que impida publicar** salvo la decisión sobre
-T061b.
+Con T067 y T068 hechas, **en el código de la captura no queda nada que impida
+publicar**: falta reverificar T061b. Para Play falta además, fuera de esta spec,
+generar la keystore de release (`android/key.properties` todavía no existe) y
+crear los productos de propina (T068 y T069 de la spec 004).
 
 ### Dónde retomar la spec 003
 
