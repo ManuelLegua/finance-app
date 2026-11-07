@@ -30,6 +30,11 @@ class EstadoCapturaNotificaciones extends ChangeNotifier {
   bool _activaEnApp = false;
   bool _servicioCorriendo = false;
   bool _exentaDeBateria = false;
+
+  /// El usuario fue a los ajustes de Android desde esta pantalla para
+  /// activar la captura, y todavía no volvió (T071). Ver [pedirPermiso].
+  bool _activarAlVolverDeLosAjustes = false;
+
   bool _cargando = true;
   String? _error;
 
@@ -75,12 +80,39 @@ class EstadoCapturaNotificaciones extends ChangeNotifier {
       _cargando = false;
       notifyListeners();
     }
+
+    await _completarActivacionPedida();
   }
 
   /// Dirige a los ajustes de Android donde se concede el permiso (FR-002).
   /// No recarga sola: quien la llama sabe que el usuario va a volver a la
   /// app después, momento en el que corresponde `cargar()` de nuevo.
-  Future<void> pedirPermiso() => _servicio.abrirAjustesDePermiso();
+  ///
+  /// **Deja anotado que el usuario pidió activar**, para que la primera
+  /// relectura al volver termine el trabajo (T071). Sin esto, conceder el
+  /// permiso dejaba la captura apagada con un segundo botón de Activar, y el
+  /// usuario la daba por activada: la pantalla no mentía, pero tampoco se
+  /// entendía de un vistazo.
+  Future<void> pedirPermiso() {
+    _activarAlVolverDeLosAjustes = true;
+    return _servicio.abrirAjustesDePermiso();
+  }
+
+  /// Termina la activación que el usuario pidió antes de ir a los ajustes, si
+  /// volvió con el permiso concedido.
+  ///
+  /// **El pedido se consume en la primera relectura, se conceda o no.** Si
+  /// quedara anotado, la captura podría encenderse sola en una vuelta a la
+  /// app que no tiene nada que ver, o pasar por encima de un "Desactivar" del
+  /// usuario. Se apaga antes de llamar a [activar], que vuelve a cargar.
+  Future<void> _completarActivacionPedida() async {
+    if (!_activarAlVolverDeLosAjustes) return;
+    _activarAlVolverDeLosAjustes = false;
+
+    if (!_permisoConcedido) return;
+    if (estado.situacion == dominio.SituacionCaptura.activa) return;
+    await activar();
+  }
 
   /// Lleva a la lista del sistema donde se concede la exención de batería.
   /// Como [pedirPermiso], no recarga sola: el usuario vuelve a la app después.

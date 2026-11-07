@@ -135,7 +135,7 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/data-model.md` | Entidades, derivados y el esquema SQLite completo |
 | `specs/001-gestion-sueldo-ahorro/contracts/` | API de la capa de cálculo puro y de los repositorios |
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
-| `specs/002-captura-notificaciones-bancarias/` | **En curso: 73 de 81 tareas, todo el código escrito**; falta verificación en dispositivo y decidir dos hallazgos (T070, T071). Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
+| `specs/002-captura-notificaciones-bancarias/` | **En curso: 75 de 81 tareas, todo el código escrito**; falta verificación en dispositivo y un hallazgo por investigar (T070). Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
 | `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
 | `specs/004-suscripcion-premium/` | **Revisada el 2026-09-12 y reimplementada: de suscripción paga a propina voluntaria** (68 de 70 tareas). La app se reparte completa y gratis; apoyar no desbloquea nada. La carpeta conserva su nombre viejo para no romper los enlaces del historial (Principio I enmendado a v2.0.0, sin enmienda nueva) |
 | `specs/005-respaldo-exportacion-datos/` | **Implementada (43 de 43).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
@@ -223,12 +223,12 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 ## Estado actual
 
 **Spec 001 completa (108/108)**, validada en emulador y en un Android real (T107).
-**Spec 002 en curso (73/81)** — todo el código está escrito; lo que falta es recorrido en dispositivo (T060, T061, T061b, T061c), dos hallazgos por decidir (T070, T071), T040a y T062. Ver "Lo que queda abierto de la spec 002" más abajo.
+**Spec 002 en curso (75/81)** — todo el código está escrito; lo que falta es el modo avión (T061c, que cierra T060 y T061), un hallazgo por investigar (T070), T040a y T062. Ver "Lo que queda abierto de la spec 002" más abajo.
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
 **Spec 006 escrita y bloqueada** — aceptar montos en dólares sin abandonar el sol como moneda de cuenta. No hay código ni lo va a haber hasta que se apruebe la enmienda v4.0.0 al Principio II y se cierren los dos `[NEEDS CLARIFICATION]` de alcance (FR-029, FR-030).
-**571 pruebas, todas en verde (2026-11-07).** Las seis últimas son de T069. T068 no sumó ninguna porque es Kotlin. Subieron de 525 con el tramo del parser de la spec 002 (T038/T038a, T039, T041a, T042, T064b) y los dos bugs que encontró el recorrido manual (T055a, T061a). Habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción y sumó las de la propina; la que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
+**576 pruebas, todas en verde (2026-11-07).** Las once últimas son de T069 y T071. T068 no sumó ninguna porque es Kotlin. Subieron de 525 con el tramo del parser de la spec 002 (T038/T038a, T039, T041a, T042, T064b) y los dos bugs que encontró el recorrido manual (T055a, T061a). Habían bajado de 552 porque la revisión de la spec 004 borró las cinco suites de la suscripción y sumó las de la propina; la que dependía del reloj real (`pantalla_ahorro_test.dart`, FR-042) se arregló en `3b31be7`.
 **`flutter analyze` sin issues.**
 
 | Spec 001 · Historia | Estado |
@@ -780,7 +780,7 @@ ninguna prueba veía**, los dos ya arreglados: T055a y T061a.
 | 3 | ✅ | El pendiente aparece con monto, comercio y fecha; el total suma bien |
 | 4 | ✅ | Confirmar pide categoría por comercio nuevo (FR-033), crea la transacción con la **fecha del consumo** y aprende la asociación |
 | 5 | ✅ | El segundo consumo del mismo comercio llega con la categoría ya propuesta |
-| 6 | ⚠️ | **La mitad**: al revocar, la app avisa bien. Que se reanude al reconceder no se pudo verificar — la causa resultó ser T068, ya arreglada; falta repetirlo, ver T061b |
+| 6 | ✅ | Al revocar, la app avisa bien; al reconceder por la interfaz real queda activa sola y captura. Cerrado el 2026-11-07, tras arreglar T068 y T071 — ver T061b |
 | 7 | ⛔ | Modo avión, sin recorrer — ver T061c |
 | 8 | ✅ | **Tras reiniciar el teléfono y sin abrir la app, el consumo se capturó igual**: el servicio vuelve solo por `BOOT_COMPLETED` (D-N4, FR-011) |
 | 9 | ✅ | Un texto con monto y sin dirección clara va a diagnóstico, nunca a pendiente con datos inventados |
@@ -905,34 +905,44 @@ es lo que D-N1 prohíbe.
   `android/key.properties`— y es lo único que permite leer la base con
   `run-as`. Fue lo que destrabó el diagnóstico.
 
+#### La activación que se quedaba a mitad de camino: T071 (2026-11-07)
+
+**Conceder el permiso dejaba la captura apagada.** El primer toque manda a los
+ajustes de Android; al volver, la pantalla decía "La captura está apagada…" con
+otro botón de Activar, y el usuario la dio por activada. Contradecía el paso 1
+del quickstart, que siempre pidió ver "Captura activa" en ese punto.
+
+Ahora "Ir a ajustes de Android" deja anotado que el usuario pidió activar, y la
+primera relectura al volver termina la activación si el permiso quedó
+concedido. **Ese pedido se consume en la primera vuelta, se conceda o no**: es
+lo que impide que una vuelta cualquiera encienda la captura sola o pase por
+encima de un "Desactivar". Hay una prueba para cada una de esas dos cosas.
+
+Con esto y T068 quedó cerrada **T061b**: quitar el permiso y volver a
+concederlo por la interfaz real deja la captura funcionando, verificado con un
+consumo de prueba. Android cierra el proceso de la app al revocarle el permiso,
+así que la captura vuelve en un proceso nuevo.
+
 #### Lo que queda abierto de la spec 002
 
-Todo el código está escrito. Lo que falta es verificación en dispositivo y dos
-hallazgos del 2026-11-07:
+Todo el código está escrito. Lo que falta es verificación en dispositivo y un
+hallazgo del 2026-11-07:
 
-- **T070** — **actualizar la app deja la captura detenida**. Pasó las dos veces
-  que se instaló un build encima; la pantalla lo detecta (T065) y Reactivar la
+- **T070** — **actualizar la app deja la captura detenida**. Pasó cada vez que
+  se instaló un build encima; la pantalla lo detecta (T065) y Reactivar la
   devuelve. Falta ver si una actualización desde Play hace lo mismo: si es así,
   cada versión nueva apaga la captura de todos hasta que abran la app.
-- **T071** — **activar en una instalación nueva lleva dos toques** separados
-  por los ajustes de Android, y el usuario se quedó a mitad de camino creyendo
-  que ya estaba activa. Sin decidir.
-
-- **T061b** — que la captura **se reanude** tras reconceder el permiso. La
-  primera mitad del paso 6 quedó probada; la segunda falló, y la causa resultó
-  ser T068, ya arreglada. Falta repetirlo **por la interfaz real**: revocar y
-  volver a conceder tocando el interruptor en la pantalla de Android, y
-  comprobar que el siguiente consumo llega a la bandeja.
 - **T061c** — el paso 7, modo avión. **No lo puede hacer un agente conectado
   por depuración inalámbrica**: activarlo corta el Wi-Fi y con él la propia
   conexión de `adb`. Queda para el usuario, o para una sesión por cable.
 - **T040a** — el hueco del normalizador con códigos de tienda. No urge: mejora
   sola a medida que aparezcan más ejemplos reales.
-- **T060, T061** — se cierran con T061b y T061c.
+- **T060, T061** — se cierran con T061c.
 - **T062** — actualizar este archivo al cerrar la spec.
 
-Con T067 y T068 hechas, **en el código de la captura no queda nada que impida
-publicar**: falta reverificar T061b. Para Play falta además, fuera de esta spec,
+Con T067, T068 y T061b hechas, **en el código de la captura no queda nada que
+impida publicar**; T070 conviene mirarla antes de la segunda versión, que es la
+primera actualización que van a recibir los usuarios. Para Play falta además, fuera de esta spec,
 generar la keystore de release (`android/key.properties` todavía no existe) y
 crear los productos de propina (T068 y T069 de la spec 004).
 

@@ -58,6 +58,105 @@ void main() {
     });
   });
 
+  group('volver de los ajustes de Android (T071)', () {
+    /// El usuario vuelve a Finanzas desde otra app.
+    void volverALaApp(WidgetTester tester) {
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    }
+
+    testWidgets('con el permiso concedido, la captura queda activa sola', (
+      tester,
+    ) async {
+      // Visto en dispositivo el 2026-11-07: el usuario concedió el permiso,
+      // volvió, leyó "La captura está apagada" con otro botón de Activar, y
+      // la dio por activada. El quickstart siempre pidió "Captura activa" en
+      // este punto.
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.text('Ir a ajustes de Android'));
+      await tester.pumpAndSettle();
+      servicio.permiso = true;
+      volverALaApp(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Captura activa'), findsOneWidget);
+      // Es el mismo `activar()` del botón: pide el aviso persistente igual.
+      expect(servicio.vecesQuePidioAvisoPersistente, 1);
+    });
+
+    testWidgets('sin conceder el permiso, no se enciende nada ni hay error', (
+      tester,
+    ) async {
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.text('Ir a ajustes de Android'));
+      await tester.pumpAndSettle();
+      volverALaApp(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ir a ajustes de Android'), findsOneWidget);
+      expect(servicio.vecesQuePidioAvisoPersistente, 0);
+      expect(servicio.corriendo, isFalse);
+    });
+
+    testWidgets('el pedido se consume en la primera vuelta', (tester) async {
+      // Si quedara anotado, la captura podría encenderse sola días después,
+      // en una vuelta a la app que no tiene nada que ver con activarla.
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.text('Ir a ajustes de Android'));
+      await tester.pumpAndSettle();
+      volverALaApp(tester);
+      await tester.pumpAndSettle();
+
+      servicio.permiso = true;
+      volverALaApp(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Activar captura'), findsOneWidget);
+      expect(servicio.corriendo, isFalse);
+    });
+
+    testWidgets('una vuelta cualquiera no enciende una captura apagada', (
+      tester,
+    ) async {
+      // El usuario la desactivó a propósito: volver a la app no es pedir que
+      // se encienda.
+      servicio.permiso = true;
+      await estado.cargar();
+      await montar(tester);
+
+      volverALaApp(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Activar captura'), findsOneWidget);
+      expect(servicio.corriendo, isFalse);
+    });
+
+    testWidgets('tras un permiso revocado, volver a concederlo la reanuda', (
+      tester,
+    ) async {
+      // El camino de T061b: se había activado, el permiso se revocó y el
+      // servicio se cayó con él.
+      await servicio.activar();
+      servicio.corriendo = false;
+      await estado.cargar();
+      await montar(tester);
+
+      await tester.tap(find.text('Ir a ajustes de Android'));
+      await tester.pumpAndSettle();
+      servicio.permiso = true;
+      volverALaApp(tester);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Captura activa'), findsOneWidget);
+    });
+  });
+
   group('permiso revocado (FR-004)', () {
     testWidgets('se explica distinto de "nunca se pidió", con ícono', (
       tester,
