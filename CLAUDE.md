@@ -135,7 +135,7 @@ Desarrollo dirigido por especificación con Spec Kit. **Ninguna funcionalidad se
 | `specs/001-gestion-sueldo-ahorro/data-model.md` | Entidades, derivados y el esquema SQLite completo |
 | `specs/001-gestion-sueldo-ahorro/contracts/` | API de la capa de cálculo puro y de los repositorios |
 | `specs/001-gestion-sueldo-ahorro/tasks.md` | **La cola de trabajo**: 105 tareas numeradas por historia |
-| `specs/002-captura-notificaciones-bancarias/` | **En curso: 75 de 81 tareas, todo el código escrito**; falta verificación en dispositivo y un hallazgo por investigar (T070). Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
+| `specs/002-captura-notificaciones-bancarias/` | **En curso: 76 de 81 tareas, todo el código escrito**; falta el modo avión en dispositivo (T061c), T040a y T062. Alcance revisado 2026-08-30: reconocimiento genérico de cualquier banco/billetera (lista ampliable), no un intérprete por banco — ver research.md D-N2/D-N10/D-N11 |
 | `specs/003-cobros-parciales-ingreso/` | **Implementada (33 de 34 tareas; falta T033, recorrido manual en dispositivo).** Ingreso en varios cobros por mes (quincena + fin de mes, etc.); `CobroIngreso` reemplazó a `Ingreso` (un monto único), mismo patrón que `AporteAhorro`. La tabla `ingreso` de la v1 ya no se crea en instalaciones nuevas — solo sigue existiendo, intacta, en las que vienen de una versión anterior (D-C2/D-C5 de research.md) |
 | `specs/004-suscripcion-premium/` | **Revisada el 2026-09-12 y reimplementada: de suscripción paga a propina voluntaria** (68 de 70 tareas). La app se reparte completa y gratis; apoyar no desbloquea nada. La carpeta conserva su nombre viejo para no romper los enlaces del historial (Principio I enmendado a v2.0.0, sin enmienda nueva) |
 | `specs/005-respaldo-exportacion-datos/` | **Implementada (43 de 43).** Exportar todo a un archivo y volver a cargarlo. El respaldo **es** el propio archivo SQLite (D1), así que restaurar uno viejo reutiliza las migraciones que ya existen (Principio I enmendado a v3.0.0) |
@@ -223,7 +223,7 @@ El objetivo es que alguien que llega al proyecto entienda una función sin recon
 ## Estado actual
 
 **Spec 001 completa (108/108)**, validada en emulador y en un Android real (T107).
-**Spec 002 en curso (75/81)** — todo el código está escrito; lo que falta es el modo avión (T061c, que cierra T060 y T061), un hallazgo por investigar (T070), T040a y T062. Ver "Lo que queda abierto de la spec 002" más abajo.
+**Spec 002 en curso (76/81)** — todo el código está escrito; lo que falta es el modo avión (T061c, que cierra T060 y T061), T040a y T062. Ver "Lo que queda abierto de la spec 002" más abajo.
 **Spec 003 implementada (33/34)** — falta T033, recorrido manual en dispositivo.
 **Spec 004 revisada a propina (68/70)** — ya no hay nada bloqueado detrás de un pago; lo que falta son las dos tareas manuales de Play Console y dispositivo (T068, T069).
 **Spec 005 implementada (43/43)** — validada en emulador el 2026-09-08: exportar abre la hoja de compartir, `pm clear` + restaurar devuelve los datos idénticos, y un archivo que no es respaldo se rechaza con su motivo. El paso 8 de T042, que esperaba una suscripción real, quedó sin objeto al desaparecer el acceso pagado.
@@ -923,15 +923,37 @@ concederlo por la interfaz real deja la captura funcionando, verificado con un
 consumo de prueba. Android cierra el proceso de la app al revocarle el permiso,
 así que la captura vuelve en un proceso nuevo.
 
+#### Actualizar la app no apaga la captura: T070 (2026-11-07)
+
+**Se sospechó que sí, y medido no se sostiene.** Con `adb install -r`, que es
+el mismo reemplazo de paquete que hace la tienda: release sobre release, 6 de 6
+volvieron solas en 3 segundos y siguieron capturando; debug sobre debug, 11 de
+11. Lo hace Android, no la app: al reemplazar el paquete vuelve a vincular los
+listeners habilitados y levanta el proceso para eso.
+
+**Y una captura desactivada sigue desactivada**: el `requestUnbind` de T064a
+la deja en la lista *Snoozed* del sistema, que sobrevive a la actualización.
+Por eso **no hay receptor de `MY_PACKAGE_REPLACED`**, y no conviene agregarlo:
+el del plugin arranca el servicio sin mirar el interruptor de la app y
+reviviría capturas que el usuario apagó.
+
+Las dos caídas que motivaron la sospecha quedan sin explicar del todo: una fue
+release → debug, un cambio que la tienda nunca hace, y la otra partió de un
+estado ya caído. Si vuelve a pasar, T065 lo muestra y Reactivar lo arregla.
+
+**Para medir el estado del listener**, acotar la sección entre `Live
+notification listeners` y `Snoozed notification listeners`: contar líneas
+después de la primera engaña dos veces, porque la sección *Snoozed* viene
+justo debajo y un listener vinculado dos veces aparece dos veces.
+
+```bash
+adb shell dumpsys notification | sed -n '/Live notification listeners/,/Snoozed notification listeners/p' | grep -c finanzas
+```
+
 #### Lo que queda abierto de la spec 002
 
-Todo el código está escrito. Lo que falta es verificación en dispositivo y un
-hallazgo del 2026-11-07:
+Todo el código está escrito. Lo que falta es verificación en dispositivo:
 
-- **T070** — **actualizar la app deja la captura detenida**. Pasó cada vez que
-  se instaló un build encima; la pantalla lo detecta (T065) y Reactivar la
-  devuelve. Falta ver si una actualización desde Play hace lo mismo: si es así,
-  cada versión nueva apaga la captura de todos hasta que abran la app.
 - **T061c** — el paso 7, modo avión. **No lo puede hacer un agente conectado
   por depuración inalámbrica**: activarlo corta el Wi-Fi y con él la propia
   conexión de `adb`. Queda para el usuario, o para una sesión por cable.
@@ -941,8 +963,8 @@ hallazgo del 2026-11-07:
 - **T062** — actualizar este archivo al cerrar la spec.
 
 Con T067, T068 y T061b hechas, **en el código de la captura no queda nada que
-impida publicar**; T070 conviene mirarla antes de la segunda versión, que es la
-primera actualización que van a recibir los usuarios. Para Play falta además, fuera de esta spec,
+impida publicar**, y T070 confirmó que las actualizaciones de la tienda no
+apagan la captura. Para Play falta además, fuera de esta spec,
 generar la keystore de release (`android/key.properties` todavía no existe) y
 crear los productos de propina (T068 y T069 de la spec 004).
 
