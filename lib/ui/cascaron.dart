@@ -37,7 +37,42 @@ class Cascaron extends StatefulWidget {
   State<Cascaron> createState() => _CascaronState();
 }
 
-class _CascaronState extends State<Cascaron> {
+class _CascaronState extends State<Cascaron> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Relee la bandeja de pendientes al volver a la app (T069).
+  ///
+  /// Es el caso real de la captura: pagar con la app del banco o con Yape y
+  /// volver a Finanzas. El consumo lo escribió el callback headless mientras
+  /// la app estaba al fondo, y el servicio en primer plano mantiene vivo el
+  /// proceso, así que el estado cargado al arrancar nunca se enteraba. Vive
+  /// acá y no en la bandeja porque el contador del drawer también lo muestra.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState estado) {
+    if (estado != AppLifecycleState.resumed) return;
+    _releerPendientes();
+  }
+
+  /// Al abrir el drawer, para que su contador no muestre una cifra vieja
+  /// cuando el consumo llegó con la app en primer plano: ahí no hay vuelta a
+  /// la app que dispare la relectura (T069).
+  void _alCambiarDrawer(bool abierto) {
+    if (abierto) _releerPendientes();
+  }
+
+  /// `EstadoPendientes?` porque el estado solo existe en Android (D-N8).
+  void _releerPendientes() => context.read<EstadoPendientes?>()?.cargar();
+
   /// Índice dentro de [_frecuentes], o `null` cuando se está viendo un
   /// destino del drawer.
   int _destinoFrecuente = 0;
@@ -159,6 +194,7 @@ class _CascaronState extends State<Cascaron> {
         ocasionales: _ocasionales,
         onElegir: _irAOcasional,
       ),
+      onDrawerChanged: _alCambiarDrawer,
       body: actual.pantalla,
       bottomNavigationBar: NavigationBar(
         // Con un destino del drawer en pantalla ninguno de la barra está

@@ -12,8 +12,30 @@ import 'package:provider/provider.dart';
 /// Ninguna acción de esta pantalla crea una transacción por sí sola: todas
 /// pasan por `EstadoPendientes.confirmar()`, que es la única puerta hacia
 /// 001 (FR-020).
-class PantallaPendientes extends StatelessWidget {
+///
+/// **Relee la base cada vez que se abre** (T069). Los pendientes los escribe
+/// el callback headless desde otro isolate, sin pasar por `EstadoPendientes`,
+/// y ese estado se carga al arrancar la app: sin esta relectura, lo capturado
+/// con la app abierta no aparecía hasta reiniciarla. La vuelta al primer plano
+/// la cubre el cascarón, que es quien además muestra el contador.
+class PantallaPendientes extends StatefulWidget {
   const PantallaPendientes({super.key});
+
+  @override
+  State<PantallaPendientes> createState() => _PantallaPendientesState();
+}
+
+class _PantallaPendientesState extends State<PantallaPendientes> {
+  @override
+  void initState() {
+    super.initState();
+    // Después del primer cuadro: `cargar()` avisa a sus oyentes de entrada, y
+    // hacerlo mientras el árbol se está construyendo es un error de Flutter.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<EstadoPendientes>().cargar();
+    });
+  }
 
   Future<void> _corregirYConfirmar(
     BuildContext context,

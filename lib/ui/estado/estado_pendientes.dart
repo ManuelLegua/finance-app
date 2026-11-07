@@ -62,8 +62,14 @@ class EstadoPendientes extends ChangeNotifier {
 
   String? get error => _error;
 
+  /// Lee la bandeja de la base.
+  ///
+  /// **`cargando` cubre solo la primera lectura**, y no se vuelve a encender
+  /// al releer (T069). La bandeja se relee cada vez que se abre y cada vez que
+  /// la app vuelve al frente, porque lo que escribe el callback headless no
+  /// pasa por este estado; si cada relectura cambiara la lista por el
+  /// indicador de carga, la pantalla parpadearía en cada vuelta.
   Future<void> cargar() async {
-    _cargando = true;
     _error = null;
     notifyListeners();
 

@@ -107,6 +107,30 @@ void main() {
     });
   });
 
+  group('lo capturado con la app abierta (T069)', () {
+    testWidgets('aparece al abrir la bandeja, sin reiniciar la app', (
+      tester,
+    ) async {
+      // El estado se carga una vez al arrancar la app, con la bandeja vacía.
+      // Después el callback headless escribe un consumo directo en la base,
+      // sin pasar por este estado: es otro isolate y no sabe que existe.
+      //
+      // Reproducido en dispositivo el 2026-11-07: tres consumos en el archivo
+      // y la bandeja diciendo "Nada esperando confirmación", porque nadie
+      // volvía a leer la base. El servicio en primer plano mantiene vivo el
+      // proceso, así que ni mandar la app al fondo lo arreglaba.
+      await estado.cargar();
+      await repoPendientes.insertar(
+        pendiente(notificacionId: 'headless', comercio: 'Capturado de fondo'),
+      );
+
+      await montar(tester);
+
+      expect(find.text('Capturado de fondo'), findsOneWidget);
+      expect(find.textContaining('Nada esperando confirmación'), findsNothing);
+    });
+  });
+
   group('sin pendientes', () {
     testWidgets('invita a esperar, no muestra una lista vacía', (tester) async {
       await estado.cargar();

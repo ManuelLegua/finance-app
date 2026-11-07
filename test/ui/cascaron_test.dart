@@ -1,9 +1,11 @@
 import 'package:finanzas/dominio/repositorios/repositorio_configuracion.dart';
 import 'package:finanzas/dominio/repositorios/repositorio_propinas.dart';
+import 'package:finanzas/shared/tipos/dinero.dart';
 import 'package:finanzas/shared/tipos/mes.dart';
 import 'package:finanzas/ui/cascaron.dart';
 import 'package:finanzas/ui/estado/estado_ahorro.dart';
 import 'package:finanzas/ui/estado/estado_mes.dart';
+import 'package:finanzas/ui/estado/estado_pendientes.dart';
 import 'package:finanzas/ui/estado/estado_respaldo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +23,12 @@ void main() {
   const agosto = Mes(2026, 8);
   final quinceDeAgosto = DateTime(2026, 8, 15);
 
-  Future<void> montar(WidgetTester tester) async {
+  /// [estadoPendientes] es opcional porque en la app solo existe en Android
+  /// (D-N8): las pruebas corren en Windows y el resto del cascarón no lo pide.
+  Future<void> montar(
+    WidgetTester tester, {
+    EstadoPendientes? estadoPendientes,
+  }) async {
     // Un alto generoso evita que el ListView de las pantallas desborde y
     // ensucie la prueba con errores de layout ajenos a la navegación.
     tester.view.physicalSize = const Size(1080, 2400);
@@ -41,6 +48,10 @@ void main() {
           Provider<RepositorioPropinas>(
             create: (_) => RepositorioPropinasEnMemoria(),
           ),
+          if (estadoPendientes != null)
+            ChangeNotifierProvider<EstadoPendientes>.value(
+              value: estadoPendientes,
+            ),
         ],
         child: const MaterialApp(home: Cascaron()),
       ),
@@ -163,6 +174,77 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Plazo para pagos rezagados'), findsNothing);
+    });
+  });
+
+  group('pendientes al volver a la app (T069)', () {
+    testWidgets('volver al primer plano relee la bandeja y su contador', (
+      tester,
+    ) async {
+      // El caso real: pagar con la app del banco o con Yape y volver a
+      // Finanzas. El consumo lo escribió el callback headless mientras la app
+      // estaba al fondo, con el proceso vivo por el servicio en primer plano,
+      // así que el estado cargado al arrancar no lo tiene.
+      final repoPendientes = RepositorioPendientesEnMemoria();
+      final estadoPendientes = EstadoPendientes(
+        repoPendientes: repoPendientes,
+        repoAsociaciones: RepositorioAsociacionesEnMemoria(),
+        estadoMes: estado,
+      );
+      await estadoPendientes.cargar();
+      await montar(tester, estadoPendientes: estadoPendientes);
+
+      await repoPendientes.insertar(
+        ConsumoPendiente(
+          id: null,
+          origenPaquete: 'com.google.android.gm',
+          notificacionId: 'headless',
+          monto: const Dinero.deCentavos(4500),
+          comercio: 'Capturado de fondo',
+          fecha: quinceDeAgosto,
+          categoriaPropuesta: null,
+          capturadoEn: quinceDeAgosto,
+        ),
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(estadoPendientes.resumen.cantidad, 1);
+    });
+
+    testWidgets('abrir el menú relee el contador, sin salir de la app', (
+      tester,
+    ) async {
+      // La otra mitad: el consumo llega con Finanzas en primer plano, así que
+      // no hay vuelta a la app que lo dispare. Verificado en dispositivo el
+      // 2026-11-07: la bandeja ya mostraba 5 al abrirla y el contador del
+      // menú seguía diciendo 4.
+      final repoPendientes = RepositorioPendientesEnMemoria();
+      final estadoPendientes = EstadoPendientes(
+        repoPendientes: repoPendientes,
+        repoAsociaciones: RepositorioAsociacionesEnMemoria(),
+        estadoMes: estado,
+      );
+      await estadoPendientes.cargar();
+      await montar(tester, estadoPendientes: estadoPendientes);
+
+      await repoPendientes.insertar(
+        ConsumoPendiente(
+          id: null,
+          origenPaquete: 'com.google.android.gm',
+          notificacionId: 'headless',
+          monto: const Dinero.deCentavos(500),
+          comercio: 'Capturado en primer plano',
+          fecha: quinceDeAgosto,
+          categoriaPropuesta: null,
+          capturadoEn: quinceDeAgosto,
+        ),
+      );
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+
+      expect(estadoPendientes.resumen.cantidad, 1);
     });
   });
 

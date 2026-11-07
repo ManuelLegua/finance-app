@@ -59,6 +59,34 @@ void main() {
     );
   });
 
+  group('recargar (T069)', () {
+    test('la primera lectura se anuncia como carga', () {
+      expect(estado.cargando, isTrue);
+    });
+
+    test('una recarga no vuelve a anunciarse como carga', () async {
+      // La bandeja se relee al abrirse y cada vez que la app vuelve al
+      // frente. Si cada relectura pasara por `cargando`, la pantalla
+      // cambiaría la lista por el indicador de carga y parpadearía en cada
+      // vuelta.
+      await estado.cargar();
+
+      final recarga = estado.cargar();
+      expect(estado.cargando, isFalse);
+      await recarga;
+    });
+
+    test('una recarga trae lo que se escribió por fuera del estado', () async {
+      await estado.cargar();
+      await repoPendientes.insertar(pendiente(notificacionId: 'headless'));
+
+      await estado.cargar();
+
+      expect(estado.pendientes, hasLength(1));
+      expect(estado.resumen.cantidad, 1);
+    });
+  });
+
   group('confirmar (FR-020, FR-026)', () {
     test(
       'crea la transacción con la fecha del consumo, no la de hoy',
